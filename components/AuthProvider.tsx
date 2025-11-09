@@ -32,15 +32,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [role, setRole] = useState<'driver' | 'admin' | 'viewer' | null>(null);
-  const [client] = useState(() => createBrowserClient());
+  const [client, setClient] = useState<SupabaseClient | null>(null);
 
-  // Initialize session on mount
+  // Initialize Supabase client and session on mount
   useEffect(() => {
     const initializeAuth = async () => {
       try {
         setLoading(true);
-        const currentSession = await getCurrentSession(client);
-        const currentRole = await getCurrentRole(client);
+        
+        // Create client first
+        const supabaseClient = createBrowserClient();
+        setClient(supabaseClient);
+        
+        const currentSession = await getCurrentSession(supabaseClient);
+        const currentRole = await getCurrentRole(supabaseClient);
 
         setSession(currentSession);
         setRole(currentRole);
@@ -55,10 +60,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     initializeAuth();
-  }, [client]);
+  }, []);
 
   // Listen for Supabase auth state changes (for admins)
   useEffect(() => {
+    if (!client) return;
+
     const { data: authListener } = client.auth.onAuthStateChange(async (event, supabaseSession) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         const currentRole = await getCurrentRole(client);
@@ -79,6 +86,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Handle driver login
   const handleLoginDriver = async (employeeId: string) => {
     try {
+      if (!client) {
+        throw new Error('Auth client not initialized');
+      }
       setError(null);
       const result = await loginAsDriver(client, employeeId);
 
@@ -101,6 +111,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Handle admin login
   const handleLoginAdmin = async (username: string, password: string) => {
     try {
+      if (!client) {
+        throw new Error('Auth client not initialized');
+      }
       setError(null);
       const result = await loginAsAdmin(client, username, password);
 
@@ -123,6 +136,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Handle logout
   const handleLogout = async () => {
     try {
+      if (!client) {
+        throw new Error('Auth client not initialized');
+      }
       setError(null);
       await logout(client);
       setSession(null);
@@ -136,7 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session,
     loading,
     error,
-    client,
+    client: client!,
     role,
     loginDriver: handleLoginDriver,
     loginAdmin: handleLoginAdmin,

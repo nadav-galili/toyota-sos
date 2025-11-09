@@ -4,50 +4,34 @@ import type { SupabaseClient, User, Session } from '@supabase/supabase-js';
 // Determine which environment to use (default to PROD)
 const ENV = process.env.NEXT_PUBLIC_ENVIRONMENT || 'PROD';
 
-// Get environment variables (these are optional at build time, required at runtime)
-const getSupabaseUrl = (): string => {
+// Get environment variables - ONLY called at runtime, never at build time
+const getSupabaseConfig = () => {
   const url =
     process.env[`NEXT_PUBLIC_SUPABASE_URL_${ENV.toUpperCase()}`] ||
     process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+  const key =
+    process.env[`NEXT_PUBLIC_SUPABASE_ANON_KEY_${ENV.toUpperCase()}`] ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  const serviceKey =
+    process.env[`SUPABASE_SERVICE_ROLE_KEY_${ENV.toUpperCase()}`] ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url) {
     throw new Error(
       `Missing Supabase URL. Please set NEXT_PUBLIC_SUPABASE_URL_${ENV.toUpperCase()} in .env.local`
     );
   }
-  return url;
-};
-
-const getSupabaseAnonKey = (): string => {
-  const key =
-    process.env[`NEXT_PUBLIC_SUPABASE_ANON_KEY_${ENV.toUpperCase()}`] ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!key) {
     throw new Error(
       `Missing Supabase Anon Key. Please set NEXT_PUBLIC_SUPABASE_ANON_KEY_${ENV.toUpperCase()} in .env.local`
     );
   }
-  return key;
+
+  return { url, key, serviceKey };
 };
-
-const getServiceRoleKey = (): string | undefined => {
-  return (
-    process.env[`SUPABASE_SERVICE_ROLE_KEY_${ENV.toUpperCase()}`] ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  );
-};
-
-let SUPABASE_URL: string;
-let SUPABASE_ANON_KEY: string;
-let SUPABASE_SERVICE_ROLE_KEY: string | undefined;
-
-// Only load if not during build
-if (typeof window !== 'undefined' || process.env.NODE_ENV === 'production') {
-  SUPABASE_URL = getSupabaseUrl();
-  SUPABASE_ANON_KEY = getSupabaseAnonKey();
-  SUPABASE_SERVICE_ROLE_KEY = getServiceRoleKey();
-}
 
 // Session storage key for driver sessions (localStorage)
 const DRIVER_SESSION_KEY = 'driver_session';
@@ -72,8 +56,7 @@ export type AuthSession = DriverSession | AdminSession | null;
 
 // Browser client (client-side only)
 export const createBrowserClient = (): SupabaseClient => {
-  const url = SUPABASE_URL || getSupabaseUrl();
-  const key = SUPABASE_ANON_KEY || getSupabaseAnonKey();
+  const { url, key } = getSupabaseConfig();
   return createClient(url, key, {
     auth: {
       persistSession: true,
@@ -85,8 +68,7 @@ export const createBrowserClient = (): SupabaseClient => {
 
 // Server client (server-side only)
 export const createServerClient = (): SupabaseClient => {
-  const url = SUPABASE_URL || getSupabaseUrl();
-  const key = SUPABASE_ANON_KEY || getSupabaseAnonKey();
+  const { url, key } = getSupabaseConfig();
   return createClient(url, key, {
     auth: {
       persistSession: false,
@@ -96,18 +78,56 @@ export const createServerClient = (): SupabaseClient => {
 
 // Service role client (admin operations, server-only)
 export const createServiceRoleClient = (): SupabaseClient => {
-  const serviceKey = SUPABASE_SERVICE_ROLE_KEY || getServiceRoleKey();
+  const { url, serviceKey } = getSupabaseConfig();
+
   if (!serviceKey) {
     throw new Error('Service role key is required for admin operations');
   }
 
-  const url = SUPABASE_URL || getSupabaseUrl();
   return createClient(url, serviceKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
     },
   });
+};
+
+// Helper functions
+export const getSession = async (client: SupabaseClient): Promise<Session | null> => {
+  const {
+    data: { session },
+  } = await client.auth.getSession();
+  return session;
+};
+
+export const getCurrentUser = async (client: SupabaseClient): Promise<User | null> => {
+  const {
+    data: { user },
+  } = await client.auth.getUser();
+  return user;
+};
+
+export const signIn = async (client: SupabaseClient, email: string, password: string) => {
+  return await client.auth.signInWithPassword({ email, password });
+};
+
+export const signUp = async (
+  client: SupabaseClient,
+  email: string,
+  password: string,
+  metadata?: Record<string, any>
+) => {
+  return await client.auth.signUp({
+    email,
+    password,
+    options: {
+      data: metadata,
+    },
+  });
+};
+
+export const signOut = async (client: SupabaseClient) => {
+  return await client.auth.signOut();
 };
 
 // ============================================
