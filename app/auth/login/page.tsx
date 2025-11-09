@@ -23,7 +23,7 @@ function LoginContent() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
-  // const redirectTo = searchParams.get('redirectTo') || '/driver';
+  const redirectTo = (searchParams.get('redirectTo') as string | null) || null;
 
   const handleDriverLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +35,7 @@ function LoginContent() {
       if (result.success) {
         setSuccess('Login successful! Redirecting...');
         setTimeout(() => {
-          router.push('/driver');
+          router.push(redirectTo || '/driver');
         }, 500);
       } else {
         setError(result.error || 'Login failed');
@@ -57,7 +57,7 @@ function LoginContent() {
       if (result.success) {
         setSuccess('Login successful! Redirecting...');
         setTimeout(() => {
-          router.push('/admin');
+          router.push(redirectTo || '/admin');
         }, 500);
       } else {
         setError(result.error || 'Login failed');

@@ -22,47 +22,16 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check if route requires authentication
-  const isProtectedRoute = AUTH_REQUIRED_ROUTES.some((route) =>
-    pathname.startsWith(route)
-  );
-
-  if (!isProtectedRoute) {
-    // Route is not protected, allow access
-    return NextResponse.next();
-  }
-
-  // Get session from cookies (for admin/viewer users)
-  const supabaseSession = request.cookies.get('sb-session')?.value;
-
-  // Get driver session from cookie (simplified - in real app, check localStorage client-side)
-  // For now, middleware can't access localStorage, so we'll rely on client-side checks
-  // and auth state cookies set by the auth context
-
-  // If no session, redirect to login
-  if (!supabaseSession) {
-    const loginUrl = new URL('/auth/login', request.url);
-    loginUrl.searchParams.set('redirectTo', pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  // Optional: Parse JWT and check role
-  // This is a simplified check - in production, validate JWT properly
-  try {
-    // Basic session existence check
-    // Full role validation will happen in the AuthProvider client-side
-    return NextResponse.next();
-  } catch (error) {
-    const loginUrl = new URL('/auth/login', request.url);
-    loginUrl.searchParams.set('redirectTo', pathname);
-    return NextResponse.redirect(loginUrl);
-  }
+  // Temporary: allow all routes through and rely on client-side auth + RLS.
+  // We’ll re-enable server-side checks after wiring proper cookie/JWT parsing.
+  return NextResponse.next();
 }
 
 // Define which routes trigger middleware
 export const config = {
   matcher: [
     // Protected routes
+    // Keep matchers for future enforcement, but middleware currently allows all
     '/driver/:path*',
     '/admin/:path*',
     '/manager/:path*',
