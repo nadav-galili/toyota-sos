@@ -22,8 +22,44 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Temporary: allow all routes through and rely on client-side auth + RLS.
-  // We’ll re-enable server-side checks after wiring proper cookie/JWT parsing.
+  // Check if route requires authentication (prefix match)
+  const matchedPrefix = AUTH_REQUIRED_ROUTES.find((route) => pathname.startsWith(route));
+  if (!matchedPrefix) {
+    // Route is not protected, allow access
+    return NextResponse.next();
+  }
+
+  // Read lightweight role cookie set by client after successful login
+  const roleCookie = request.cookies.get('toyota_role')?.value as
+    | 'driver'
+    | 'admin'
+    | 'manager'
+    | 'viewer'
+    | undefined;
+
+  // If no role cookie and the route is protected, redirect to login
+  if (!roleCookie) {
+    const loginUrl = new URL('/auth/login', request.url);
+    loginUrl.searchParams.set('redirectTo', pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // Verify role is allowed for the route prefix
+  const allowedRoles = PROTECTED_ROUTES[matchedPrefix];
+  const isAllowed = allowedRoles.includes(roleCookie);
+
+  if (!isAllowed) {
+    // Redirect to role’s default home
+    const defaultHome =
+      roleCookie === 'driver'
+        ? '/driver'
+        : roleCookie === 'admin' || roleCookie === 'manager'
+        ? '/admin'
+        : '/viewer';
+    const url = new URL(defaultHome, request.url);
+    return NextResponse.redirect(url);
+  }
+
   return NextResponse.next();
 }
 

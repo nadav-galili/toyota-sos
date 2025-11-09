@@ -34,6 +34,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<'driver' | 'admin' | 'viewer' | null>(null);
   const [client, setClient] = useState<SupabaseClient | null>(null);
 
+  const writeRoleCookie = (newRole: 'driver' | 'admin' | 'viewer' | null) => {
+    try {
+      if (!newRole) {
+        // clear cookie
+        document.cookie = `toyota_role=; path=/; max-age=0`;
+      } else {
+        // 7 days
+        document.cookie = `toyota_role=${newRole}; path=/; max-age=${7 * 24 * 60 * 60}`;
+      }
+    } catch {
+      // ignore
+    }
+  };
+
   // Initialize Supabase client and session on mount
   useEffect(() => {
     const initializeAuth = async () => {
@@ -49,11 +63,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         setSession(currentSession);
         setRole(currentRole);
+        writeRoleCookie(currentRole);
         setError(null);
       } catch (err: any) {
         setError(err.message || 'Failed to initialize auth');
         setSession(null);
         setRole(null);
+        writeRoleCookie(null);
       } finally {
         setLoading(false);
       }
@@ -72,9 +88,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const currentSession = await getCurrentSession(client);
         setSession(currentSession);
         setRole(currentRole);
+        writeRoleCookie(currentRole);
       } else if (event === 'SIGNED_OUT') {
         setSession(null);
         setRole(null);
+        writeRoleCookie(null);
       }
     });
 
@@ -95,6 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (result.success && result.session) {
         setSession(result.session);
         setRole('driver');
+        writeRoleCookie('driver');
         return { success: true };
       } else {
         const errorMsg = result.error || 'Driver login failed';
@@ -120,6 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (result.success && result.session) {
         setSession(result.session);
         setRole(result.session.role);
+        writeRoleCookie(result.session.role);
         return { success: true };
       } else {
         const errorMsg = result.error || 'Admin login failed';
@@ -143,6 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await logout(client);
       setSession(null);
       setRole(null);
+      writeRoleCookie(null);
     } catch (err: any) {
       setError(err.message || 'Logout failed');
     }
