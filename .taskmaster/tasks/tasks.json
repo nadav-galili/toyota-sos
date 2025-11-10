@@ -482,7 +482,7 @@
                 "description": "Required, min/max length/value, pattern regex; custom validator hook.",
                 "dependencies": [2],
                 "details": "Validate on submit and on edited fields after first attempt. Set aria-invalid, role=alert for error text, and scroll to first invalid field.",
-                "status": "pending",
+                "status": "done",
                 "testStrategy": "Leave fields invalid, assert errors block submit; fix and assert success."
               },
               {

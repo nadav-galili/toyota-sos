@@ -86,6 +86,8 @@ export function FormRenderer(props: FormRendererProps) {
   const { schema, className, initialValues, onChange, onSubmit } = props;
 
   const [values, setValues] = useState<NormalizedFormData>({});
+  const [errors, setErrors] = useState<Record<string, string | null>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   // Initialize values
   useEffect(() => {
@@ -114,6 +116,19 @@ export function FormRenderer(props: FormRendererProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Validate all visible fields
+    const nextErrors: Record<string, string | null> = {};
+    for (const f of visibleSchema) {
+      nextErrors[f.id] = validateField(f, values[f.id]);
+    }
+    setErrors(nextErrors);
+    // If any errors, focus first and abort submit
+    const firstInvalid = visibleSchema.find((f) => nextErrors[f.id]);
+    if (firstInvalid) {
+      const el = document.getElementById(`fr-${firstInvalid.id}`);
+      el?.focus?.();
+      return;
+    }
     // Filter out values for fields that are not visible
     const submit: NormalizedFormData = {};
     for (const f of visibleSchema) {
@@ -121,6 +136,20 @@ export function FormRenderer(props: FormRendererProps) {
     }
     onSubmit?.(submit);
   };
+
+  const setFieldValue = (field: FormField, raw: unknown) => {
+    setValues((v) => {
+      const next = { ...v, [field.id]: coerceValue(field.type, raw) };
+      return next;
+    });
+    // live-validate if already touched
+    setErrors((prev) => {
+      if (!touched[field.id]) return prev;
+      return { ...prev, [field.id]: validateField(field, coerceValue(field.type, raw)) };
+    });
+  };
+
+  const markTouched = (id: string) => setTouched((t) => ({ ...t, [id]: true }));
 
   return (
     <form dir="rtl" className={className ?? ''} data-testid="form-renderer" onSubmit={handleSubmit}>
@@ -132,6 +161,7 @@ export function FormRenderer(props: FormRendererProps) {
             const id = `fr-${f.id}`;
             const descId = f.description ? `${id}-desc` : undefined;
             const value = values[f.id];
+            const errorMsg = errors[f.id] ?? null;
             // checkbox
             if (f.type === 'checkbox') {
               const checked = Boolean(value);
@@ -142,8 +172,13 @@ export function FormRenderer(props: FormRendererProps) {
                     type="checkbox"
                     className="mt-1 h-5 w-5"
                     checked={checked}
-                    onChange={(e) => setValues((v) => ({ ...v, [f.id]: e.target.checked }))}
+                    onChange={(e) => setFieldValue(f, e.target.checked)}
+                    onBlur={() => {
+                      markTouched(f.id);
+                      setErrors((prev) => ({ ...prev, [f.id]: validateField(f, checked) }));
+                    }}
                     aria-describedby={descId}
+                    aria-invalid={errorMsg ? 'true' : undefined}
                   />
                   <div className="flex-1">
                     <label htmlFor={id} className="font-medium">
@@ -152,6 +187,11 @@ export function FormRenderer(props: FormRendererProps) {
                     {f.description ? (
                       <p id={descId} className="text-sm text-gray-600">
                         {f.description}
+                      </p>
+                    ) : null}
+                    {errorMsg ? (
+                      <p role="alert" className="text-sm text-red-600">
+                        {errorMsg}
                       </p>
                     ) : null}
                   </div>
@@ -182,15 +222,26 @@ export function FormRenderer(props: FormRendererProps) {
                             type="radio"
                             className="h-4 w-4"
                             checked={String(value ?? '') === String(opt.value)}
-                            onChange={() =>
-                              setValues((v) => ({ ...v, [f.id]: coerceValue(f.type, opt.value) }))
-                            }
+                            onChange={() => setFieldValue(f, opt.value)}
+                            onBlur={() => {
+                              markTouched(f.id);
+                              setErrors((prev) => ({
+                                ...prev,
+                                [f.id]: validateField(f, coerceValue(f.type, value)),
+                              }));
+                            }}
+                            aria-invalid={errorMsg ? 'true' : undefined}
                           />
                           <span className="text-sm">{opt.label}</span>
                         </label>
                       );
                     })}
                   </div>
+                  {errorMsg ? (
+                    <p role="alert" className="text-sm text-red-600">
+                      {errorMsg}
+                    </p>
+                  ) : null}
                 </fieldset>
               );
             }
@@ -207,9 +258,15 @@ export function FormRenderer(props: FormRendererProps) {
                     className="w-full rounded-md border border-gray-300 p-2 text-sm"
                     aria-describedby={descId}
                     value={String(value ?? '')}
-                    onChange={(e) =>
-                      setValues((v) => ({ ...v, [f.id]: coerceValue(f.type, e.target.value) }))
-                    }
+                    onChange={(e) => setFieldValue(f, e.target.value)}
+                    onBlur={() => {
+                      markTouched(f.id);
+                      setErrors((prev) => ({
+                        ...prev,
+                        [f.id]: validateField(f, coerceValue(f.type, value)),
+                      }));
+                    }}
+                    aria-invalid={errorMsg ? 'true' : undefined}
                   >
                     <option value="">בחר</option>
                     {opts?.map((opt) => (
@@ -221,6 +278,11 @@ export function FormRenderer(props: FormRendererProps) {
                   {f.description ? (
                     <p id={descId} className="text-sm text-gray-600">
                       {f.description}
+                    </p>
+                  ) : null}
+                  {errorMsg ? (
+                    <p role="alert" className="text-sm text-red-600">
+                      {errorMsg}
                     </p>
                   ) : null}
                 </div>
@@ -238,14 +300,25 @@ export function FormRenderer(props: FormRendererProps) {
                     className="w-full rounded-md border border-gray-300 p-2 text-sm"
                     aria-describedby={descId}
                     value={String(value ?? '')}
-                    onChange={(e) =>
-                      setValues((v) => ({ ...v, [f.id]: coerceValue(f.type, e.target.value) }))
-                    }
+                    onChange={(e) => setFieldValue(f, e.target.value)}
+                    onBlur={() => {
+                      markTouched(f.id);
+                      setErrors((prev) => ({
+                        ...prev,
+                        [f.id]: validateField(f, coerceValue(f.type, value)),
+                      }));
+                    }}
+                    aria-invalid={errorMsg ? 'true' : undefined}
                     rows={4}
                   />
                   {f.description ? (
                     <p id={descId} className="text-sm text-gray-600">
                       {f.description}
+                    </p>
+                  ) : null}
+                  {errorMsg ? (
+                    <p role="alert" className="text-sm text-red-600">
+                      {errorMsg}
                     </p>
                   ) : null}
                 </div>
@@ -264,13 +337,24 @@ export function FormRenderer(props: FormRendererProps) {
                   className="w-full rounded-md border border-gray-300 p-2 text-sm"
                   aria-describedby={descId}
                   value={formatValueForInput(f.type, value)}
-                  onChange={(e) =>
-                    setValues((v) => ({ ...v, [f.id]: coerceValue(f.type, e.target.value) }))
-                  }
+                  onChange={(e) => setFieldValue(f, e.target.value)}
+                  onBlur={() => {
+                    markTouched(f.id);
+                    setErrors((prev) => ({
+                      ...prev,
+                      [f.id]: validateField(f, coerceValue(f.type, value)),
+                    }));
+                  }}
+                  aria-invalid={errorMsg ? 'true' : undefined}
                 />
                 {f.description ? (
                   <p id={descId} className="text-sm text-gray-600">
                     {f.description}
+                  </p>
+                ) : null}
+                {errorMsg ? (
+                  <p role="alert" className="text-sm text-red-600">
+                    {errorMsg}
                   </p>
                 ) : null}
               </div>
@@ -303,6 +387,12 @@ function defaultForType(t: FieldType): string | number | boolean | null {
   }
 }
 
+function isEmptyForType(t: FieldType, v: unknown): boolean {
+  if (t === 'checkbox') return v !== true;
+  if (t === 'number') return v === '' || v === null || typeof v === 'undefined';
+  return String(v ?? '').trim().length === 0;
+}
+
 function evaluateDependencies(dep: DependencyConfig | undefined, data: NormalizedFormData): boolean {
   if (!dep || !dep.rules?.length) return true;
   const evalRule = (r: DependencyRule): boolean => {
@@ -322,6 +412,50 @@ function evaluateDependencies(dep: DependencyConfig | undefined, data: Normalize
   return dep.when === 'any' ? results.some(Boolean) : results.every(Boolean);
 }
 
+function validateField(field: FormField, rawValue: unknown): string | null {
+  const v = rawValue;
+  // required
+  if (field.required && isEmptyForType(field.type, v)) {
+    return 'שדה חובה';
+  }
+  // constraints
+  const c = field.constraints;
+  if (!c) return null;
+  if (field.type === 'text' || field.type === 'textarea') {
+    const s = String(v ?? '');
+    if (typeof c.minLength === 'number' && s.length < c.minLength) {
+      return `מינימום ${c.minLength} תווים`;
+    }
+    if (typeof c.maxLength === 'number' && s.length > c.maxLength) {
+      return `מקסימום ${c.maxLength} תווים`;
+    }
+    if (c.pattern) {
+      try {
+        const re = new RegExp(c.pattern);
+        if (s && !re.test(s)) {
+          return 'פורמט לא תקין';
+        }
+      } catch {
+        // ignore invalid regex
+      }
+    }
+  }
+  if (field.type === 'number') {
+    const n = Number(v);
+    if (String(v) !== '' && !Number.isFinite(n)) {
+      return 'מספר לא תקין';
+    }
+    if (typeof c.min === 'number' && String(v) !== '' && n < c.min) {
+      return `ערך מינימלי ${c.min}`;
+    }
+    if (typeof c.max === 'number' && String(v) !== '' && n > c.max) {
+      return `ערך מקסימלי ${c.max}`;
+    }
+  }
+  // For date/time we keep only required for now
+  return null;
+}
+
 function coerceValue(t: FieldType, v: unknown): string | number | boolean | null {
   if (v === null || typeof v === 'undefined') return '';
   switch (t) {
@@ -329,7 +463,7 @@ function coerceValue(t: FieldType, v: unknown): string | number | boolean | null
       return Boolean(v);
     case 'number': {
       const n = Number(v);
-      return Number.isFinite(n) ? n : ('' as unknown as number);
+      return Number.isFinite(n) ? n : String(v ?? '');
     }
     case 'date':
     case 'time':
