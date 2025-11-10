@@ -11,17 +11,28 @@ jest.mock('next/navigation', () => {
   };
 });
 
+// Mock Supabase browser client RPC
+const rpcMock = jest.fn();
+jest.mock('@/lib/auth', () => {
+  return {
+    createBrowserClient: () => ({
+      rpc: rpcMock,
+    }),
+  };
+});
+
 describe('DriverHome filtering and tabs', () => {
   const now = Date.now();
-  const tasks = [
+  const todayItems = [
     {
       id: 't1',
       title: 'מסירת רכב ללקוח',
       type: 'pickup_or_dropoff_car',
       priority: 'high' as const,
       status: 'pending' as const,
-      estimatedStart: new Date(now - 60 * 60 * 1000),
-      estimatedEnd: new Date(now + 30 * 60 * 1000),
+      estimated_start: new Date(now - 60 * 60 * 1000).toISOString(),
+      estimated_end: new Date(now + 30 * 60 * 1000).toISOString(),
+      updated_at: new Date(now + 10 * 1000).toISOString(),
     },
     {
       id: 't2',
@@ -29,42 +40,106 @@ describe('DriverHome filtering and tabs', () => {
       type: 'drive_client_to_dealership',
       priority: 'medium' as const,
       status: 'in_progress' as const,
-      estimatedStart: new Date(now - 30 * 60 * 1000),
-      estimatedEnd: new Date(now + 60 * 60 * 1000),
+      estimated_start: new Date(now - 30 * 60 * 1000).toISOString(),
+      estimated_end: new Date(now + 60 * 60 * 1000).toISOString(),
+      updated_at: new Date(now + 5 * 1000).toISOString(),
     },
+  ];
+  const overdueItems = [
     {
       id: 't3',
       title: 'מסירת רכב חלופי',
       type: 'replacement_car_delivery',
       priority: 'low' as const,
       status: 'pending' as const,
-      estimatedStart: new Date(now - 5 * 60 * 60 * 1000),
-      estimatedEnd: new Date(now - 3 * 60 * 60 * 1000), // overdue
+      estimated_start: new Date(now - 5 * 60 * 60 * 1000).toISOString(),
+      estimated_end: new Date(now - 3 * 60 * 60 * 1000).toISOString(),
+      updated_at: new Date(now + 1 * 1000).toISOString(),
     },
   ];
 
-  test('default tab today shows only tasks intersecting today', () => {
-    render(<DriverHome tasks={tasks as any} />);
+  beforeEach(() => {
+    rpcMock.mockReset();
+    // default RPC returns "today" dataset
+    rpcMock.mockResolvedValue({ data: todayItems, error: null });
+  });
+
+  test('default tab today shows only tasks intersecting today', async () => {
+    render(<DriverHome tasks={[]} />);
     // There are 3 today-intersecting tasks by the provided dates (all within today).
     // But overdue is also today intersecting; we assert count >= 2 and contains titles.
-    expect(screen.getByText('מסירת רכב ללקוח')).toBeInTheDocument();
-    expect(screen.getByText('הסעת לקוח למוסך')).toBeInTheDocument();
+    expect(await screen.findByText('מסירת רכב ללקוח')).toBeInTheDocument();
+    expect(await screen.findByText('הסעת לקוח למוסך')).toBeInTheDocument();
   });
 
   test('switch to Overdue tab shows only overdue item', async () => {
-    render(<DriverHome tasks={tasks as any} />);
+    // Set call order: initial -> overdue
+    rpcMock.mockResolvedValueOnce({ data: todayItems, error: null }); // initial mount
+    rpcMock.mockResolvedValueOnce({ data: overdueItems, error: null }); // after tab change
+    render(<DriverHome tasks={[]} />);
     await userEvent.click(screen.getByRole('button', { name: 'איחורים' }));
-    expect(screen.getByText('מסירת רכב חלופי')).toBeInTheDocument();
+    expect(await screen.findByText('מסירת רכב חלופי')).toBeInTheDocument();
     // And hide a non-overdue one
     expect(screen.queryByText('הסעת לקוח למוסך')).not.toBeInTheDocument();
   });
 
   test('switch to All tab shows all items', async () => {
-    render(<DriverHome tasks={tasks as any} />);
+    rpcMock.mockResolvedValueOnce({ data: todayItems, error: null }); // initial mount
+    // For 'all', just return union here (simplified for test)
+    rpcMock.mockResolvedValueOnce({ data: [...todayItems, ...overdueItems], error: null });
+    render(<DriverHome tasks={[]} />);
     await userEvent.click(screen.getByRole('button', { name: 'הכל' }));
-    expect(screen.getByText('מסירת רכב ללקוח')).toBeInTheDocument();
-    expect(screen.getByText('הסעת לקוח למוסך')).toBeInTheDocument();
-    expect(screen.getByText('מסירת רכב חלופי')).toBeInTheDocument();
+    expect(await screen.findByText('מסירת רכב ללקוח')).toBeInTheDocument();
+    expect(await screen.findByText('הסעת לקוח למוסך')).toBeInTheDocument();
+    expect(await screen.findByText('מסירת רכב חלופי')).toBeInTheDocument();
+  });
+});
+
+describe('pagination de-duplication', () => {
+  const now = Date.now();
+  const page1 = Array.from({ length: 10 }).map((_, i) => ({
+    id: `p1-${i}`,
+    title: `p1-${i}`,
+    type: 'pickup_or_dropoff_car',
+    priority: 'low' as const,
+    status: 'pending' as const,
+    estimated_start: new Date(now - (i + 1) * 1000).toISOString(),
+    estimated_end: new Date(now + (i + 1) * 1000).toISOString(),
+    updated_at: new Date(now - (i + 1) * 1000).toISOString(),
+  }));
+  // Second page overlaps with last of first page
+  const page2 = [
+    page1[2],
+    {
+      id: 'p2-new',
+      title: 'p2-new',
+      type: 'drive_client_to_dealership',
+      priority: 'medium' as const,
+      status: 'in_progress' as const,
+      estimated_start: new Date(now - 10 * 1000).toISOString(),
+      estimated_end: new Date(now + 10 * 1000).toISOString(),
+      updated_at: new Date(now - 10 * 1000).toISOString(),
+    },
+  ];
+
+  beforeEach(() => {
+    rpcMock.mockReset();
+    rpcMock.mockResolvedValue({ data: page1, error: null });
+  });
+
+  test('appending next page does not duplicate overlapping items', async () => {
+    rpcMock.mockResolvedValueOnce({ data: page1, error: null }); // initial
+    rpcMock.mockResolvedValueOnce({ data: page2, error: null }); // load more
+    render(<DriverHome tasks={[]} />);
+    // initial render (one of the items)
+    expect(await screen.findByText('p1-0')).toBeInTheDocument();
+    // click Load more
+    await userEvent.click(screen.getByRole('button', { name: 'טען עוד' }));
+    // still only 4 unique titles
+    expect(screen.getByText('p1-0')).toBeInTheDocument();
+    expect(screen.getByText('p1-1')).toBeInTheDocument();
+    expect(screen.getByText('p1-2')).toBeInTheDocument();
+    expect(screen.getByText('p2-new')).toBeInTheDocument();
   });
 });
 
