@@ -2,13 +2,16 @@
 
 import dayjs from '@/lib/dayjs';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { TaskCard, TaskCardProps } from '@/components/driver/TaskCard';
 import { createBrowserClient } from '@/lib/auth';
 
 export type DriverTask = TaskCardProps;
 
-function intersectsToday(start?: string | Date | null, end?: string | Date | null): boolean {
+function intersectsToday(
+  start?: string | Date | null,
+  end?: string | Date | null
+): boolean {
   const todayStart = dayjs().startOf('day');
   const todayEnd = dayjs().endOf('day');
   const s = start ? dayjs(start) : null;
@@ -24,26 +27,38 @@ function intersectsToday(start?: string | Date | null, end?: string | Date | nul
 }
 
 function isOverdue(task: DriverTask): boolean {
-  return !!task.estimatedEnd && task.status !== 'completed' && dayjs(task.estimatedEnd).isBefore(dayjs());
+  return (
+    !!task.estimatedEnd &&
+    task.status !== 'completed' &&
+    dayjs(task.estimatedEnd).isBefore(dayjs())
+  );
 }
 
-export function DriverHome({ tasks }: { tasks: DriverTask[] }) {
+export function DriverHome() {
   const router = useRouter();
   const pathname = usePathname();
   const search = useSearchParams();
-  const urlTab = (search.get('tab') as 'today' | 'all' | 'overdue' | null) ?? 'today';
+  const urlTab =
+    (search.get('tab') as 'today' | 'all' | 'overdue' | null) ?? 'today';
   const [tabState, setTabState] = useState<'today' | 'all' | 'overdue'>(urlTab);
 
   const setTab = (next: 'today' | 'all' | 'overdue') => {
     const params = new URLSearchParams(search.toString());
     params.set('tab', next);
     router.replace(`${pathname}?${params.toString()}`);
+    // Reset pagination state on tab switch
+    setCursor(null);
+    setHasMore(true);
+    setRemoteTasks([]);
     setTabState(next);
   };
 
   // Remote paginated tasks via RPC
   const [remoteTasks, setRemoteTasks] = useState<DriverTask[]>([]);
-  const [cursor, setCursor] = useState<{ updated_at: string; id: string } | null>(null);
+  const [cursor, setCursor] = useState<{
+    updated_at: string;
+    id: string;
+  } | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -56,48 +71,66 @@ export function DriverHome({ tasks }: { tasks: DriverTask[] }) {
     return Array.from(map.values());
   }
 
-  async function fetchPage(reset: boolean) {
-    const supa = createBrowserClient();
-    const params: any = {
-      p_tab: tabState,
-      p_limit: 10,
-    };
-    if (!reset && cursor) {
-      params.p_cursor_updated = cursor.updated_at;
-      params.p_cursor_id = cursor.id;
-    }
-    const { data, error } = await supa.rpc('get_driver_tasks', params);
-    if (error) {
-      // eslint-disable-next-line no-console
-      console.error('get_driver_tasks error', error);
-      return;
-    }
-    const mapped: DriverTask[] = (data ?? []).map((t: any) => ({
-      id: t.id,
-      title: t.title,
-      type: t.type,
-      priority: t.priority,
-      status: t.status,
-      estimatedStart: t.estimated_start,
-      estimatedEnd: t.estimated_end,
-      address: t.address,
-      clientName: null,
-      vehicle: null,
-    }));
-    setRemoteTasks((prev) => (reset ? mapped : mergeById(prev, mapped)));
-    setHasMore((mapped?.length ?? 0) === 10);
-    const last = mapped?.[mapped.length - 1];
-    if (last) {
-      setCursor({ updated_at: (data[data.length - 1] as any).updated_at, id: last.id });
-    }
-  }
+  type SupaTaskRow = {
+    id: string;
+    title: string;
+    type: DriverTask['type'];
+    priority: DriverTask['priority'];
+    status: DriverTask['status'];
+    estimated_start: string | null;
+    estimated_end: string | null;
+    address: string | null;
+    updated_at: string;
+  };
 
-  // Initial and tab changes
+  const fetchPageRef = useRef<(reset: boolean) => Promise<void>>(
+    async () => {}
+  );
   useEffect(() => {
-    setCursor(null);
-    setHasMore(true);
-    fetchPage(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchPageRef.current = async (reset: boolean) => {
+      const supa = createBrowserClient();
+      const params: Record<string, unknown> = {
+        p_tab: tabState,
+        p_limit: 10,
+      };
+      if (!reset && cursor) {
+        params.p_cursor_updated = cursor.updated_at;
+        params.p_cursor_id = cursor.id;
+      }
+      const { data, error } = (await supa.rpc('get_driver_tasks', params)) as {
+        data: SupaTaskRow[] | null;
+        error: unknown | null;
+      };
+      if (error) {
+        return;
+      }
+      const mapped: DriverTask[] = (data ?? []).map((t) => ({
+        id: t.id,
+        title: t.title,
+        type: t.type,
+        priority: t.priority,
+        status: t.status,
+        estimatedStart: t.estimated_start,
+        estimatedEnd: t.estimated_end,
+        address: t.address,
+        clientName: null,
+        vehicle: null,
+      }));
+      setRemoteTasks((prev) => (reset ? mapped : mergeById(prev, mapped)));
+      setHasMore((mapped?.length ?? 0) === 10);
+      const last = mapped?.[mapped.length - 1];
+      if (last && data && data.length > 0) {
+        setCursor({
+          updated_at: data[data.length - 1].updated_at,
+          id: last.id,
+        });
+      }
+    };
+  }, [tabState, cursor]);
+
+  // Initial load and on tab changes, trigger fetch
+  useEffect(() => {
+    fetchPageRef.current(true);
   }, [tabState]);
 
   // IntersectionObserver to auto-load next page (server pagination)
@@ -110,7 +143,7 @@ export function DriverHome({ tasks }: { tasks: DriverTask[] }) {
         for (const entry of entries) {
           if (entry.isIntersecting && !isLoadingMore) {
             setIsLoadingMore(true);
-            fetchPage(false).finally(() => setIsLoadingMore(false));
+            fetchPageRef.current(false).finally(() => setIsLoadingMore(false));
           }
         }
       },
@@ -124,20 +157,25 @@ export function DriverHome({ tasks }: { tasks: DriverTask[] }) {
     <div className="space-y-4">
       {/* Tabs */}
       <div className="grid grid-cols-3 gap-2">
-        {[
-          { key: 'today', label: 'היום' },
-          { key: 'all', label: 'הכל' },
-          { key: 'overdue', label: 'איחורים' },
-        ].map((t) => {
-          const active = tabState === (t.key as any);
+        {(
+          [
+            { key: 'today', label: 'היום' },
+            { key: 'all', label: 'הכל' },
+            { key: 'overdue', label: 'איחורים' },
+          ] as const
+        ).map((t) => {
+          type TabKey = typeof t.key;
+          const active = tabState === (t.key as TabKey);
           return (
             <button
               key={t.key}
               type="button"
-              onClick={() => setTab(t.key as any)}
+              onClick={() => setTab(t.key as TabKey)}
               className={[
                 'rounded-md py-2 text-sm font-medium transition-colors',
-                active ? 'bg-toyota-primary text-white' : 'bg-gray-100 text-gray-800 hover:bg-gray-200',
+                active
+                  ? 'bg-toyota-primary text-white'
+                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200',
               ].join(' ')}
               aria-pressed={active}
             >
@@ -153,7 +191,9 @@ export function DriverHome({ tasks }: { tasks: DriverTask[] }) {
           <TaskCard key={task.id} {...task} />
         ))}
         {remoteTasks.length === 0 ? (
-          <div className="text-center text-sm text-gray-500 py-10">אין משימות להצגה</div>
+          <div className="text-center text-sm text-gray-500 py-10">
+            אין משימות להצגה
+          </div>
         ) : null}
 
         {/* Load more button (fallback) */}
@@ -163,7 +203,7 @@ export function DriverHome({ tasks }: { tasks: DriverTask[] }) {
               type="button"
               className="rounded-md bg-gray-100 px-4 py-2 text-sm hover:bg-gray-200"
               disabled={isLoadingMore}
-              onClick={() => fetchPage(false)}
+              onClick={() => fetchPageRef.current(false)}
             >
               {isLoadingMore ? 'טוען…' : 'טען עוד'}
             </button>
@@ -179,5 +219,3 @@ export function DriverHome({ tasks }: { tasks: DriverTask[] }) {
 
 // Re-export helpers for testing
 export const __internal = { intersectsToday, isOverdue };
-
-
