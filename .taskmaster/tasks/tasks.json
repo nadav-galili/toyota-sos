@@ -316,6 +316,7 @@
             "description": "Create the TaskDetails screen with header, details, client/vehicle, and address sections, each collapsible for readability.",
             "dependencies": [],
             "details": "Implement `components/driver/TaskDetails.tsx` using Accordion/Collapsible for sections, render title/type/priority/status/updatedAt, show description, client and vehicle fields, and address with a Waze deeplink button. Wire to existing task data props and add basic loading/empty states.",
+            "status": "done",
             "subtasks": [
               {
                 "id": 1,
