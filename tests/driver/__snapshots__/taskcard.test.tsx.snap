@@ -1,0 +1,65 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`TaskCard matches snapshot 1`] = `
+<div>
+  <div
+    class="rounded-lg border border-gray-200 p-4 shadow-sm bg-white"
+  >
+    <div
+      class="flex items-center justify-between gap-2"
+    >
+      <span
+        class="inline-flex px-2 py-1 rounded text-xs text-white bg-red-600"
+      >
+        high
+      </span>
+      <span
+        class="inline-flex px-2 py-1 rounded text-xs text-white bg-gray-500"
+      >
+        pending
+      </span>
+    </div>
+    <h3
+      class="mt-2 text-lg font-semibold"
+    >
+      מסירת רכב ללקוח
+    </h3>
+    <p
+      class="text-sm text-gray-600"
+    >
+      pickup_or_dropoff_car
+    </p>
+    <div
+      class="mt-3 space-y-1 text-sm text-gray-700"
+    >
+      <div>
+        חלון זמן: 
+        01/01/2025 12:00 – 01/01/2025 14:30
+      </div>
+      <div>
+        כתובת: 
+        תל אביב, דיזנגוף 100
+      </div>
+      <div>
+        לקוח: 
+        לקוח א
+      </div>
+      <div>
+        רכב: 
+        12-345-67
+         • Corolla
+      </div>
+    </div>
+    <div
+      class="mt-3 flex gap-2"
+    >
+      <a
+        class="inline-flex items-center justify-center rounded-md bg-toyota-primary px-3 py-2 text-sm text-white hover:bg-red-700"
+        href="waze://?navigate=yes&q=%D7%AA%D7%9C%20%D7%90%D7%91%D7%99%D7%91%2C%20%D7%93%D7%99%D7%96%D7%A0%D7%92%D7%95%D7%A3%20100"
+      >
+        פתיחה ב-Waze
+      </a>
+    </div>
+  </div>
+</div>
+`;

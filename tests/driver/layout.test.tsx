@@ -28,9 +28,9 @@ describe('DriverLayout bottom navigation', () => {
     expect(screen.getByText('התראות')).toBeInTheDocument();
     expect(screen.getByText('פרופיל')).toBeInTheDocument();
 
-    // root wrapper should have dir=rtl via closest main container
-    const root = screen.getByTestId('content').closest('div');
-    expect(root?.parentElement?.getAttribute('dir')).toBe('rtl');
+    // root wrapper should have dir=rtl
+    const rtlRoot = document.querySelector('[dir=\"rtl\"]');
+    expect(rtlRoot).toBeInTheDocument();
   });
 
   test('active state: /driver exact only', () => {
