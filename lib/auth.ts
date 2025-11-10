@@ -152,25 +152,26 @@ export const loginAsDriver = async (
   employeeId: string
 ): Promise<{ success: boolean; session?: DriverSession; error?: string }> => {
   try {
-    const normalizeEmployeeId = (input: string): string => {
-      const trimmed = (input || '').trim().toUpperCase();
-      // If matches D#### or digits with optional leading D, normalize to D0001 format
-      const m = trimmed.match(/^D?(\d{1,4})$/);
-      if (m) {
-        const num = m[1].padStart(4, '0');
-        return `D${num}`;
-      }
-      return trimmed;
-    };
-    const normalizedId = normalizeEmployeeId(employeeId);
+    const trimmed = (employeeId || '').trim();
+    const upper = trimmed.toUpperCase();
+    const candidateIds: string[] = Array.from(
+      new Set<string>([
+        trimmed,
+        upper,
+        // If purely digits, also add D + zero-padded
+        /^\d{1,6}$/.test(trimmed) ? `D${trimmed.padStart(4, '0')}` : '',
+        // If D + digits (any pad), also add zero-padded D#### form
+        /^D\d{1,6}$/i.test(trimmed) ? `D${trimmed.replace(/^D/i, '').padStart(4, '0')}` : '',
+      ].filter(Boolean) as string[])
+    );
 
     // Query profiles table for this employee
     const { data, error } = await client
       .from('profiles')
       .select('id, name, role, employee_id, email')
-      .eq('employee_id', normalizedId)
+      .in('employee_id', candidateIds)
       .eq('role', 'driver')
-      .maybeSingle();
+      .limit(1);
 
     if (error) {
       return {
@@ -179,7 +180,8 @@ export const loginAsDriver = async (
       };
     }
 
-    if (!data) {
+    const row = (data as any[])?.[0];
+    if (!row) {
       return {
         success: false,
         error: 'Employee ID not found or not a driver',
@@ -189,12 +191,12 @@ export const loginAsDriver = async (
     // DEV convenience: attempt real Supabase sign-in so RLS works for RPC
     // We seeded driver01..05 with passwords Driver@202501..Driver@202505
     // Derive password from employeeId when possible (e.g., D0001 -> 01)
-    if (data.email) {
+    if (row.email) {
       try {
-        const lastTwo = normalizedId.replace(/\D/g, '').slice(-2) || '01';
+        const lastTwo = String(row.employee_id || '').replace(/\D/g, '').slice(-2) || '01';
         const derivedPassword = `Driver@2025${lastTwo}`;
         const { data: authData, error: authErr } = await client.auth.signInWithPassword({
-          email: data.email,
+          email: row.email,
           password: derivedPassword,
         });
         // If this fails (e.g., prod), we silently continue with local session fallback
@@ -209,10 +211,10 @@ export const loginAsDriver = async (
 
     // Create driver session
     const session: DriverSession = {
-      employeeId: employeeId,
-      userId: data.id,
+      employeeId: row.employee_id || upper,
+      userId: row.id,
       role: 'driver',
-      name: data.name,
+      name: row.name,
       createdAt: Date.now(),
     };
 
