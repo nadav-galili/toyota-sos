@@ -455,7 +455,7 @@
                 "description": "Create components/driver/FormRenderer.tsx and supporting TypeScript types.",
                 "dependencies": [],
                 "details": "Define a typed schema: id, type, title, description, required, options (for select/radio), constraints (min/max/pattern), dependencies/visibility rules. Export normalized submit payload type.",
-                "status": "pending",
+                "status": "done",
                 "testStrategy": "Compile-time type checks for schema; render empty schema without errors."
               },
               {
