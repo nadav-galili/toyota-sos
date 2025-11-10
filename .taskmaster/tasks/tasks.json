@@ -364,7 +364,6 @@
                 "testStrategy": "RTL render and axe-lite checks; verify keyboard toggling cycles correctly."
               }
             ],
-            "status": "pending",
             "testStrategy": "Render screen with mock task; verify all sections toggle, header shows correct metadata, and Waze button formats deeplink correctly.",
             "parentId": "undefined"
           },
@@ -374,6 +373,71 @@
             "description": "Create a modal to render a JSON schema checklist supporting boolean, text, and textarea with required field validation.",
             "dependencies": [1],
             "details": "Build `ChecklistModal` that parses provided JSON schema to render fields dynamically, enforces required fields before progression, and on submit stores results to `task_forms` with GPS coordinates. Include open/close controls and persistence callback.",
+            "subtasks": [
+              {
+                "id": 1,
+                "title": "Scaffold ChecklistModal with open/close controls and layout",
+                "description": "Create base modal with header, content area, and footer actions (Cancel/Save).",
+                "dependencies": [],
+                "details": "Client component `components/driver/ChecklistModal.tsx` with props: `open`, `onOpenChange`, `schema`, `onSubmit`. Provide keyboard focus trap, escape to close, and mobile-friendly full-screen behavior.",
+                "status": "pending",
+                "testStrategy": "Render modal opened, verify focus is trapped and ESC closes; snapshot base layout."
+              },
+              {
+                "id": 2,
+                "title": "Parse JSON schema and render fields dynamically",
+                "description": "Support boolean (checkbox), string (input), and textarea fields; handle titles/help text.",
+                "dependencies": [1],
+                "details": "Accept a simplified schema shape (id, type, title, description, required) and map to form controls with controlled state. Render RTL-aware labels and helper text.",
+                "status": "pending",
+                "testStrategy": "Given a sample schema, assert correct controls render with initial values and labels."
+              },
+              {
+                "id": 3,
+                "title": "Implement required validation and error messaging",
+                "description": "Block submission until all required fields are filled; show inline errors.",
+                "dependencies": [2],
+                "details": "On submit, validate required fields; show per-field error text and auto-scroll to first error; disable Save until valid.",
+                "status": "pending",
+                "testStrategy": "Leave a required field empty, click Save, expect error and no submission; fill it, expect submission callback."
+              },
+              {
+                "id": 4,
+                "title": "Capture GPS coordinates on submit (best‑effort)",
+                "description": "Use `navigator.geolocation.getCurrentPosition` to include lat/lng in payload.",
+                "dependencies": [3],
+                "details": "Attempt geolocation with timeout (e.g., 4s). If granted, append `{ lat, lng, accuracy }`; otherwise omit gracefully and continue.",
+                "status": "pending",
+                "testStrategy": "Mock geolocation success and error; assert payload includes/excludes coordinates accordingly."
+              },
+              {
+                "id": 5,
+                "title": "Persist to Supabase task_forms with RLS-safe insert",
+                "description": "Submit normalized payload via Supabase RPC or direct insert.",
+                "dependencies": [3, 4],
+                "details": "Use `createBrowserClient()` to `from('task_forms').insert({ task_id, driver_id, form_data, gps_location })`. Handle errors with toast and keep modal open; on success, close modal and call `onSubmit`.",
+                "status": "pending",
+                "testStrategy": "Mock Supabase insert success/error; assert close on success, error UI on failure, and callback invocation."
+              },
+              {
+                "id": 6,
+                "title": "A11y, RTL, and mobile UX polish",
+                "description": "Ensure correct aria roles/labels, logical tab order, and 44px controls.",
+                "dependencies": [1, 2, 3],
+                "details": "Add `aria-describedby` for helper text, visible focus states, proper button labeling, and ensure direction is RTL; confirm responsive spacing on small viewports.",
+                "status": "pending",
+                "testStrategy": "Keyboard-navigate through controls; verify focus indicators and RTL alignment; basic axe-lite check if available."
+              },
+              {
+                "id": 7,
+                "title": "Unit tests for schema rendering, validation, and submission",
+                "description": "Add RTL tests covering typical flows and edge cases.",
+                "dependencies": [2, 3, 5],
+                "details": "Tests for: render by schema; required validation; geolocation branching; insert success/error; onSubmit callback fired with normalized payload.",
+                "status": "pending",
+                "testStrategy": "Use React Testing Library with mocks for geolocation and Supabase client."
+              }
+            ],
             "status": "pending",
             "testStrategy": "Unit-test dynamic field rendering and required validation; mock geolocation to ensure GPS saved; verify submission payload structure and modal lifecycle.",
             "parentId": "undefined"
