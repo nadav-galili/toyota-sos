@@ -464,7 +464,7 @@
                 "description": "Support text, textarea, select, checkbox, radio, number, date, time.",
                 "dependencies": [1],
                 "details": "Map schema types to inputs with controlled state. Render options for select/radio. Add basic formatting for date/time and number.",
-                "status": "pending",
+                "status": "done",
                 "testStrategy": "Snapshot and interaction tests for each field type; verify value updates."
               },
               {
