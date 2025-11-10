@@ -425,7 +425,7 @@
                 "description": "Ensure correct aria roles/labels, logical tab order, and 44px controls.",
                 "dependencies": [1, 2, 3],
                 "details": "Add `aria-describedby` for helper text, visible focus states, proper button labeling, and ensure direction is RTL; confirm responsive spacing on small viewports.",
-                "status": "pending",
+                "status": "done",
                 "testStrategy": "Keyboard-navigate through controls; verify focus indicators and RTL alignment; basic axe-lite check if available."
               },
               {

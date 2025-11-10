@@ -271,7 +271,7 @@ export function ChecklistModal(props: ChecklistModalProps) {
           </div>
           <button
             type="button"
-            className="rounded-md px-2 py-1 text-sm text-gray-700 hover:bg-gray-100"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-md text-sm text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-toyota-primary"
             onClick={() => onOpenChange(false)}
             aria-label="סגור"
           >
@@ -294,7 +294,7 @@ export function ChecklistModal(props: ChecklistModalProps) {
                       <input
                         id={baseId}
                         type="checkbox"
-                        className="mt-1 h-4 w-4"
+                        className="mt-1 h-5 w-5 focus:outline-none focus:ring-2 focus:ring-toyota-primary"
                         aria-describedby={[descId, errId].filter(Boolean).join(' ') || undefined}
                         aria-invalid={err ? 'true' : undefined}
                         checked={val}
@@ -310,7 +310,7 @@ export function ChecklistModal(props: ChecklistModalProps) {
                           </p>
                         ) : null}
                         {err ? (
-                          <p id={errId} className="text-sm text-red-600">
+                          <p id={errId} role="alert" className="text-sm text-red-600">
                             {err}
                           </p>
                         ) : null}
@@ -329,7 +329,7 @@ export function ChecklistModal(props: ChecklistModalProps) {
                       </label>
                       <textarea
                         id={baseId}
-                        className="w-full rounded-md border border-gray-300 p-2 text-sm"
+                        className="w-full rounded-md border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-toyota-primary min-h-[44px]"
                         aria-describedby={[descId, errId].filter(Boolean).join(' ') || undefined}
                         aria-invalid={err ? 'true' : undefined}
                         value={val}
@@ -342,7 +342,7 @@ export function ChecklistModal(props: ChecklistModalProps) {
                         </p>
                       ) : null}
                       {err ? (
-                        <p id={errId} className="text-sm text-red-600">
+                        <p id={errId} role="alert" className="text-sm text-red-600">
                           {err}
                         </p>
                       ) : null}
@@ -361,7 +361,7 @@ export function ChecklistModal(props: ChecklistModalProps) {
                     <input
                       id={baseId}
                       type="text"
-                      className="w-full rounded-md border border-gray-300 p-2 text-sm"
+                      className="w-full rounded-md border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-toyota-primary min-h-[44px]"
                       aria-describedby={[descId, errId].filter(Boolean).join(' ') || undefined}
                       aria-invalid={err ? 'true' : undefined}
                       value={val}
@@ -373,7 +373,7 @@ export function ChecklistModal(props: ChecklistModalProps) {
                       </p>
                     ) : null}
                     {err ? (
-                      <p id={errId} className="text-sm text-red-600">
+                      <p id={errId} role="alert" className="text-sm text-red-600">
                         {err}
                       </p>
                     ) : null}
@@ -389,14 +389,14 @@ export function ChecklistModal(props: ChecklistModalProps) {
         <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
           <button
             type="button"
-            className="rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+            className="rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-toyota-primary min-h-[44px]"
             onClick={() => onOpenChange(false)}
           >
             ביטול
           </button>
           <button
             type="button"
-            className="rounded-md bg-toyota-primary px-3 py-2 text-sm text-white hover:bg-red-700"
+            className="rounded-md bg-toyota-primary px-3 py-2 text-sm text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-toyota-primary min-h-[44px]"
             onClick={handleSubmit}
             disabled={persisting}
           >
@@ -404,7 +404,9 @@ export function ChecklistModal(props: ChecklistModalProps) {
           </button>
         </div>
         {persistError ? (
-          <div className="px-4 py-2 text-sm text-red-700 bg-red-50 border-t border-red-200">{persistError}</div>
+          <div role="alert" className="px-4 py-2 text-sm text-red-700 bg-red-50 border-t border-red-200">
+            {persistError}
+          </div>
         ) : null}
       </div>
     </div>
