@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export type ChecklistField =
   | {
@@ -43,6 +43,7 @@ export function ChecklistModal(props: ChecklistModalProps) {
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const previouslyFocusedEl = useRef<HTMLElement | null>(null);
+  const [values, setValues] = useState<Record<string, unknown>>({});
 
   const focusableSelectors = useMemo(
     () => [
@@ -66,6 +67,14 @@ export function ChecklistModal(props: ChecklistModalProps) {
 
   useEffect(() => {
     if (open) {
+      // initialize values from schema
+      const initial: Record<string, unknown> = {};
+      for (const f of schema) {
+        if (f.type === 'boolean') initial[f.id] = initial[f.id] ?? false;
+        else initial[f.id] = initial[f.id] ?? '';
+      }
+      setValues(initial);
+
       previouslyFocusedEl.current = document.activeElement as HTMLElement;
       // Move focus to first focusable in the panel after paint
       setTimeout(() => {
@@ -113,6 +122,14 @@ export function ChecklistModal(props: ChecklistModalProps) {
 
   if (!open) return null;
 
+  const handleChange = (id: string, next: unknown) => {
+    setValues((v) => ({ ...v, [id]: next }));
+  };
+
+  const handleSubmit = () => {
+    onSubmit(values);
+  };
+
   return (
     <div
       ref={overlayRef}
@@ -154,11 +171,86 @@ export function ChecklistModal(props: ChecklistModalProps) {
         </div>
 
         <div className="p-4 overflow-y-auto">
-          {/* 5.2.1 scaffold only - form rendering will be implemented in 5.2.2 */}
-          <div className="text-sm text-gray-700">
-            {/* Show a quick placeholder using the schema length */}
-            {schema && schema.length > 0 ? 'הטופס ייטען לפי הסכימה' : 'אין שדות בטופס זה'}
-          </div>
+          {schema && schema.length > 0 ? (
+            <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+              {schema.map((field) => {
+                const baseId = `field-${field.id}`;
+                const descId = field.description ? `${baseId}-desc` : undefined;
+                if (field.type === 'boolean') {
+                  const val = Boolean(values[field.id]);
+                  return (
+                    <div key={field.id} className="flex items-start gap-3">
+                      <input
+                        id={baseId}
+                        type="checkbox"
+                        className="mt-1 h-4 w-4"
+                        aria-describedby={descId}
+                        checked={val}
+                        onChange={(e) => handleChange(field.id, e.target.checked)}
+                      />
+                      <div className="flex-1">
+                        <label htmlFor={baseId} className="font-medium">
+                          {field.title} {field.required ? <span className="text-red-600">*</span> : null}
+                        </label>
+                        {field.description ? (
+                          <p id={descId} className="text-sm text-gray-600">
+                            {field.description}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                }
+                if (field.type === 'textarea') {
+                  const val = String(values[field.id] ?? '');
+                  return (
+                    <div key={field.id} className="space-y-1">
+                      <label htmlFor={baseId} className="font-medium">
+                        {field.title} {field.required ? <span className="text-red-600">*</span> : null}
+                      </label>
+                      <textarea
+                        id={baseId}
+                        className="w-full rounded-md border border-gray-300 p-2 text-sm"
+                        aria-describedby={descId}
+                        value={val}
+                        onChange={(e) => handleChange(field.id, e.target.value)}
+                        rows={4}
+                      />
+                      {field.description ? (
+                        <p id={descId} className="text-sm text-gray-600">
+                          {field.description}
+                        </p>
+                      ) : null}
+                    </div>
+                  );
+                }
+                // string
+                const val = String(values[field.id] ?? '');
+                return (
+                  <div key={field.id} className="space-y-1">
+                    <label htmlFor={baseId} className="font-medium">
+                      {field.title} {field.required ? <span className="text-red-600">*</span> : null}
+                    </label>
+                    <input
+                      id={baseId}
+                      type="text"
+                      className="w-full rounded-md border border-gray-300 p-2 text-sm"
+                      aria-describedby={descId}
+                      value={val}
+                      onChange={(e) => handleChange(field.id, e.target.value)}
+                    />
+                    {field.description ? (
+                      <p id={descId} className="text-sm text-gray-600">
+                        {field.description}
+                      </p>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </form>
+          ) : (
+            <div className="text-sm text-gray-700">אין שדות בטופס זה</div>
+          )}
         </div>
 
         <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
@@ -172,7 +264,7 @@ export function ChecklistModal(props: ChecklistModalProps) {
           <button
             type="button"
             className="rounded-md bg-toyota-primary px-3 py-2 text-sm text-white hover:bg-red-700"
-            onClick={() => onSubmit({})}
+            onClick={handleSubmit}
           >
             שמור
           </button>

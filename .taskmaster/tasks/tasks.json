@@ -389,7 +389,7 @@
                 "description": "Support boolean (checkbox), string (input), and textarea fields; handle titles/help text.",
                 "dependencies": [1],
                 "details": "Accept a simplified schema shape (id, type, title, description, required) and map to form controls with controlled state. Render RTL-aware labels and helper text.",
-                "status": "pending",
+                "status": "done",
                 "testStrategy": "Given a sample schema, assert correct controls render with initial values and labels."
               },
               {
