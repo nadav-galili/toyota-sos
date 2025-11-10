@@ -109,13 +109,17 @@ export function FormRenderer(props: FormRendererProps) {
   }, [values, onChange]);
 
   const visibleSchema = useMemo(() => {
-    // 5.3.3 not yet implemented — return schema as-is for now
-    return schema;
-  }, [schema]);
+    return schema.filter((f) => evaluateDependencies(f.dependsOn, values));
+  }, [schema, values]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit?.(values);
+    // Filter out values for fields that are not visible
+    const submit: NormalizedFormData = {};
+    for (const f of visibleSchema) {
+      submit[f.id] = values[f.id];
+    }
+    onSubmit?.(submit);
   };
 
   return (
@@ -297,6 +301,25 @@ function defaultForType(t: FieldType): string | number | boolean | null {
     default:
       return '';
   }
+}
+
+function evaluateDependencies(dep: DependencyConfig | undefined, data: NormalizedFormData): boolean {
+  if (!dep || !dep.rules?.length) return true;
+  const evalRule = (r: DependencyRule): boolean => {
+    const current = data[r.fieldId];
+    switch (r.operator) {
+      case 'equals':
+        return current === r.value;
+      case 'notEquals':
+        return current !== r.value;
+      case 'in':
+        return Array.isArray(r.value) ? (r.value as unknown[]).some((v) => v === current) : false;
+      default:
+        return false;
+    }
+  };
+  const results = dep.rules.map(evalRule);
+  return dep.when === 'any' ? results.some(Boolean) : results.every(Boolean);
 }
 
 function coerceValue(t: FieldType, v: unknown): string | number | boolean | null {

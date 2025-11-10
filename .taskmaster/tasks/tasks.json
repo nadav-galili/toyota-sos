@@ -473,7 +473,7 @@
                 "description": "Add dependency rules to show/enable fields based on other field values.",
                 "dependencies": [2],
                 "details": "Implement simple expression/predicate evaluation against current form state. Recompute on changes; hide fields from submit payload when not visible.",
-                "status": "pending",
+                "status": "done",
                 "testStrategy": "Unit-test visibility toggling for multiple dependency scenarios."
               },
               {
