@@ -332,7 +332,7 @@
                 "description": "Header, Details, Client, Vehicle, Address (Waze), Time window sections; all collapsible with proper a11y.",
                 "dependencies": [1],
                 "details": "Create a client component with semantic headings, buttons controlling collapsible regions via aria-controls/aria-expanded, and a structured layout respecting RTL.",
-                "status": "pending",
+                "status": "done",
                 "testStrategy": "Mount component and assert sections toggle visibility and aria attributes update."
               },
               {
