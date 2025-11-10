@@ -341,7 +341,7 @@
                 "description": "Call Supabase RPC `get_task_details(task_id uuid)` to fetch task + client + vehicle.",
                 "dependencies": [2],
                 "details": "Use `createBrowserClient()` and call `rpc('get_task_details', { task_id: uuid })`. Show loading skeleton and error retry. Fallback gracefully if fields are missing.",
-                "status": "pending",
+                "status": "done",
                 "testStrategy": "Mock RPC success and error; assert skeleton, error UI with retry, and final render."
               },
               {
