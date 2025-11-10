@@ -152,15 +152,34 @@ export const loginAsDriver = async (
   employeeId: string
 ): Promise<{ success: boolean; session?: DriverSession; error?: string }> => {
   try {
+    const normalizeEmployeeId = (input: string): string => {
+      const trimmed = (input || '').trim().toUpperCase();
+      // If matches D#### or digits with optional leading D, normalize to D0001 format
+      const m = trimmed.match(/^D?(\d{1,4})$/);
+      if (m) {
+        const num = m[1].padStart(4, '0');
+        return `D${num}`;
+      }
+      return trimmed;
+    };
+    const normalizedId = normalizeEmployeeId(employeeId);
+
     // Query profiles table for this employee
     const { data, error } = await client
       .from('profiles')
       .select('id, name, role, employee_id, email')
-      .eq('employee_id', employeeId)
+      .eq('employee_id', normalizedId)
       .eq('role', 'driver')
-      .single();
+      .maybeSingle();
 
-    if (error || !data) {
+    if (error) {
+      return {
+        success: false,
+        error: error?.message || 'Failed to verify employee ID',
+      };
+    }
+
+    if (!data) {
       return {
         success: false,
         error: 'Employee ID not found or not a driver',
@@ -172,7 +191,7 @@ export const loginAsDriver = async (
     // Derive password from employeeId when possible (e.g., D0001 -> 01)
     if (data.email) {
       try {
-        const lastTwo = employeeId.replace(/\D/g, '').slice(-2) || '01';
+        const lastTwo = normalizedId.replace(/\D/g, '').slice(-2) || '01';
         const derivedPassword = `Driver@2025${lastTwo}`;
         const { data: authData, error: authErr } = await client.auth.signInWithPassword({
           email: data.email,
