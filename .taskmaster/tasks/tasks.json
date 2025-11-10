@@ -566,7 +566,7 @@
                 "description": "Upload compressed files to Storage, using path convention taskId/YYYYMMDD/uuid-filename; return signed URLs.",
                 "dependencies": [3],
                 "details": "Handle auth; use content-type; await uploads; call getPublicUrl or createSignedUrl; return array of metadata.",
-                "status": "pending",
+                "status": "done",
                 "testStrategy": "Mock supabase client; assert called with correct bucket/path and signed URL retrieval."
               },
               {

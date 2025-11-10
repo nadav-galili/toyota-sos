@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useRef, useState } from 'react';
+import { createBrowserClient } from '@/lib/auth';
 
 export type ImageUploadFile = {
   file: File;
@@ -13,8 +14,20 @@ export type ImageUploadProps = {
   maxSizeBytes?: number; // e.g., 2_000_000
   multiple?: boolean;
   onChange?: (files: ImageUploadFile[]) => void;
+  onUploaded?: (files: UploadedImageMeta[]) => void;
   className?: string;
   label?: string; // accessible label for the picker button
+  bucket?: string; // Supabase storage bucket
+  taskId?: string; // used for path convention
+  signedUrlExpiresInSeconds?: number; // default 3600
+};
+
+export type UploadedImageMeta = {
+  path: string;
+  signedUrl?: string | null;
+  name: string;
+  size: number;
+  contentType: string;
 };
 
 /**
@@ -37,6 +50,7 @@ export function ImageUpload(props: ImageUploadProps) {
   const [items, setItems] = useState<ImageUploadFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const createdUrlsRef = useRef<Set<string>>(new Set());
+  const [uploading, setUploading] = useState(false);
 
   const empty = items.length === 0;
 
@@ -99,6 +113,57 @@ export function ImageUpload(props: ImageUploadProps) {
       onChange?.(merged);
       return merged;
     });
+  };
+
+  const sanitizeName = (name: string) => name.replace(/[^a-zA-Z0-9._-]+/g, '_');
+  const yyyymmdd = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}${m}${day}`;
+  };
+
+  const handleUpload = async () => {
+    if (!props.bucket || !props.taskId) return;
+    if (items.length === 0) return;
+    setUploading(true);
+    try {
+      const supa = createBrowserClient();
+      const folder = `${props.taskId}/${yyyymmdd(new Date())}`;
+      const metas: UploadedImageMeta[] = [];
+      for (const it of items) {
+        const uuid = (globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2));
+        const fileName = `${uuid}-${sanitizeName(it.file.name)}`;
+        const path = `${folder}/${fileName}`;
+        const { error: upErr } = await supa.storage.from(props.bucket).upload(path, it.file, {
+          contentType: it.file.type || 'application/octet-stream',
+          upsert: true,
+        });
+        if (upErr) {
+          continue;
+        }
+        let signedUrl: string | null | undefined = undefined;
+        const expiresIn = props.signedUrlExpiresInSeconds ?? 3600;
+        const { data: signed, error: signErr } = await supa.storage
+          .from(props.bucket)
+          .createSignedUrl(path, expiresIn);
+        if (!signErr) {
+          signedUrl = signed?.signedUrl ?? null;
+        }
+        metas.push({
+          path,
+          signedUrl: signedUrl ?? null,
+          name: it.file.name,
+          size: it.file.size,
+          contentType: it.file.type || 'application/octet-stream',
+        });
+      }
+      if (metas.length > 0) {
+        props.onUploaded?.(metas);
+      }
+    } finally {
+      setUploading(false);
+    }
   };
 
   const onDragEnter = (e: React.DragEvent) => {
@@ -198,6 +263,19 @@ export function ImageUpload(props: ImageUploadProps) {
               </button>
             </figure>
           ))}
+        </div>
+      ) : null}
+      {props.bucket && props.taskId ? (
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={() => void handleUpload()}
+            disabled={uploading || items.length === 0}
+            className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50 min-h-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-toyota-primary focus-visible:ring-offset-2 disabled:opacity-50"
+            aria-busy={uploading ? 'true' : undefined}
+          >
+            {uploading ? 'מעלה...' : 'העלה'}
+          </button>
         </div>
       ) : null}
     </div>
