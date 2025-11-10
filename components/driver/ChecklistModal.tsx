@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createBrowserClient } from '@/lib/auth';
 
 export type ChecklistField =
   | {
@@ -34,10 +35,24 @@ export type ChecklistModalProps = {
   onSubmit: (data: Record<string, unknown>) => void;
   title?: string;
   description?: string;
+  // 5.2.5 persistence props
+  persist?: boolean;
+  taskId?: string;
+  driverId?: string;
 };
 
 export function ChecklistModal(props: ChecklistModalProps) {
-  const { open, onOpenChange, schema, onSubmit, title = 'צ’ק-ליסט', description } = props;
+  const {
+    open,
+    onOpenChange,
+    schema,
+    onSubmit,
+    title = 'צ’ק-ליסט',
+    description,
+    persist = false,
+    taskId,
+    driverId,
+  } = props;
 
   // Focus management / trap
   const overlayRef = useRef<HTMLDivElement | null>(null);
@@ -46,6 +61,8 @@ export function ChecklistModal(props: ChecklistModalProps) {
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [attempted, setAttempted] = useState(false);
+  const [persistError, setPersistError] = useState<string | null>(null);
+  const [persisting, setPersisting] = useState(false);
 
   const focusableSelectors = useMemo(
     () => [
@@ -192,7 +209,34 @@ export function ChecklistModal(props: ChecklistModalProps) {
     }
     const gps = await getGeoPosition();
     const payload = gps ? { ...values, gps_location: gps } : values;
-    onSubmit(payload);
+    // Persist if configured and we have a taskId
+    if (persist && taskId) {
+      try {
+        setPersisting(true);
+        setPersistError(null);
+        const supa = createBrowserClient();
+        const row: Record<string, unknown> = {
+          task_id: taskId,
+          form_data: payload,
+        };
+        if (driverId) row.driver_id = driverId;
+        if (gps) row.gps_location = gps;
+        const { error } = await supa.from('task_forms').insert([row] as any);
+        if (error) {
+          setPersistError(error.message || 'שמירה נכשלה');
+          setPersisting(false);
+          return;
+        }
+        setPersisting(false);
+        onSubmit(payload);
+        onOpenChange(false);
+      } catch (err: any) {
+        setPersistError(err?.message || 'שמירה נכשלה');
+        setPersisting(false);
+      }
+    } else {
+      onSubmit(payload);
+    }
   };
 
   return (
@@ -354,10 +398,14 @@ export function ChecklistModal(props: ChecklistModalProps) {
             type="button"
             className="rounded-md bg-toyota-primary px-3 py-2 text-sm text-white hover:bg-red-700"
             onClick={handleSubmit}
+            disabled={persisting}
           >
-            שמור
+            {persisting ? 'שומר…' : 'שמור'}
           </button>
         </div>
+        {persistError ? (
+          <div className="px-4 py-2 text-sm text-red-700 bg-red-50 border-t border-red-200">{persistError}</div>
+        ) : null}
       </div>
     </div>
   );

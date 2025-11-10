@@ -416,7 +416,7 @@
                 "description": "Submit normalized payload via Supabase RPC or direct insert.",
                 "dependencies": [3, 4],
                 "details": "Use `createBrowserClient()` to `from('task_forms').insert({ task_id, driver_id, form_data, gps_location })`. Handle errors with toast and keep modal open; on success, close modal and call `onSubmit`.",
-                "status": "pending",
+                "status": "done",
                 "testStrategy": "Mock Supabase insert success/error; assert close on success, error UI on failure, and callback invocation."
               },
               {
