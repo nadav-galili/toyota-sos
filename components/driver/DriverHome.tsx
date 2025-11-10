@@ -93,7 +93,6 @@ export function DriverHome() {
   const fetchPageRef = useRef<(reset: boolean) => Promise<void>>(
     async () => {}
   );
-  const refreshNowRef = useRef<() => Promise<void>>(async () => {});
   useEffect(() => {
     fetchPageRef.current = async (reset: boolean) => {
       const supa = createBrowserClient();
@@ -128,14 +127,11 @@ export function DriverHome() {
       setHasMore((mapped?.length ?? 0) === 10);
       const last = mapped?.[mapped.length - 1];
       if (last && data && data.length > 0) {
-        setCursor({ updated_at: data[data.length - 1].updated_at, id: last.id });
+        setCursor({
+          updated_at: data[data.length - 1].updated_at,
+          id: last.id,
+        });
       }
-    };
-    refreshNowRef.current = async () => {
-      setCursor(null);
-      setHasMore(true);
-      setRemoteTasks([]);
-      await fetchPageRef.current(true);
     };
   }, [tabState, cursor]);
 
@@ -143,38 +139,6 @@ export function DriverHome() {
   useEffect(() => {
     fetchPageRef.current(true);
   }, [tabState]);
-
-  // Supabase realtime: refetch on tasks/task_assignees changes (debounced)
-  useEffect(() => {
-    const supa = createBrowserClient();
-    let debounceTimer: number | null = null;
-    const schedule = () => {
-      if (debounceTimer !== null) return;
-      debounceTimer = window.setTimeout(async () => {
-        debounceTimer = null;
-        await refreshNowRef.current();
-      }, 400);
-    };
-    const ch = supa
-      .channel('driver-tasks')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'tasks' },
-        () => schedule()
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'task_assignees' },
-        () => schedule()
-      )
-      .subscribe();
-    return () => {
-      if (debounceTimer !== null) {
-        window.clearTimeout(debounceTimer);
-      }
-      supa.removeChannel(ch);
-    };
-  }, []);
 
   // IntersectionObserver to auto-load next page (server pagination)
   useEffect(() => {
@@ -196,62 +160,55 @@ export function DriverHome() {
     return () => obs.disconnect();
   }, [hasMore, isLoadingMore]);
 
-  // Pull-to-refresh handlers on the container
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    // Only start pulling if at top of page
-    const scrollTop =
-      typeof window !== 'undefined'
-        ? window.scrollY || document.documentElement.scrollTop
-        : 0;
-    if (scrollTop <= 0) {
-      isPullingRef.current = true;
-      pullStartYRef.current = e.clientY;
-      setPullDistance(0);
-    }
-  };
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isPullingRef.current || pullStartYRef.current === null) return;
-    const delta = e.clientY - pullStartYRef.current;
-    if (delta > 0) {
-      // apply a dampening factor for nicer feel
-      const dampened = Math.min(120, delta * 0.6);
-      setPullDistance(dampened);
-      // prevent native overscroll glow
-      e.preventDefault();
-    } else {
-      setPullDistance(0);
-    }
-  };
-  const endPull = async () => {
-    const shouldRefresh = pullDistance >= PULL_THRESHOLD_PX;
-    isPullingRef.current = false;
-    pullStartYRef.current = null;
-    if (shouldRefresh) {
-      setIsRefreshing(true);
-      try {
-        await refreshNowRef.current();
-      } finally {
-        setIsRefreshing(false);
-        setPullDistance(0);
-      }
-    } else {
-      setPullDistance(0);
-    }
-  };
-  const handlePointerUp = async () => {
-    await endPull();
-  };
-  const handlePointerCancel = async () => {
-    await endPull();
-  };
-
   return (
     <div
       className="space-y-4"
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerCancel}
+      onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => {
+        const scrollTop =
+          typeof window !== 'undefined'
+            ? window.scrollY || document.documentElement.scrollTop
+            : 0;
+        if (scrollTop <= 0) {
+          isPullingRef.current = true;
+          pullStartYRef.current = e.clientY;
+          setPullDistance(0);
+        }
+      }}
+      onPointerMove={(e: React.PointerEvent<HTMLDivElement>) => {
+        if (!isPullingRef.current || pullStartYRef.current === null) return;
+        const delta = e.clientY - pullStartYRef.current;
+        if (delta > 0) {
+          const dampened = Math.min(120, delta * 0.6);
+          setPullDistance(dampened);
+          e.preventDefault();
+        } else {
+          setPullDistance(0);
+        }
+      }}
+      onPointerUp={async () => {
+        const shouldRefresh = pullDistance >= PULL_THRESHOLD_PX;
+        isPullingRef.current = false;
+        pullStartYRef.current = null;
+        if (shouldRefresh) {
+          setIsRefreshing(true);
+          try {
+            setCursor(null);
+            setHasMore(true);
+            setRemoteTasks([]);
+            await fetchPageRef.current(true);
+          } finally {
+            setIsRefreshing(false);
+            setPullDistance(0);
+          }
+        } else {
+          setPullDistance(0);
+        }
+      }}
+      onPointerCancel={() => {
+        isPullingRef.current = false;
+        pullStartYRef.current = null;
+        setPullDistance(0);
+      }}
     >
       {/* Pull-to-refresh indicator */}
       <div
@@ -270,10 +227,15 @@ export function DriverHome() {
           </span>
         ) : null}
       </div>
-
       {/* Tabs */}
       <div className="grid grid-cols-3 gap-2">
-        {([{ key: 'today', label: 'היום' }, { key: 'all', label: 'הכל' }, { key: 'overdue', label: 'איחורים' }] as const).map((t) => {
+        {(
+          [
+            { key: 'today', label: 'היום' },
+            { key: 'all', label: 'הכל' },
+            { key: 'overdue', label: 'איחורים' },
+          ] as const
+        ).map((t) => {
           type TabKey = typeof t.key;
           const active = tabState === (t.key as TabKey);
           return (
@@ -300,7 +262,11 @@ export function DriverHome() {
         {remoteTasks.map((task) => (
           <TaskCard key={task.id} {...task} />
         ))}
-        {remoteTasks.length === 0 ? <div className="text-center text-sm text-gray-500 py-10">אין משימות להצגה</div> : null}
+        {remoteTasks.length === 0 ? (
+          <div className="text-center text-sm text-gray-500 py-10">
+            אין משימות להצגה
+          </div>
+        ) : null}
 
         {/* Load more button (fallback) */}
         {hasMore ? (
