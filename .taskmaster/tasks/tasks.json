@@ -434,7 +434,7 @@
                 "description": "Add RTL tests covering typical flows and edge cases.",
                 "dependencies": [2, 3, 5],
                 "details": "Tests for: render by schema; required validation; geolocation branching; insert success/error; onSubmit callback fired with normalized payload.",
-                "status": "pending",
+                "status": "done",
                 "testStrategy": "Use React Testing Library with mocks for geolocation and Supabase client."
               }
             ],
