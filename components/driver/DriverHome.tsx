@@ -2,7 +2,7 @@
 
 import dayjs from '@/lib/dayjs';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { TaskCard, TaskCardProps } from '@/components/driver/TaskCard';
 
 export type DriverTask = TaskCardProps;
@@ -47,6 +47,44 @@ export function DriverHome({ tasks }: { tasks: DriverTask[] }) {
     return tasks.filter((t) => intersectsToday(t.estimatedStart, t.estimatedEnd));
   }, [tabState, tasks]);
 
+  // Pagination (client-side slice for now; can be replaced with server paging)
+  const PAGE_SIZE = 10;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  const hasMore = filtered.length > visibleCount;
+  const visibleTasks = filtered.slice(0, visibleCount);
+
+  // Reset pagination on tab or tasks change
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [tabState, tasks]);
+
+  // IntersectionObserver to auto-load next page
+  useEffect(() => {
+    if (!hasMore) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting && !isLoadingMore) {
+            setIsLoadingMore(true);
+            // Simulate async load
+            setTimeout(() => {
+              setVisibleCount((c) => c + PAGE_SIZE);
+              setIsLoadingMore(false);
+            }, 0);
+          }
+        }
+      },
+      { rootMargin: '120px' }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [hasMore, isLoadingMore]);
+
   return (
     <div className="space-y-4">
       {/* Tabs */}
@@ -76,12 +114,29 @@ export function DriverHome({ tasks }: { tasks: DriverTask[] }) {
 
       {/* List */}
       <div className="space-y-3">
-        {filtered.map((task) => (
+        {visibleTasks.map((task) => (
           <TaskCard key={task.id} {...task} />
         ))}
-        {filtered.length === 0 ? (
+        {visibleTasks.length === 0 ? (
           <div className="text-center text-sm text-gray-500 py-10">אין משימות להצגה</div>
         ) : null}
+
+        {/* Load more button (fallback) */}
+        {hasMore ? (
+          <div className="flex justify-center">
+            <button
+              type="button"
+              className="rounded-md bg-gray-100 px-4 py-2 text-sm hover:bg-gray-200"
+              disabled={isLoadingMore}
+              onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+            >
+              {isLoadingMore ? 'טוען…' : 'טען עוד'}
+            </button>
+          </div>
+        ) : null}
+
+        {/* Sentinel for infinite scroll */}
+        <div ref={sentinelRef} />
       </div>
     </div>
   );
