@@ -350,7 +350,7 @@
                 "description": "Generate `waze://?navigate=yes&q={encoded address}` with full address text.",
                 "dependencies": [2],
                 "details": "If address exists, render a primary button linking to Waze URI scheme; otherwise omit.",
-                "status": "pending",
+                "status": "done",
                 "testStrategy": "Assert href is formed correctly for a known address string."
               },
               {
