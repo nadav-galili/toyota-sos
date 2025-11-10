@@ -438,7 +438,7 @@
                 "testStrategy": "Use React Testing Library with mocks for geolocation and Supabase client."
               }
             ],
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Unit-test dynamic field rendering and required validation; mock geolocation to ensure GPS saved; verify submission payload structure and modal lifecycle.",
             "parentId": "undefined"
           },
