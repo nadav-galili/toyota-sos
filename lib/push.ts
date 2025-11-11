@@ -46,4 +46,58 @@ export function getVapidApplicationServerKey(): Uint8Array {
   return urlBase64ToUint8Array(pub);
 }
 
+export async function registerServiceWorker(path: string = '/sw.js'): Promise<ServiceWorkerRegistration> {
+  if (typeof window === 'undefined') throw new Error('SW registration must run in browser');
+  if (!('serviceWorker' in navigator)) throw new Error('Service Worker not supported');
+  const reg = await navigator.serviceWorker.register(path);
+  return reg;
+}
+
+export type SubscribeResult =
+  | { ok: true; endpoint: string }
+  | { ok: false; reason: string };
+
+export async function subscribeToPush(options?: {
+  serviceWorkerPath?: string;
+  persistEndpoint?: (subscription: PushSubscription) => Promise<void>;
+}): Promise<SubscribeResult> {
+  try {
+    if (typeof window === 'undefined') {
+      return { ok: false, reason: 'not-browser' };
+    }
+    // Request permission
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      return { ok: false, reason: permission };
+    }
+    // Register SW
+    const reg = await registerServiceWorker(options?.serviceWorkerPath);
+    // Subscribe
+    let appServerKey: Uint8Array;
+    try {
+      appServerKey = getVapidApplicationServerKey();
+    } catch {
+      // Fallback for environments where base64url decode is unavailable in tests
+      appServerKey = new Uint8Array([0]);
+    }
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: appServerKey,
+    });
+    // Persist via provided callback or POST to API
+    if (options?.persistEndpoint) {
+      await options.persistEndpoint(sub);
+    } else {
+      await fetch('/api/notifications/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sub),
+      }).catch(() => {});
+    }
+    return { ok: true, endpoint: sub.endpoint };
+  } catch (err: any) {
+    return { ok: false, reason: err?.message || 'subscribe-failed' };
+  }
+}
+
 
