@@ -27,7 +27,18 @@ export async function PATCH(
     const body = await request.json();
 
     // Only allow updating specific fields
-    const allowedFields = ['status', 'priority', 'details'];
+    const allowedFields = [
+      'title',
+      'type',
+      'priority',
+      'status',
+      'details',
+      'estimated_start',
+      'estimated_end',
+      'address',
+      'client_id',
+      'vehicle_id',
+    ];
     const updatePayload: Record<string, any> = {};
 
     Object.entries(body).forEach(([key, value]) => {

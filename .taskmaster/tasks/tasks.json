@@ -677,7 +677,7 @@
             "description": "Implement a full-featured dialog for creating and editing tasks with strict validation.",
             "dependencies": [1],
             "details": "Create `TaskDialog` using `react-hook-form` + `zod`. Fields: type (7 values), priority, title, details, start/end datetime (dayjs), address, client, vehicle, driver multi-select (lead+co), checklist schema selector, signature required. Support create and edit modes, prefill on edit, and integrate with TaskCard quick actions.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Validate required fields, date ranges, and type constraints. Create a task and verify appearance on board; edit a task and confirm changes persist.",
             "parentId": "undefined"
           },

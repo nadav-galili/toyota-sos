@@ -16,6 +16,7 @@ import {
   useDroppable,
   closestCorners,
 } from '@dnd-kit/core';
+const LazyTaskDialog = React.lazy(() => import('./TaskDialog').then((m) => ({ default: m.TaskDialog })));
 
 /**
  * Type definitions for TasksBoard state and data structures
@@ -108,6 +109,9 @@ export function TasksBoard({
   const [overId, setOverId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create');
+  const [dialogTask, setDialogTask] = useState<Task | null>(null);
 
   // Configure drag-and-drop sensors
   const sensors = useSensors(
@@ -219,6 +223,35 @@ export function TasksBoard({
     },
     [tasks, groupBy, assignees]
   );
+
+  // Dialog helpers
+  const openCreateDialog = useCallback(() => {
+    setDialogMode('create');
+    setDialogTask(null);
+    setDialogOpen(true);
+  }, []);
+
+  const openEditDialog = useCallback((task: Task) => {
+    setDialogMode('edit');
+    setDialogTask(task);
+    setDialogOpen(true);
+  }, []);
+
+  const handleCreated = useCallback((created: Task, leadId?: string, coIds?: string[]) => {
+    setTasks((prev) => [created, ...prev]);
+    const inserts: TaskAssignee[] = [];
+    if (leadId) {
+      inserts.push({ id: `local-${created.id}-lead`, task_id: created.id, driver_id: leadId, is_lead: true, assigned_at: new Date().toISOString() });
+    }
+    (coIds || []).forEach((id) => {
+      inserts.push({ id: `local-${created.id}-${id}`, task_id: created.id, driver_id: id, is_lead: false, assigned_at: new Date().toISOString() });
+    });
+    if (inserts.length > 0) setAssignees((prev) => [...prev, ...inserts]);
+  }, []);
+
+  const handleUpdated = useCallback((updated: Task) => {
+    setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+  }, []);
 
   // DnD event handlers
   const handleDragStart = useCallback((event: DragStartEvent) => {
@@ -410,6 +443,13 @@ export function TasksBoard({
               נהג
             </button>
           </div>
+
+          <button
+            onClick={openCreateDialog}
+            className="ml-auto rounded bg-toyota-primary px-3 py-2 text-sm font-semibold text-white hover:bg-toyota-primary/90"
+          >
+            משימה חדשה
+          </button>
         </div>
 
         {/* Kanban board container */}
@@ -478,6 +518,22 @@ export function TasksBoard({
           </div>
         )}
       </DragOverlay>
+      {/* Task Dialog */}
+      {dialogOpen && (
+        <Suspense fallback={null}>
+          <LazyTaskDialog
+            open={dialogOpen}
+            onOpenChange={setDialogOpen}
+            mode={dialogMode}
+            task={dialogTask}
+            drivers={drivers}
+            clients={clients}
+            vehicles={vehicles}
+            onCreated={handleCreated}
+            onUpdated={handleUpdated}
+          />
+        </Suspense>
+      )}
     </DndContext>
   );
 }
@@ -591,6 +647,7 @@ function KanbanColumn({
               clientMap={clientMap}
               vehicleMap={vehicleMap}
               onDragStart={onDragStart}
+              onEdit={() => {}}
             />
           ))
         )}
@@ -612,6 +669,7 @@ interface TaskCardProps {
   clientMap: Map<string, Client>;
   vehicleMap: Map<string, Vehicle>;
   onDragStart: (event: DragStartEvent) => void;
+  onEdit: (task: Task) => void;
 }
 
 function TaskCard({
@@ -623,6 +681,7 @@ function TaskCard({
   clientMap,
   vehicleMap,
   onDragStart,
+  onEdit,
 }: TaskCardProps) {
   const client = clientMap.get(task.client_id || '');
   const vehicle = vehicleMap.get(task.vehicle_id || '');
@@ -689,11 +748,14 @@ function TaskCard({
         {formatDate(task.estimated_start)} - {formatDate(task.estimated_end)}
       </div>
 
-      {/* Status badge */}
-      <div className="inline-block">
-        <span className={`inline-block rounded-full px-2 py-1 text-xs font-semibold ${statusColor(task.status)}`}>
+      {/* Footer: Status + Actions */}
+      <div className="mt-2 flex items-center justify-between">
+        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${statusColor(task.status)}`}>
           {statusLabel(task.status)}
         </span>
+        <button className="text-xs text-toyota-primary hover:underline" onClick={() => onEdit(task)}>
+          עריכה
+        </button>
       </div>
     </div>
   );
