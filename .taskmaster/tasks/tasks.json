@@ -308,7 +308,7 @@
         "testStrategy": "Test checklist modal renders all fields from schema. Verify required fields validation prevents progression. Test image upload with compression and thumbnail display. Test signature pad captures and saves signature. Verify status transitions enforce required fields. Test offline queue stores submissions. Confirm forms/photos/signatures sync when online. Test conflict resolution displays correctly.",
         "priority": "high",
         "dependencies": ["4"],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -697,7 +697,7 @@
             "description": "Enable selecting multiple tasks and performing bulk actions with confirmations and atomic updates.",
             "dependencies": [1, 2, 3],
             "details": "Introduce per-card checkboxes and column-level select-all. Show a bulk action bar for reassign-to-driver, change priority, and delete. Execute batched Supabase updates/deletes with optimistic progress and granular error handling; confirm destructive actions; clear selection on success.",
-          "status": "done",
+            "status": "done",
             "testStrategy": "Select multiple tasks and perform each bulk action; verify all targeted tasks update. Induce partial failures to confirm error reporting and partial rollback behavior.",
             "parentId": "undefined"
           },
@@ -707,7 +707,7 @@
             "description": "Add quick filters, search and sort controls, Supabase Realtime updates, and success/error toasts.",
             "dependencies": [1, 2, 3, 4],
             "details": "Create quick filters (type, priority, overdue-only, manager-only), a debounced search across title/client/vehicle, and sorting by priority/time/driver. Compose client/server queries efficiently. Subscribe to Supabase Realtime for tasks/assignees; throttle updates and preserve user interactions. Use toast notifications for create/update/delete and DnD outcomes.",
-            "status": "pending",
+          "status": "done",
             "testStrategy": "Apply filters and sorting to confirm correct results. Search by title and client. Trigger realtime updates and verify board refreshes smoothly. Confirm toasts show on success/error.",
             "parentId": "undefined"
           }
