@@ -202,13 +202,124 @@ export function TasksBoard({
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     
-    // Placeholder: no persistence yet
-    // TODO: 7.1.4 - Handle actual reassignment/status update
-    
     setActiveId(null);
     setOverId(null);
     setDraggedTask(null);
-  }, []);
+
+    // If no drop target or same target, do nothing
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const taskId = active.id as string;
+    const targetColumnId = over.id as string;
+    const task = tasks.find((t) => t.id === taskId);
+
+    if (!task) return;
+
+    let updatePayload: Partial<Task> = {};
+
+    // Determine what changed based on groupBy mode and target column
+    if (groupBy === 'status') {
+      // Target column is a status
+      const newStatus = targetColumnId as TaskStatus;
+      if (task.status !== newStatus) {
+        updatePayload.status = newStatus;
+      }
+    } else if (groupBy === 'driver') {
+      // Target column is a driver - update task assignee
+      const targetDriverId = targetColumnId;
+      const currentAssignee = taskAssignees.find((ta) => ta.task_id === taskId && ta.is_lead);
+
+      if (currentAssignee?.driver_id !== targetDriverId) {
+        // Update the lead driver assignment
+        // This will be handled via API call below
+        updatePayload.id = taskId;
+        updatePayload.updated_by = 'admin'; // Will be set by server
+        updatePayload.updated_at = new Date().toISOString();
+      }
+    }
+
+    // If no changes, return
+    if (Object.keys(updatePayload).length === 0 || !updatePayload.status) {
+      return;
+    }
+
+    // Optimistically update local state
+    setTasks((prevTasks) =>
+      prevTasks.map((t) =>
+        t.id === taskId
+          ? { ...t, ...updatePayload }
+          : t
+      )
+    );
+
+    // Persist to database via API
+    if (updatePayload.status) {
+      persistTaskUpdate(taskId, { status: updatePayload.status });
+    }
+
+    // If changing driver assignment, also persist that
+    if (groupBy === 'driver' && taskAssignees.some((ta) => ta.task_id === taskId)) {
+      persistDriverAssignment(taskId, targetColumnId);
+    }
+  }, [tasks, taskAssignees, groupBy]);
+
+  // Persist task status update to database
+  const persistTaskUpdate = useCallback(
+    async (taskId: string, update: Partial<Task>) => {
+      try {
+        const response = await fetch(`/api/admin/tasks/${taskId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(update),
+        });
+
+        if (!response.ok) {
+          console.error('Failed to update task:', response.statusText);
+          // Revert optimistic update on error
+          setTasks((prevTasks) =>
+            prevTasks.map((t) =>
+              t.id === taskId
+                ? initialTasks.find((it) => it.id === taskId) || t
+                : t
+            )
+          );
+        }
+      } catch (error) {
+        console.error('Error persisting task update:', error);
+        // Revert optimistic update on error
+        setTasks((prevTasks) =>
+          prevTasks.map((t) =>
+            t.id === taskId
+              ? initialTasks.find((it) => it.id === taskId) || t
+              : t
+          )
+        );
+      }
+    },
+    [initialTasks]
+  );
+
+  // Persist driver assignment update to database
+  const persistDriverAssignment = useCallback(
+    async (taskId: string, newDriverId: string) => {
+      try {
+        const response = await fetch(`/api/admin/tasks/${taskId}/assign`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ driver_id: newDriverId }),
+        });
+
+        if (!response.ok) {
+          console.error('Failed to update driver assignment:', response.statusText);
+        }
+      } catch (error) {
+        console.error('Error persisting driver assignment:', error);
+      }
+    },
+    []
+  );
 
   return (
     <DndContext

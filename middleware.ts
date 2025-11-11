@@ -49,12 +49,12 @@ export function middleware(request: NextRequest) {
   const isAllowed = allowedRoles.includes(roleCookie);
 
   if (!isAllowed) {
-    // Redirect to role’s default home
+    // Redirect to role's default home
     const defaultHome =
       roleCookie === 'driver'
         ? '/driver'
         : roleCookie === 'admin' || roleCookie === 'manager'
-        ? '/admin'
+        ? '/admin/tasks'
         : '/viewer';
     const url = new URL(defaultHome, request.url);
     return NextResponse.redirect(url);
