@@ -687,7 +687,7 @@
             "description": "Connect Google Places autocomplete and dynamic dropdowns with inline create-new flows.",
             "dependencies": [4],
             "details": "Wire address input to Google Places Autocomplete with debounce, selecting and storing structured address + lat/lng. Implement client and vehicle dropdowns loading options from Supabase; include inline \"Create new\" modals to insert records and refresh options. Ensure controlled form fields sync with TaskDialog state.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Type an address to see suggestions; select to populate fields. Add a new client/vehicle via inline flow and verify it becomes selectable; submit and ensure data saved correctly.",
             "parentId": "undefined"
           },
