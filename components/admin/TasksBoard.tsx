@@ -218,20 +218,33 @@ export function TasksBoard({
       onDragEnd={handleDragEnd}
     >
       <div className="space-y-4">
-        {/* Group toggle */}
-        <div className="flex items-center gap-3">
-          <label htmlFor="group-toggle" className="text-sm font-medium text-gray-700">
-            קבץ לפי:
-          </label>
-          <select
-            id="group-toggle"
-            value={groupBy}
-            onChange={(e) => setGroupBy(e.target.value as GroupBy)}
-            className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-toyota-primary"
-          >
-            <option value="status">סטטוס</option>
-            <option value="driver">נהג</option>
-          </select>
+        {/* Group toggle - Segmented control style */}
+        <div className="flex items-center gap-4">
+          <label className="text-sm font-medium text-gray-700">קבץ לפי:</label>
+          <div className="inline-flex rounded-lg border border-gray-300 bg-gray-100 p-1">
+            <button
+              onClick={() => setGroupBy('status')}
+              className={`px-4 py-2 text-sm font-medium rounded transition-colors ${
+                groupBy === 'status'
+                  ? 'bg-white text-toyota-primary shadow-sm'
+                  : 'text-gray-700 hover:text-gray-900'
+              }`}
+              aria-pressed={groupBy === 'status'}
+            >
+              סטטוס
+            </button>
+            <button
+              onClick={() => setGroupBy('driver')}
+              className={`px-4 py-2 text-sm font-medium rounded transition-colors ${
+                groupBy === 'driver'
+                  ? 'bg-white text-toyota-primary shadow-sm'
+                  : 'text-gray-700 hover:text-gray-900'
+              }`}
+              aria-pressed={groupBy === 'driver'}
+            >
+              נהג
+            </button>
+          </div>
         </div>
 
         {/* Kanban board container */}
