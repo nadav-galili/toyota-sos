@@ -565,7 +565,7 @@
         "testStrategy": "Render task board and verify columns display correctly. Test drag-and-drop reassigns task to new driver. Verify task creation dialog validates required fields. Test autocomplete for address and client/vehicle dropdowns. Verify bulk operations apply to all selected tasks. Test filters update board correctly. Verify real-time updates reflect changes from other users. Test error handling for failed operations.",
         "priority": "high",
         "dependencies": ["1", "3"],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -742,7 +742,7 @@
             "description": "Create a filter component exposing selected range and timezone, with Today/Yesterday/Last 7/Last 30/Custom presets.",
             "dependencies": [1],
             "details": "Create components/admin/dashboard/PeriodFilter.tsx that uses dayjs for date math and a date range picker for Custom. Expose onChange callback and context/provider so all KPI cards and charts consume the same period. Persist last selection in URL query or localStorage. Handle disabled/loading states and invalid ranges gracefully.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Simulate clicks on each preset and confirm computed start/end values. Verify custom picker outputs correct ranges. Ensure all subscribers receive updates and that URL/localStorage state rehydrates.",
             "parentId": "undefined"
           },
