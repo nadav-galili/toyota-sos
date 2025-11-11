@@ -1,0 +1,49 @@
+'use client';
+
+import React from 'react';
+
+export function KpiCard({
+  title,
+  value,
+  secondary,
+  loading,
+  error,
+  actionArea,
+}: {
+  title: string;
+  value: React.ReactNode;
+  secondary?: React.ReactNode;
+  loading?: boolean;
+  error?: string | null;
+  actionArea?: React.ReactNode;
+}) {
+  if (loading) {
+    return (
+      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm animate-pulse">
+        <div className="mb-2 h-4 w-24 rounded bg-gray-200" />
+        <div className="h-8 w-36 rounded bg-gray-300" />
+        <div className="mt-2 h-3 w-28 rounded bg-gray-200" />
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4 shadow-sm">
+        <div className="mb-2 text-sm font-medium text-red-700">{title}</div>
+        <div className="text-sm text-red-700">שגיאה: {error}</div>
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="mb-2 flex items-center justify-between">
+        <div className="text-sm font-medium text-gray-700">{title}</div>
+        {actionArea}
+      </div>
+      <div className="text-3xl font-bold text-gray-900">{value}</div>
+      {secondary ? <div className="mt-1 text-xs text-gray-500">{secondary}</div> : null}
+    </div>
+  );
+}
+
+

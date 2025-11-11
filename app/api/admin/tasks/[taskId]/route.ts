@@ -79,3 +79,31 @@ export async function PATCH(
   }
 }
 
+/**
+ * DELETE /api/admin/tasks/[taskId]
+ * Delete a task (and rely on FK constraints for related rows)
+ * Only accessible by admin/manager users
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ taskId: string }> }
+) {
+  try {
+    const cookieStore = await cookies();
+    const roleCookie = cookieStore.get('toyota_role')?.value;
+    if (!roleCookie || (roleCookie !== 'admin' && roleCookie !== 'manager')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { taskId } = await params;
+    const admin = getSupabaseAdmin();
+    const { error } = await admin.from('tasks').delete().eq('id', taskId);
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    return NextResponse.json({ ok: true }, { status: 200 });
+  } catch (error) {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+

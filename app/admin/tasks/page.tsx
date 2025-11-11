@@ -1,4 +1,3 @@
-import React from 'react';
 import { TasksBoard } from '@/components/admin/TasksBoard';
 import type {
   Task,
@@ -25,7 +24,8 @@ export default async function AdminTasksPage() {
   try {
     const { data, error } = await admin
       .from('tasks')
-      .select(`
+      .select(
+        `
         id,
         title,
         type,
@@ -41,7 +41,8 @@ export default async function AdminTasksPage() {
         updated_by,
         created_at,
         updated_at
-      `)
+      `
+      )
       .order('updated_at', { ascending: false })
       .limit(100);
 
@@ -89,7 +90,8 @@ export default async function AdminTasksPage() {
       taskAssignees = data || [];
     }
   } catch (e) {
-    assigneesError = e instanceof Error ? e.message : 'Failed to fetch assignees';
+    assigneesError =
+      e instanceof Error ? e.message : 'Failed to fetch assignees';
   }
 
   // Fetch clients
@@ -98,11 +100,13 @@ export default async function AdminTasksPage() {
     const { data, error } = await admin
       .from('clients')
       .select('id, name, phone, email');
+    console.log('🚀 ~ AdminTasksPage ~ data:', data);
 
     if (!error) {
       clients = data || [];
     }
   } catch (e) {
+    console.log('🚀 ~ AdminTasksPage ~ e:', e);
     // silently ignore client fetch errors
   }
 
@@ -117,6 +121,7 @@ export default async function AdminTasksPage() {
       vehicles = data || [];
     }
   } catch (e) {
+    console.log('🚀 ~ AdminTasksPage ~ e:', e);
     // silently ignore vehicle fetch errors
   }
 
@@ -127,10 +132,18 @@ export default async function AdminTasksPage() {
 
         {(tasksError || driversError || assigneesError) && (
           <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4">
-            <p className="text-sm font-semibold text-red-700">שגיאה בטעינת נתונים</p>
-            {tasksError && <p className="text-xs text-red-600">משימות: {tasksError}</p>}
-            {driversError && <p className="text-xs text-red-600">נהגים: {driversError}</p>}
-            {assigneesError && <p className="text-xs text-red-600">הקצאות: {assigneesError}</p>}
+            <p className="text-sm font-semibold text-red-700">
+              שגיאה בטעינת נתונים
+            </p>
+            {tasksError && (
+              <p className="text-xs text-red-600">משימות: {tasksError}</p>
+            )}
+            {driversError && (
+              <p className="text-xs text-red-600">נהגים: {driversError}</p>
+            )}
+            {assigneesError && (
+              <p className="text-xs text-red-600">הקצאות: {assigneesError}</p>
+            )}
           </div>
         )}
 
@@ -145,4 +158,3 @@ export default async function AdminTasksPage() {
     </main>
   );
 }
-
