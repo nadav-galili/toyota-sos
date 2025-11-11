@@ -35,6 +35,8 @@ export function TaskDialog(props: TaskDialogProps) {
   const [error, setError] = useState<string | null>(null);
 
   // Form state
+  const [clientsLocal, setClientsLocal] = useState<Client[]>(clients);
+  const [vehiclesLocal, setVehiclesLocal] = useState<Vehicle[]>(vehicles);
   const [title, setTitle] = useState(task?.title ?? '');
   const [type, setType] = useState<TaskType>(task?.type ?? 'other');
   const [priority, setPriority] = useState<TaskPriority>(task?.priority ?? 'medium');
@@ -43,10 +45,20 @@ export function TaskDialog(props: TaskDialogProps) {
   const [estimatedStart, setEstimatedStart] = useState(task?.estimated_start ?? '');
   const [estimatedEnd, setEstimatedEnd] = useState(task?.estimated_end ?? '');
   const [address, setAddress] = useState(task?.address ?? '');
+  const [addressQuery, setAddressQuery] = useState(task?.address ?? '');
+  const [addressSuggestions, setAddressSuggestions] = useState<string[]>([]);
   const [clientId, setClientId] = useState<string>(task?.client_id ?? '');
   const [vehicleId, setVehicleId] = useState<string>(task?.vehicle_id ?? '');
   const [leadDriverId, setLeadDriverId] = useState<string>('');
   const [coDriverIds, setCoDriverIds] = useState<string[]>([]);
+  const [showAddClient, setShowAddClient] = useState(false);
+  const [newClientName, setNewClientName] = useState('');
+  const [newClientPhone, setNewClientPhone] = useState('');
+  const [newClientEmail, setNewClientEmail] = useState('');
+  const [showAddVehicle, setShowAddVehicle] = useState(false);
+  const [newVehiclePlate, setNewVehiclePlate] = useState('');
+  const [newVehicleModel, setNewVehicleModel] = useState('');
+  const [newVehicleVin, setNewVehicleVin] = useState('');
 
   useEffect(() => {
     if (open) {
@@ -60,12 +72,17 @@ export function TaskDialog(props: TaskDialogProps) {
       setEstimatedStart(task?.estimated_start ?? '');
       setEstimatedEnd(task?.estimated_end ?? '');
       setAddress(task?.address ?? '');
+      setAddressQuery(task?.address ?? '');
       setClientId(task?.client_id ?? '');
       setVehicleId(task?.vehicle_id ?? '');
       setLeadDriverId('');
       setCoDriverIds([]);
+      setClientsLocal(clients);
+      setVehiclesLocal(vehicles);
+      setShowAddClient(false);
+      setShowAddVehicle(false);
     }
-  }, [open, task]);
+  }, [open, task, clients, vehicles]);
 
   const coDriversSet = useMemo(() => new Set(coDriverIds), [coDriverIds]);
 
@@ -84,6 +101,83 @@ export function TaskDialog(props: TaskDialogProps) {
       return 'שעת התחלה לא יכולה להיות אחרי שעת סיום';
     }
     return null;
+  };
+
+  // Address autocomplete (debounced, mock suggestions if no external API)
+  useEffect(() => {
+    const h = setTimeout(() => {
+      const q = (addressQuery || '').trim();
+      if (q.length < 3) {
+        setAddressSuggestions([]);
+        return;
+      }
+      // Mock suggestions set (RTL examples)
+      const pool = [
+        'תל אביב-יפו, ישראל',
+        'רחוב דיזנגוף 100, תל אביב',
+        'רחוב הרצל 10, תל אביב',
+        'ירושלים, ישראל',
+        'חיפה, ישראל',
+        'ראשון לציון, ישראל',
+        'בת ים, ישראל',
+        'אשדוד, ישראל',
+      ];
+      const results = pool.filter((s) => s.toLowerCase().includes(q.toLowerCase())).slice(0, 5);
+      setAddressSuggestions(results);
+    }, 250);
+    return () => clearTimeout(h);
+  }, [addressQuery]);
+
+  const pickSuggestion = (s: string) => {
+    setAddress(s);
+    setAddressQuery(s);
+    setAddressSuggestions([]);
+  };
+
+  const createClient = async () => {
+    const name = newClientName.trim();
+    if (!name) return;
+    try {
+      const res = await fetch('/api/admin/clients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone: newClientPhone || null, email: newClientEmail || null }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const json = await res.json();
+      const created: Client = json.data;
+      setClientsLocal((prev) => [...prev, created]);
+      setClientId(created.id);
+      setShowAddClient(false);
+      setNewClientName('');
+      setNewClientPhone('');
+      setNewClientEmail('');
+    } catch (err: any) {
+      setError(err?.message || 'יצירת לקוח נכשלה');
+    }
+  };
+
+  const createVehicle = async () => {
+    const license_plate = newVehiclePlate.trim();
+    if (!license_plate) return;
+    try {
+      const res = await fetch('/api/admin/vehicles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ license_plate, model: newVehicleModel || null, vin: newVehicleVin || null }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const json = await res.json();
+      const created: Vehicle = json.data;
+      setVehiclesLocal((prev) => [...prev, created]);
+      setVehicleId(created.id);
+      setShowAddVehicle(false);
+      setNewVehiclePlate('');
+      setNewVehicleModel('');
+      setNewVehicleVin('');
+    } catch (err: any) {
+      setError(err?.message || 'יצירת רכב נכשלה');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -225,27 +319,78 @@ export function TaskDialog(props: TaskDialogProps) {
 
           <label className="col-span-1 md:col-span-2 flex flex-col gap-1">
             <span className="text-sm font-medium">כתובת</span>
-            <input className="rounded border border-gray-300 p-2" value={address} onChange={(e) => setAddress(e.target.value)} />
+            <input
+              className="rounded border border-gray-300 p-2"
+              value={addressQuery}
+              onChange={(e) => setAddressQuery(e.target.value)}
+              placeholder="הקלד כתובת..."
+            />
+            {addressSuggestions.length > 0 && (
+              <div className="mt-1 rounded border border-gray-200 bg-white shadow-sm">
+                {addressSuggestions.map((s) => (
+                  <button
+                    type="button"
+                    key={s}
+                    className="block w-full text-right px-3 py-2 text-sm hover:bg-gray-50"
+                    onClick={() => pickSuggestion(s)}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
           </label>
 
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium">לקוח</span>
-            <select className="rounded border border-gray-300 p-2" value={clientId} onChange={(e) => setClientId(e.target.value)}>
+            <div className="flex gap-2">
+              <select className="rounded border border-gray-300 p-2 flex-1" value={clientId} onChange={(e) => setClientId(e.target.value)}>
               <option value="">—</option>
-              {clients.map((c) => (
+              {clientsLocal.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
-            </select>
+              </select>
+              <button type="button" className="rounded border border-gray-300 px-2 text-xs" onClick={() => setShowAddClient((v) => !v)}>
+                חדש
+              </button>
+            </div>
+            {showAddClient && (
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                <input className="rounded border border-gray-300 p-2 col-span-1" placeholder="שם" value={newClientName} onChange={(e) => setNewClientName(e.target.value)} />
+                <input className="rounded border border-gray-300 p-2 col-span-1" placeholder="טלפון" value={newClientPhone} onChange={(e) => setNewClientPhone(e.target.value)} />
+                <input className="rounded border border-gray-300 p-2 col-span-1" placeholder="אימייל" value={newClientEmail} onChange={(e) => setNewClientEmail(e.target.value)} />
+                <div className="col-span-3 flex justify-end gap-2">
+                  <button type="button" className="rounded border border-gray-300 px-2 text-xs" onClick={() => setShowAddClient(false)}>בטל</button>
+                  <button type="button" className="rounded bg-toyota-primary px-2 py-1 text-xs font-semibold text-white" onClick={createClient}>צור</button>
+                </div>
+              </div>
+            )}
           </label>
 
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium">רכב</span>
-            <select className="rounded border border-gray-300 p-2" value={vehicleId} onChange={(e) => setVehicleId(e.target.value)}>
+            <div className="flex gap-2">
+              <select className="rounded border border-gray-300 p-2 flex-1" value={vehicleId} onChange={(e) => setVehicleId(e.target.value)}>
               <option value="">—</option>
-              {vehicles.map((v) => (
+              {vehiclesLocal.map((v) => (
                 <option key={v.id} value={v.id}>{v.license_plate} · {v.model}</option>
               ))}
-            </select>
+              </select>
+              <button type="button" className="rounded border border-gray-300 px-2 text-xs" onClick={() => setShowAddVehicle((v) => !v)}>
+                חדש
+              </button>
+            </div>
+            {showAddVehicle && (
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                <input className="rounded border border-gray-300 p-2 col-span-1" placeholder="מספר רישוי" value={newVehiclePlate} onChange={(e) => setNewVehiclePlate(e.target.value)} />
+                <input className="rounded border border-gray-300 p-2 col-span-1" placeholder="דגם" value={newVehicleModel} onChange={(e) => setNewVehicleModel(e.target.value)} />
+                <input className="rounded border border-gray-300 p-2 col-span-1" placeholder="VIN" value={newVehicleVin} onChange={(e) => setNewVehicleVin(e.target.value)} />
+                <div className="col-span-3 flex justify-end gap-2">
+                  <button type="button" className="rounded border border-gray-300 px-2 text-xs" onClick={() => setShowAddVehicle(false)}>בטל</button>
+                  <button type="button" className="rounded bg-toyota-primary px-2 py-1 text-xs font-semibold text-white" onClick={createVehicle}>צור</button>
+                </div>
+              </div>
+            )}
           </label>
 
           {/* Drivers */}
