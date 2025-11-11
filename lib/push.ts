@@ -82,7 +82,8 @@ export async function subscribeToPush(options?: {
     }
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: appServerKey,
+    // Some TS libdom versions are too strict; cast to satisfy BufferSource
+    applicationServerKey: appServerKey as unknown as ArrayBuffer,
     });
     // Persist via provided callback or POST to API
     if (options?.persistEndpoint) {

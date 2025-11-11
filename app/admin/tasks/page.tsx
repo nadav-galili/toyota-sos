@@ -1,5 +1,12 @@
 import React from 'react';
 import { TasksBoard } from '@/components/admin/TasksBoard';
+import type {
+  Task,
+  Driver,
+  TaskAssignee,
+  Client,
+  Vehicle,
+} from '@/components/admin/TasksBoard';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 /**
@@ -12,7 +19,7 @@ export default async function AdminTasksPage() {
   const admin = getSupabaseAdmin();
 
   // Fetch initial tasks
-  let tasks = [];
+  let tasks: Task[] = [];
   let tasksError: string | null = null;
 
   try {
@@ -48,7 +55,7 @@ export default async function AdminTasksPage() {
   }
 
   // Fetch drivers (profiles with role='driver')
-  let drivers = [];
+  let drivers: Driver[] = [];
   let driversError: string | null = null;
 
   try {
@@ -68,7 +75,7 @@ export default async function AdminTasksPage() {
   }
 
   // Fetch driver assignments for tasks
-  let taskAssignees = [];
+  let taskAssignees: TaskAssignee[] = [];
   let assigneesError: string | null = null;
 
   try {
@@ -86,7 +93,7 @@ export default async function AdminTasksPage() {
   }
 
   // Fetch clients
-  let clients = [];
+  let clients: Client[] = [];
   try {
     const { data, error } = await admin
       .from('clients')
@@ -100,7 +107,7 @@ export default async function AdminTasksPage() {
   }
 
   // Fetch vehicles
-  let vehicles = [];
+  let vehicles: Vehicle[] = [];
   try {
     const { data, error } = await admin
       .from('vehicles')

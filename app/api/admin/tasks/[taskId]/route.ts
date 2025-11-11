@@ -13,7 +13,7 @@ export async function PATCH(
 ) {
   try {
     // Check authentication via cookie
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const roleCookie = cookieStore.get('toyota_role')?.value;
     
     if (!roleCookie || (roleCookie !== 'admin' && roleCookie !== 'manager')) {

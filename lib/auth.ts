@@ -86,7 +86,9 @@ export const createServerClient = (): SupabaseClient => {
 
 // Service role client (admin operations, server-only)
 export const createServiceRoleClient = (): SupabaseClient => {
-  const { url, serviceKey } = getSupabaseConfig();
+  // Service role only used on the server
+  const { url } = getSupabaseConfigServer();
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!serviceKey) {
     throw new Error('Service role key is required for admin operations');

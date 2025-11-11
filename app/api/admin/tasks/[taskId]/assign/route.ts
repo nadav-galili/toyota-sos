@@ -13,7 +13,7 @@ export async function PATCH(
 ) {
   try {
     // Check authentication via cookie
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const roleCookie = cookieStore.get('toyota_role')?.value;
     
     if (!roleCookie || (roleCookie !== 'admin' && roleCookie !== 'manager')) {
@@ -75,7 +75,6 @@ export async function PATCH(
     await admin
       .from('tasks')
       .update({
-        updated_by: session.id,
         updated_at: new Date().toISOString(),
       })
       .eq('id', taskId);

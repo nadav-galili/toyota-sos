@@ -108,11 +108,15 @@ export function TasksBoard({
   // Configure drag-and-drop sensors
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      distance: 8,
+      activationConstraint: {
+        distance: 8,
+      },
     }),
     useSensor(KeyboardSensor),
     useSensor(TouchSensor, {
-      distance: 8,
+      activationConstraint: {
+        distance: 8,
+      },
     })
   );
 
@@ -589,8 +593,6 @@ function TaskCard({
       className={`cursor-grab active:cursor-grabbing rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-all hover:shadow-md hover:border-gray-300 ${
         isActive ? 'opacity-50 ring-2 ring-toyota-primary' : ''
       } ${isDragging ? 'opacity-50' : ''}`}
-      role="button"
-      tabIndex={0}
       aria-label={`משימה: ${task.title}`}
       data-draggable-id={task.id}
       {...attributes}

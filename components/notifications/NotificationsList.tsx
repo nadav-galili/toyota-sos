@@ -77,23 +77,12 @@ export function NotificationsList({ pageSize = 20 }: { pageSize?: number }) {
   };
 
   const deleteNotification = async (id: string) => {
-    // Soft delete via payload.deleted = true
-    const { error } = await supa
-      .from('notifications')
-      .update({ payload: supa.rpc ? undefined : undefined } as any)
-      .eq('id', id);
-    // We don't have a direct jsonb_set helper on supabase-js client without RPC;
-    // fallback: fetch current payload and set deleted=true client-side.
-    if (!error) {
-      setRows((prev) => prev.filter((r) => r.id !== id));
-      return;
-    }
-    // fallback path: update by sending full payload
+    // Soft delete via payload.deleted = true (client-side jsonb merge then update)
     const target = rows.find((r) => r.id === id);
     if (!target) return;
     const nextPayload = { ...(target.payload || {}), deleted: true };
-    const { error: err2 } = await supa.from('notifications').update({ payload: nextPayload }).eq('id', id);
-    if (!err2) {
+    const { error } = await supa.from('notifications').update({ payload: nextPayload }).eq('id', id);
+    if (!error) {
       setRows((prev) => prev.filter((r) => r.id !== id));
     }
   };
