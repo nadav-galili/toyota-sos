@@ -657,7 +657,7 @@
             "description": "Add a UI toggle to switch Kanban grouping between driver swimlanes and status columns.",
             "dependencies": [1],
             "details": "Add segmented control or tabs to toggle between `groupBy=driver|status`. Compute columns from memoized selectors; ensure headers show driver names/avatars or status labels. Persist preference in URL query or localStorage. Handle empty-driver and empty-status columns consistently.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Toggle between views and confirm columns re-render correctly with stable card counts and accessible toggle semantics.",
             "parentId": "undefined"
           },

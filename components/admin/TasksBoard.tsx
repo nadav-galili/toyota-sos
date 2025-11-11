@@ -99,7 +99,9 @@ export function TasksBoard({
 }: TasksBoardProps) {
   // State management
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
-  const [groupBy, setGroupBy] = useState<GroupBy>('status');
+  // Persisted groupBy via URL query (?groupBy=driver|status) and localStorage
+  const initialGroupBy = 'status' as GroupBy;
+  const [groupBy, setGroupBy] = useState<GroupBy>(initialGroupBy);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -119,6 +121,33 @@ export function TasksBoard({
       },
     })
   );
+
+  // Sync groupBy to URL and localStorage
+  const persistGroupBy = useCallback((next: GroupBy) => {
+    setGroupBy(next);
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem('tasksBoard.groupBy', next);
+        const current = new URL(window.location.href);
+        current.searchParams.set('groupBy', next);
+        window.history.replaceState(null, '', `${current.pathname}?${current.searchParams.toString()}`);
+      } catch {
+        // no-op
+      }
+    }
+  }, []);
+
+  // On mount, if URL lacks groupBy but localStorage has it, sync URL (and state) to stored
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    const hasParam = url.searchParams.has('groupBy');
+    const stored = window.localStorage.getItem('tasksBoard.groupBy') as GroupBy | null;
+    if (!hasParam && (stored === 'driver' || stored === 'status')) {
+      persistGroupBy(stored);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Create lookup maps
   const driverMap = useMemo(() => {
@@ -338,9 +367,9 @@ export function TasksBoard({
         {/* Group toggle - Segmented control style */}
         <div className="flex items-center gap-4">
           <label className="text-sm font-medium text-gray-700">קבץ לפי:</label>
-          <div className="inline-flex rounded-lg border border-gray-300 bg-gray-100 p-1">
+        <div className="inline-flex rounded-lg border border-gray-300 bg-gray-100 p-1" role="group" aria-label="קבץ לפי">
             <button
-              onClick={() => setGroupBy('status')}
+            onClick={() => persistGroupBy('status')}
               className={`px-4 py-2 text-sm font-medium rounded transition-colors ${
                 groupBy === 'status'
                   ? 'bg-white text-toyota-primary shadow-sm'
@@ -351,7 +380,7 @@ export function TasksBoard({
               סטטוס
             </button>
             <button
-              onClick={() => setGroupBy('driver')}
+            onClick={() => persistGroupBy('driver')}
               className={`px-4 py-2 text-sm font-medium rounded transition-colors ${
                 groupBy === 'driver'
                   ? 'bg-white text-toyota-primary shadow-sm'
