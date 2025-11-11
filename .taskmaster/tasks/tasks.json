@@ -697,7 +697,7 @@
             "description": "Enable selecting multiple tasks and performing bulk actions with confirmations and atomic updates.",
             "dependencies": [1, 2, 3],
             "details": "Introduce per-card checkboxes and column-level select-all. Show a bulk action bar for reassign-to-driver, change priority, and delete. Execute batched Supabase updates/deletes with optimistic progress and granular error handling; confirm destructive actions; clear selection on success.",
-            "status": "pending",
+          "status": "done",
             "testStrategy": "Select multiple tasks and perform each bulk action; verify all targeted tasks update. Induce partial failures to confirm error reporting and partial rollback behavior.",
             "parentId": "undefined"
           },
