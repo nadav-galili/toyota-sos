@@ -807,7 +807,7 @@
             "description": "Implement a Service Worker at public/sw.js to cache the app shell (cache-first) and API requests (network-first with fallback), with cache versioning, skipWaiting, and clients.claim.",
             "dependencies": [],
             "details": "Add public/sw.js with versioned cache names (e.g., CACHE_V1). Precache app shell assets on install, remove old caches on activate, call self.skipWaiting() and self.clients.claim(). For fetch: use cache-first for static assets and network-first with cache fallback for API endpoints. Ensure proper routing for same-origin/third-party requests.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Register SW in app entry, verify caches in Application tab, simulate offline and confirm app shell loads; check API requests fall back to cache when offline.",
             "parentId": "undefined"
           },
@@ -817,7 +817,7 @@
             "description": "Create lib/indexeddb.ts to manage DB open/upgrade and CRUD helpers for all required object stores, including blob handling.",
             "dependencies": [],
             "details": "Use idb (or vanilla IndexedDB) to create database with versioned upgrade. Stores: tasks (by id), forms (queue), images (queue with Blob), signatures (queue with Blob), notifications (by id). Provide typed helpers: put/get/getAll/delete/iterate, and transactional batch operations. Handle Blob serialization if needed.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Unit-test open/upgrade paths, create/read/update/delete records per store, store and retrieve image/signature blobs; verify graceful handling of missing keys.",
             "parentId": "undefined"
           },
