@@ -30,7 +30,7 @@ export default function AdminDashboardPage() {
 
   return (
     <div dir="rtl" className="min-h-screen bg-gray-50 p-4">
-      <NavBar items={navItems} className="mb-4" />
+      {/* //   <NavBar items={navItems} className="mb-4" /> */}
       <div className="">
         <Button
           variant="outline"
@@ -63,7 +63,9 @@ export default function AdminDashboardPage() {
             </Button>
           </div>
         </div> */}
-        <h1 className="text-xl font-bold text-red-500">לוח מחוונים</h1>
+        <h1 className="text-4xl font-bold text-red-500 underline">
+          לוח מחוונים
+        </h1>
         <DashboardKPIs />
       </div>
     </div>
