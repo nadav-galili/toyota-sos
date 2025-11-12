@@ -762,7 +762,7 @@
             "description": "Add charts per spec and ensure correct rendering in RTL, responsive sizing, and accessible tooltips/legends.",
             "dependencies": [1, 2],
             "details": "Create components/admin/dashboard/charts/* implementing: line chart (created vs completed over time), bar chart (overdue by driver), pie chart (on-time vs late), funnel (assigned→started→completed). Use ResponsiveContainer. For RTL, mirror axes using axis reversed props and wrapping containers that flip direction without breaking tooltips. Consume the shared period context and typed query data.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Render charts with sample data and verify no runtime errors. Check tooltips and legends show expected values. Toggle RTL direction and confirm axis order and bars/lines mirror correctly. Resize viewport to ensure responsiveness.",
             "parentId": "undefined"
           },
