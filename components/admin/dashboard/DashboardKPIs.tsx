@@ -7,6 +7,7 @@ import { KpiCard } from './KpiCard';
 import { toCsv, downloadCsv, makeCsvFilename } from '@/utils/csv';
 // fetch from server API to avoid RLS issues and ensure service-role-backed metrics
 import dynamic from 'next/dynamic';
+import { useConnectivity } from '@/components/ConnectivityProvider';
 
 // lazy drilldown modal (client-only)
 const DrilldownModal = dynamic(() => import('./DrilldownModal').then(m => ({ default: m.DrilldownModal })), { ssr: false });
@@ -24,6 +25,7 @@ function KPIsGrid() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [data, setData] = React.useState<Awaited<ReturnType<typeof fetchDashboardData>> | null>(null);
+  const { isOnline } = useConnectivity();
   // drill-down modal state
   const [ddOpen, setDdOpen] = React.useState(false);
   const [ddTitle, setDdTitle] = React.useState<string>('');
@@ -37,6 +39,13 @@ function KPIsGrid() {
       try {
         setLoading(true);
         setError(null);
+        if (!isOnline) {
+          if (!cancelled) {
+            setError('offline');
+            setLoading(false);
+          }
+          return;
+        }
         const u = new URL('/api/admin/dashboard/summary', window.location.origin);
         u.searchParams.set('from', range.start);
         u.searchParams.set('to', range.end);
@@ -55,7 +64,7 @@ function KPIsGrid() {
     return () => {
       cancelled = true;
     };
-  }, [range.start, range.end, range.timezone]);
+  }, [range.start, range.end, range.timezone, isOnline]);
 
   // Realtime auto-refresh for tasks changes
   React.useEffect(() => {
@@ -64,6 +73,7 @@ function KPIsGrid() {
     let channel: any;
     const doRefetch = debounce(async () => {
       if (cancelled) return;
+      if (!isOnline) return;
       try {
         const u = new URL('/api/admin/dashboard/summary', window.location.origin);
         u.searchParams.set('from', range.start);
@@ -98,7 +108,7 @@ function KPIsGrid() {
         // ignore
       }
     };
-  }, [range.start, range.end, range.timezone]);
+  }, [range.start, range.end, range.timezone, isOnline]);
 
   const summary = data?.summary;
   const datasets = data?.datasets;

@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/components/AuthProvider";
 import { SupabaseConfigProvider } from "@/components/SupabaseConfigProvider";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
+import { ConnectivityProvider } from "@/components/ConnectivityProvider";
+import { OfflineBanner } from "@/components/OfflineBanner";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -41,7 +43,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ServiceWorkerRegister />
-        <AuthProvider>{children}</AuthProvider>
+        <ConnectivityProvider>
+          <OfflineBanner />
+          <AuthProvider>{children}</AuthProvider>
+        </ConnectivityProvider>
       </body>
     </html>
   );

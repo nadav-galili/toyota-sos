@@ -827,7 +827,7 @@
             "description": "Listen to online/offline events, expose a reactive connectivity state, render an offline banner, disable network-dependent controls, and show cached data with an 'offline' badge.",
             "dependencies": [1, 2],
             "details": "Create a connectivity hook/store subscribing to window 'online'/'offline'. Show a dismissible banner when offline, disable submit/upload buttons, and gate fetches. When offline, read from IndexedDB stores and render with an 'offline' badge. Persist last online timestamp if useful for UX.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Toggle network in DevTools; verify banner appears/disappears, buttons disable, and cached data renders with badge; confirm no network calls are attempted when offline.",
             "parentId": "undefined"
           },
