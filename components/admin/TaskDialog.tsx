@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import type { Driver, Client, Vehicle, Task, TaskPriority, TaskStatus, TaskType } from './TasksBoard';
+import { trackFormSubmitted } from '@/lib/events';
 
 type Mode = 'create' | 'edit';
 
@@ -185,6 +186,11 @@ export function TaskDialog(props: TaskDialogProps) {
     const v = validate();
     if (v) {
       setError(v);
+      try {
+        trackFormSubmitted({ form: 'TaskDialog', mode, success: false, error_message: v });
+      } catch {
+        // optional analytics
+      }
       return;
     }
     setSubmitting(true);
@@ -217,6 +223,11 @@ export function TaskDialog(props: TaskDialogProps) {
         const json = await res.json();
         const created: Task = json.data;
         onCreated?.(created, leadDriverId || undefined, coDriverIds);
+        try {
+          trackFormSubmitted({ form: 'TaskDialog', mode, success: true, task_id: created.id });
+        } catch {
+          // optional
+        }
         onOpenChange(false);
       } else {
         if (!task) return;
@@ -244,10 +255,20 @@ export function TaskDialog(props: TaskDialogProps) {
         const json = await res.json();
         const updated: Task = json.data;
         onUpdated?.(updated);
+        try {
+          trackFormSubmitted({ form: 'TaskDialog', mode, success: true, task_id: updated.id });
+        } catch {
+          // optional
+        }
         onOpenChange(false);
       }
     } catch (err: any) {
       setError(err?.message || 'שגיאה');
+      try {
+        trackFormSubmitted({ form: 'TaskDialog', mode, success: false, task_id: task?.id, error_message: err?.message });
+      } catch {
+        // optional
+      }
     } finally {
       setSubmitting(false);
     }

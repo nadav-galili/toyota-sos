@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createBrowserClient } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
+import { trackNotificationOpened } from '@/lib/events';
 
 type NotificationRow = {
   id: string;
@@ -102,6 +103,11 @@ export function NotificationsList({ pageSize = 20 }: { pageSize?: number }) {
   };
 
   const onOpen = (row: NotificationRow) => {
+    try {
+      trackNotificationOpened({ id: row.id, type: row.type, task_id: row.task_id });
+    } catch {
+      // optional analytics
+    }
     if (row.task_id) {
       router.push(`/driver/tasks/${row.task_id}`);
     }

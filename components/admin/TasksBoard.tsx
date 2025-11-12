@@ -16,6 +16,7 @@ import {
   useDroppable,
   closestCorners,
 } from '@dnd-kit/core';
+import { trackTaskAssigned, trackTaskCreated, trackTaskStatusChange } from '@/lib/events';
 const LazyTaskDialog = React.lazy(() => import('./TaskDialog').then((m) => ({ default: m.TaskDialog })));
 
 /**
@@ -333,6 +334,7 @@ export function TasksBoard({
       inserts.push({ id: `local-${created.id}-${id}`, task_id: created.id, driver_id: id, is_lead: false, assigned_at: new Date().toISOString() });
     });
     if (inserts.length > 0) setAssignees((prev) => [...prev, ...inserts]);
+    try { trackTaskCreated(created, leadId); } catch {}
   }, []);
 
   const handleUpdated = useCallback((updated: Task) => {
@@ -558,6 +560,16 @@ export function TasksBoard({
           setToast({ message: 'שגיאה בעדכון משימה', type: 'error' });
         } else {
           setToast({ message: 'המשימה עודכנה', type: 'success' });
+      try {
+        // Find the latest task snapshot
+        setTasks((prev) => {
+          const t = prev.find((x) => x.id === taskId);
+          if (t && (update as any).status) {
+            trackTaskStatusChange({ ...t, updated_at: new Date().toISOString() }, (update as any).status as string);
+          }
+          return prev;
+        });
+      } catch {}
         }
       } catch (error) {
         console.error('Error persisting task update:', error);
@@ -593,6 +605,10 @@ export function TasksBoard({
           setToast({ message: 'שגיאה בהקצאת נהג', type: 'error' });
         } else {
           setToast({ message: 'נהג עודכן', type: 'success' });
+      try {
+        const t = tasks.find((x) => x.id === taskId);
+        if (t) trackTaskAssigned(t, newDriverId);
+      } catch {}
         }
       } catch (error) {
         console.error('Error persisting driver assignment:', error);

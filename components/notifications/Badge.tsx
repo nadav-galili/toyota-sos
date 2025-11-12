@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createBrowserClient } from '@/lib/auth';
+import { trackNotificationReceived } from '@/lib/events';
 
 type PostgresChangePayload = {
   eventType: 'INSERT' | 'UPDATE' | 'DELETE';
@@ -71,6 +72,11 @@ export function NotificationsBadge({
             const r = payload.new;
             if (r && r.read === false && (!r.payload || r.payload?.deleted !== true)) {
               setCount((c) => c + 1);
+            }
+            try {
+              if (r) trackNotificationReceived({ id: r.id, type: r.type, task_id: r.task_id });
+            } catch {
+              // optional analytics
             }
           } else if (payload.eventType === 'UPDATE') {
             const before = payload.old;

@@ -2,6 +2,7 @@
 
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { createBrowserClient } from '@/lib/auth';
+import { trackSignatureCaptured } from '@/lib/events';
 
 export type SignaturePadProps = {
   width?: number;
@@ -446,6 +447,17 @@ export const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(funct
               const bytes = typeof blob.size === 'number' ? blob.size : 0;
               const result = { blob, dataURL, width, height, bytes };
               if (result && onExport) onExport(result);
+              try {
+                trackSignatureCaptured({
+                  task_id: taskId,
+                  width: Math.floor(width / (dprRef.current || 1)),
+                  height: Math.floor(height / (dprRef.current || 1)),
+                  bytes,
+                  method: 'export',
+                });
+              } catch {
+                // analytics optional
+              }
             }}
           >
             ייצא
@@ -493,6 +505,20 @@ export const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(funct
                   onUploaded?.({ path, signedUrl: signed?.signedUrl ?? null, bytes: blob.size });
                 } else {
                   onUploaded?.({ path, signedUrl: null, bytes: blob.size });
+                }
+                try {
+                  const cssW = Math.floor((canvas.width || 0) / (dprRef.current || 1));
+                  const cssH = Math.floor((canvas.height || 0) / (dprRef.current || 1));
+                  trackSignatureCaptured({
+                    task_id: taskId,
+                    width: cssW,
+                    height: cssH,
+                    bytes: blob.size,
+                    method: 'upload',
+                    storage_path: `${uploadBucket}/${path}`,
+                  });
+                } catch {
+                  // optional
                 }
               }}
             >

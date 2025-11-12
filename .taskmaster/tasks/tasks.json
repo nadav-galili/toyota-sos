@@ -912,7 +912,7 @@
             "description": "Add tracking calls for all required events with the correct payloads and consistent naming across the codebase.",
             "dependencies": [1],
             "details": "Wire analytics.track for: Task Created, Task Assigned, Task Started, Task Completed (duration_ms, on_time), Task Blocked, Form Submitted, Signature Captured, Notification Received, Notification Opened. Include task_id, type, priority, assigned_to/driver_id, timestamps (ISO), and context. Ensure idempotency, error handling, and standard property keys.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Use integration tests or component tests with mocked analytics to assert each event fires with expected properties. Validate on_time computation and that distinct_id and super properties are attached.",
             "parentId": "undefined"
           },
