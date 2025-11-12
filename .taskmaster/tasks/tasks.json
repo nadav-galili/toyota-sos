@@ -902,7 +902,7 @@
             "description": "Initialize Mixpanel, identify users, set super properties, and provide helper wrappers for consistent event tracking across the app.",
             "dependencies": [],
             "details": "Create lib/mixpanel.ts to initialize with token (env var), identify users with distinct_id=profile.id, and set super properties (role, app_version, device_type). Expose track(), identify(), setSuperProperties(), init(). Add consent gating stub. Create lib/analytics.ts to centralize provider calls and enable future provider swaps.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Mock Mixpanel SDK and assert helper functions call it with correct payloads. Verify super properties are registered once per session and no events fire without consent.",
             "parentId": "undefined"
           },
