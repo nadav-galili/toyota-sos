@@ -1,6 +1,7 @@
 'use client';
 
 import mixpanel from 'mixpanel-browser';
+import { getFlags } from './flags';
 
 let inited = false;
 const token =
@@ -24,6 +25,27 @@ export function initMixpanel() {
     record_sessions_percent: 100,
   });
   inited = true;
+  // Fire-and-forget: register feature flags and cohort variant as super properties
+  try {
+    (async () => {
+      try {
+        const flags = await getFlags().catch(() => ({}));
+        const superProps: Record<string, any> = {};
+        Object.entries(flags || {}).forEach(([k, v]) => {
+          superProps[`flag.${k}`] = !!v;
+        });
+        if (Object.keys(superProps).length > 0) {
+          mixpanel.register(superProps);
+        }
+        const variant = getOrAssignVariant();
+        mixpanel.register({ 'cohort.variant': variant });
+      } catch {
+        // ignore
+      }
+    })();
+  } catch {
+    // ignore
+  }
 }
 
 export function identify(userId: string, props?: Record<string, any>) {
@@ -50,6 +72,27 @@ export function reset() {
     mixpanel.reset();
   } catch {
     // ignore
+  }
+}
+
+function getOrAssignVariant(): 'A' | 'B' {
+  if (typeof window === 'undefined') return 'A';
+  try {
+    const key = 'ab_variant';
+    const existing = localStorage.getItem(key);
+    if (existing === 'A' || existing === 'B') return existing as 'A' | 'B';
+    // Stable-ish assignment using userAgent hash fallback to random
+    const ua = navigator.userAgent || `${Math.random()}`;
+    let hash = 0;
+    for (let i = 0; i < ua.length; i++) {
+      hash = ((hash << 5) - hash) + ua.charCodeAt(i);
+      hash |= 0;
+    }
+    const variant: 'A' | 'B' = (Math.abs(hash) % 2 === 0) ? 'A' : 'B';
+    localStorage.setItem(key, variant);
+    return variant;
+  } catch {
+    return 'A';
   }
 }
 

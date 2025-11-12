@@ -18,6 +18,8 @@ import {
 } from '@dnd-kit/core';
 import { trackTaskAssigned, trackTaskCreated, trackTaskStatusChange } from '@/lib/events';
 const LazyTaskDialog = React.lazy(() => import('./TaskDialog').then((m) => ({ default: m.TaskDialog })));
+import { useFeatureFlag } from '@/lib/useFeatureFlag';
+import { FLAG_BULK_OPS } from '@/lib/flagKeys';
 
 /**
  * Type definitions for TasksBoard state and data structures
@@ -127,6 +129,9 @@ export function TasksBoard({
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   // Conflict ribbons (server-wins notifications)
   const [conflictByTaskId, setConflictByTaskId] = useState<Record<string, { by?: string | null; at?: string | null }>>({});
+
+  // Feature flags
+  const bulkEnabled = useFeatureFlag(FLAG_BULK_OPS);
 
   // Configure drag-and-drop sensors
   const sensors = useSensors(
@@ -808,7 +813,7 @@ export function TasksBoard({
           </div>
         ) : (
           <>
-            {selectedIds.size > 0 && (
+            {bulkEnabled && selectedIds.size > 0 && (
               <div className="flex items-center gap-3 border-b border-gray-200 bg-gray-50 px-4 py-2">
                 <span className="text-sm text-gray-700">נבחרו {selectedIds.size}</span>
                 <div className="flex items-center gap-2">
@@ -876,8 +881,9 @@ export function TasksBoard({
                     vehicleMap={vehicleMap}
                     conflict={conflictByTaskId}
                     onDragStart={handleDragStart}
-                    toggleSelected={toggleSelected}
-                    selectAllInColumn={selectAllInColumn}
+                      toggleSelected={toggleSelected}
+                      selectAllInColumn={selectAllInColumn}
+                      bulkEnabled={!!bulkEnabled}
                   />
                 );
               })}
@@ -985,6 +991,7 @@ interface KanbanColumnProps {
   onDragStart: (event: DragStartEvent) => void;
   toggleSelected: (taskId: string) => void;
   selectAllInColumn: (columnId: string, checked: boolean) => void;
+  bulkEnabled: boolean;
 }
 
 function KanbanColumn({
@@ -1001,6 +1008,7 @@ function KanbanColumn({
   onDragStart,
   toggleSelected,
   selectAllInColumn,
+  bulkEnabled,
 }: KanbanColumnProps) {
   // Setup droppable
   const { setNodeRef } = useDroppable({
@@ -1034,13 +1042,15 @@ function KanbanColumn({
           </div>
         </div>
         <div className="mt-2 flex items-center justify-between">
-          <label className="inline-flex items-center gap-2 text-xs text-gray-600">
-            <input
-              type="checkbox"
-              onChange={(e) => selectAllInColumn(column.id, e.target.checked)}
-            />
-            בחר הכל
-          </label>
+          {bulkEnabled && (
+            <label className="inline-flex items-center gap-2 text-xs text-gray-600">
+              <input
+                type="checkbox"
+                onChange={(e) => selectAllInColumn(column.id, e.target.checked)}
+              />
+              בחר הכל
+            </label>
+          )}
         </div>
       </div>
 
@@ -1068,6 +1078,7 @@ function KanbanColumn({
               onEdit={() => {}}
               selected={selectedIds.has(task.id)}
               onToggleSelected={() => toggleSelected(task.id)}
+              showSelect={bulkEnabled}
             />
           ))
         )}
@@ -1093,6 +1104,7 @@ interface TaskCardProps {
   onEdit: (task: Task) => void;
   selected: boolean;
   onToggleSelected: () => void;
+  showSelect: boolean;
 }
 
 function TaskCard({
@@ -1108,6 +1120,7 @@ function TaskCard({
   onEdit,
   selected,
   onToggleSelected,
+  showSelect,
 }: TaskCardProps) {
   const client = clientMap.get(task.client_id || '');
   const vehicle = vehicleMap.get(task.vehicle_id || '');
@@ -1140,7 +1153,9 @@ function TaskCard({
       {/* Header: Select + Title + Priority Badge */}
       <div className="mb-2 flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
-          <input type="checkbox" checked={selected} onChange={onToggleSelected} aria-label="בחר משימה" />
+          {showSelect && (
+            <input type="checkbox" checked={selected} onChange={onToggleSelected} aria-label="בחר משימה" />
+          )}
           <h4 className="flex-1 line-clamp-2 font-semibold text-gray-900 text-sm">{task.title}</h4>
         </div>
         <span className={`shrink-0 inline-block rounded-full px-1.5 py-0.5 text-xs font-bold text-white ${priorityColor(task.priority)}`}>

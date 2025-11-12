@@ -6,6 +6,14 @@ type Listener = (flags: Readonly<Record<string, boolean>>) => void;
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
+// Reasonable defaults so features remain visible unless explicitly disabled in DB
+const DEFAULT_FLAGS: Record<string, boolean> = {
+  bulk_operations_enabled: true,
+  multi_driver_assignment: true,
+  signature_required: false,
+  pdf_generation: false,
+};
+
 let cache: FlagsMap = new Map();
 let cacheExpiresAt = 0;
 const listeners = new Set<Listener>();
@@ -26,7 +34,8 @@ export function subscribe(listener: Listener) {
   listeners.add(listener);
   // push current snapshot immediately
   try {
-    listener(Object.fromEntries(cache.entries()));
+    const snapshot = { ...DEFAULT_FLAGS, ...Object.fromEntries(cache.entries()) };
+    listener(snapshot);
   } catch {}
   return () => listeners.delete(listener);
 }
@@ -49,15 +58,16 @@ async function fetchFlags(): Promise<Record<string, boolean>> {
 
 export async function getFlags(force = false): Promise<Record<string, boolean>> {
   if (!force && !isStale() && cache.size > 0) {
-    return Object.fromEntries(cache.entries());
+    return { ...DEFAULT_FLAGS, ...Object.fromEntries(cache.entries()) };
   }
   if (!inflight) {
     inflight = fetchFlags()
       .then((obj) => {
-        cache = new Map(Object.entries(obj));
+        const merged = { ...DEFAULT_FLAGS, ...obj };
+        cache = new Map(Object.entries(merged));
         cacheExpiresAt = Date.now() + CACHE_TTL_MS;
         emit();
-        return obj;
+        return merged;
       })
       .finally(() => {
         inflight = null;
@@ -67,7 +77,8 @@ export async function getFlags(force = false): Promise<Record<string, boolean>> 
 }
 
 export function isEnabled(key: string): boolean {
-  return !!cache.get(key);
+  if (cache.has(key)) return !!cache.get(key);
+  return !!DEFAULT_FLAGS[key];
 }
 
 export async function setFlag(key: string, enabled: boolean): Promise<void> {

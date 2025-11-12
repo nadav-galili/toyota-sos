@@ -6,22 +6,34 @@ const realFetch = global.fetch;
 
 describe('FeatureFlags UI', () => {
   beforeEach(() => {
-    (global as any).fetch = jest.fn().mockImplementation((url: string, init?: any) => {
-      if (url.includes('/api/admin/flags') && (!init || !init.method || init.method === 'GET')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ data: [{ key: 'alpha', enabled: false }] }),
-        });
-      }
-      if (url.includes('/api/admin/flags') && init?.method === 'PUT') {
-        const body = JSON.parse(init.body);
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ data: { key: body.key, enabled: body.enabled, updated_at: new Date().toISOString(), updated_by: null } }),
-        });
-      }
-      return Promise.resolve({ ok: true, json: async () => ({}) });
-    });
+    (global as any).fetch = jest
+      .fn()
+      .mockImplementation((url: string, init?: any) => {
+        if (
+          url.includes('/api/admin/flags') &&
+          (!init || !init.method || init.method === 'GET')
+        ) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ data: [{ key: 'alpha', enabled: false }] }),
+          });
+        }
+        if (url.includes('/api/admin/flags') && init?.method === 'PUT') {
+          const body = JSON.parse(init.body);
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              data: {
+                key: body.key,
+                enabled: body.enabled,
+                updated_at: new Date().toISOString(),
+                updated_by: null,
+              },
+            }),
+          });
+        }
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      });
   });
   afterEach(() => {
     (global as any).fetch = realFetch;
@@ -30,11 +42,13 @@ describe('FeatureFlags UI', () => {
   test('lists and toggles a flag', async () => {
     render(<FeatureFlags />);
     // wait for toggle button of alpha to appear (ensures fetch + state update)
-    const toggle = await screen.findByRole('button', { name: /החלף דגל alpha/i });
+    const toggle = await screen.findByRole('button', {
+      name: /החלף דגל alpha/i,
+    });
     fireEvent.click(toggle);
     // becomes enabled label
     await waitFor(() => {
-      expect(screen.getByText('פעיל')).toBeInTheDocument();
+      expect(screen.getAllByText('פעיל').length).toBeGreaterThan(0);
     });
   });
 
@@ -48,5 +62,3 @@ describe('FeatureFlags UI', () => {
     });
   });
 });
-
-

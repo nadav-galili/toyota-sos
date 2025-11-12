@@ -3,6 +3,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type { Driver, Client, Vehicle, Task, TaskPriority, TaskStatus, TaskType } from './TasksBoard';
 import { trackFormSubmitted } from '@/lib/events';
+import { useFeatureFlag } from '@/lib/useFeatureFlag';
+import { FLAG_MULTI_DRIVER } from '@/lib/flagKeys';
 
 type Mode = 'create' | 'edit';
 
@@ -34,6 +36,9 @@ export function TaskDialog(props: TaskDialogProps) {
   const { open, onOpenChange, mode, task, drivers, clients, vehicles, onCreated, onUpdated } = props;
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Feature flags
+  const multiDriverEnabled = useFeatureFlag(FLAG_MULTI_DRIVER);
 
   // Form state
   const [clientsLocal, setClientsLocal] = useState<Client[]>(clients);
@@ -426,21 +431,23 @@ export function TaskDialog(props: TaskDialogProps) {
               </select>
             </label>
 
-            <div className="flex flex-col gap-1">
-              <span className="text-sm font-medium">נהגי משנה</span>
-              <div className="max-h-28 overflow-auto rounded border border-gray-200 p-2">
-                {drivers.map((d) => (
-                  <label key={d.id} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={coDriversSet.has(d.id)}
-                      onChange={() => toggleCoDriver(d.id)}
-                    />
-                    <span>{d.name || d.email}</span>
-                  </label>
-                ))}
+            {multiDriverEnabled && (
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-medium">נהגי משנה</span>
+                <div className="max-h-28 overflow-auto rounded border border-gray-200 p-2">
+                  {drivers.map((d) => (
+                    <label key={d.id} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={coDriversSet.has(d.id)}
+                        onChange={() => toggleCoDriver(d.id)}
+                      />
+                      <span>{d.name || d.email}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="col-span-1 md:col-span-2 mt-2 flex items-center justify-end gap-2">
