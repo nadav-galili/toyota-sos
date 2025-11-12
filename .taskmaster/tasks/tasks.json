@@ -724,7 +724,7 @@
         "testStrategy": "Render dashboard and verify all KPI cards display. Test period filter updates all metrics. Verify CSV export generates correct data. Test charts render correctly in RTL. Verify calculations are accurate (sample data). Test real-time updates when new tasks created. Test error handling for failed queries. Verify responsive layout on mobile.",
         "priority": "medium",
         "dependencies": ["3", "7"],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -782,7 +782,7 @@
             "description": "Subscribe to task changes to refresh metrics, implement drill-down from KPIs, and ensure mobile/desktop responsive layouts.",
             "dependencies": [1, 2, 3, 4, 5],
             "details": "Use Supabase Realtime to listen for inserts/updates on tasks/assignments; debounce and refetch affected metrics. Implement drill-down: clicking a KPI opens a modal/drawer or navigates to a details table pre-filtered by metric and period, with pagination and CSV export. Finalize responsive grid for cards/charts, ensuring good spacing, no overflow, and RTL compatibility; add ARIA attributes for accessibility.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Mock realtime events to confirm auto-refresh. Click each KPI to open drill-down and verify filters apply. Test dashboard at common breakpoints (mobile, tablet, desktop) for layout stability and RTL correctness.",
             "parentId": "undefined"
           }

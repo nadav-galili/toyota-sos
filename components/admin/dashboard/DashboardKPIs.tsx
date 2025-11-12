@@ -6,12 +6,30 @@ import { PeriodFilter } from './PeriodFilter';
 import { KpiCard } from './KpiCard';
 import { toCsv, downloadCsv, makeCsvFilename } from '@/utils/csv';
 // fetch from server API to avoid RLS issues and ensure service-role-backed metrics
+import dynamic from 'next/dynamic';
+
+// lazy drilldown modal (client-only)
+const DrilldownModal = dynamic(() => import('./DrilldownModal').then(m => ({ default: m.DrilldownModal })), { ssr: false });
+
+function debounce<F extends (...args: any[]) => void>(fn: F, delay: number) {
+  let t: any;
+  return (...args: Parameters<F>) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), delay);
+  };
+}
 
 function KPIsGrid() {
   const { range } = usePeriod();
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [data, setData] = React.useState<Awaited<ReturnType<typeof fetchDashboardData>> | null>(null);
+  // drill-down modal state
+  const [ddOpen, setDdOpen] = React.useState(false);
+  const [ddTitle, setDdTitle] = React.useState<string>('');
+  const [ddRows, setDdRows] = React.useState<any[]>([]);
+  const [ddLoading, setDdLoading] = React.useState(false);
+  const [ddError, setDdError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -36,6 +54,49 @@ function KPIsGrid() {
     })();
     return () => {
       cancelled = true;
+    };
+  }, [range.start, range.end, range.timezone]);
+
+  // Realtime auto-refresh for tasks changes
+  React.useEffect(() => {
+    let cancelled = false;
+    let supa: any;
+    let channel: any;
+    const doRefetch = debounce(async () => {
+      if (cancelled) return;
+      try {
+        const u = new URL('/api/admin/dashboard/summary', window.location.origin);
+        u.searchParams.set('from', range.start);
+        u.searchParams.set('to', range.end);
+        if (range.timezone) u.searchParams.set('tz', range.timezone);
+        const resp = await fetch(u.toString());
+        if (!resp.ok) return;
+        const json = await resp.json();
+        if (json?.ok && !cancelled) setData(json.data);
+      } catch {
+        // ignore
+      }
+    }, 500);
+    (async () => {
+      try {
+        const { createBrowserClient } = await import('@/lib/auth');
+        supa = createBrowserClient();
+        channel = supa
+          .channel('realtime:dashboard-kpis')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => doRefetch())
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'task_assignees' }, () => doRefetch())
+          .subscribe();
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      cancelled = true;
+      try {
+        if (channel && supa) supa.removeChannel(channel);
+      } catch {
+        // ignore
+      }
     };
   }, [range.start, range.end, range.timezone]);
 
@@ -113,6 +174,30 @@ function KPIsGrid() {
     downloadCsv(makeCsvFilename('dashboard_overdue_by_driver', range.timezone), csv);
   }, [datasets, range.timezone]);
 
+  const openDrilldown = React.useCallback(async (metric: 'created' | 'completed' | 'overdue' | 'on_time' | 'late', title: string) => {
+    setDdOpen(true);
+    setDdTitle(title);
+    setDdLoading(true);
+    setDdError(null);
+    setDdRows([]);
+    try {
+      const u = new URL('/api/admin/dashboard/details', window.location.origin);
+      u.searchParams.set('metric', metric);
+      u.searchParams.set('from', range.start);
+      u.searchParams.set('to', range.end);
+      if (range.timezone) u.searchParams.set('tz', range.timezone);
+      const resp = await fetch(u.toString());
+      if (!resp.ok) throw new Error(await resp.text());
+      const json = await resp.json();
+      if (!json?.ok) throw new Error(json?.error || 'failed');
+      setDdRows(json.rows || []);
+    } catch (e: any) {
+      setDdError(e?.message || 'failed');
+    } finally {
+      setDdLoading(false);
+    }
+  }, [range.start, range.end, range.timezone]);
+
   const exportOnTimeVsLate = React.useCallback(() => {
     if (!datasets) return;
     const rows = [
@@ -150,9 +235,14 @@ function KPIsGrid() {
           loading={loading}
           error={error}
           actionArea={
-            <button className="text-xs text-toyota-primary hover:underline" onClick={exportCreatedCompleted}>
-              CSV
-            </button>
+            <div className="flex items-center gap-2">
+              <button className="text-xs text-toyota-primary hover:underline" onClick={exportCreatedCompleted}>
+                CSV
+              </button>
+              <button className="text-xs text-gray-600 hover:underline" onClick={() => openDrilldown('created', 'משימות שנוצרו')}>
+                פרטים
+              </button>
+            </div>
           }
         />
         <KpiCard
@@ -161,9 +251,14 @@ function KPIsGrid() {
           loading={loading}
           error={error}
           actionArea={
-            <button className="text-xs text-toyota-primary hover:underline" onClick={exportCreatedCompleted}>
-              CSV
-            </button>
+            <div className="flex items-center gap-2">
+              <button className="text-xs text-toyota-primary hover:underline" onClick={exportCreatedCompleted}>
+                CSV
+              </button>
+              <button className="text-xs text-gray-600 hover:underline" onClick={() => openDrilldown('completed', 'משימות שהושלמו')}>
+                פרטים
+              </button>
+            </div>
           }
         />
         <KpiCard
@@ -172,9 +267,14 @@ function KPIsGrid() {
           loading={loading}
           error={error}
           actionArea={
-            <button className="text-xs text-toyota-primary hover:underline" onClick={exportOverdueByDriver}>
-              CSV
-            </button>
+            <div className="flex items-center gap-2">
+              <button className="text-xs text-toyota-primary hover:underline" onClick={exportOverdueByDriver}>
+                CSV
+              </button>
+              <button className="text-xs text-gray-600 hover:underline" onClick={() => openDrilldown('overdue', 'משימות באיחור')}>
+                פרטים
+              </button>
+            </div>
           }
         />
         <KpiCard
@@ -206,6 +306,7 @@ function KPIsGrid() {
           }
         />
       </div>
+      <DrilldownModal open={ddOpen} title={ddTitle} rows={ddRows} loading={ddLoading} error={ddError} onClose={() => setDdOpen(false)} />
     </div>
   );
 }
