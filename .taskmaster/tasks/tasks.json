@@ -847,7 +847,7 @@
             "description": "When syncing queued changes, resolve conflicts using server-updated timestamp precedence; merge non-conflicting fields and surface a user-facing ribbon note.",
             "dependencies": [2, 4],
             "details": "Define a merge function comparing local modifiedAt vs server updatedAt. If server newer, apply server version and attach metadata (updatedBy, time). For partial merges, reconcile fields that didn’t change locally. Persist resolved record to IndexedDB and reflect in UI with a ribbon: 'Updated by X at hh:mm'. Log conflicts for diagnostics.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Craft simulated conflicts: local older/newer vs server. Verify server-wins behavior, partial merge correctness, and that the ribbon appears with accurate details.",
             "parentId": "undefined"
           },
