@@ -867,7 +867,7 @@
             "description": "Provide a custom install CTA that listens for beforeinstallprompt, defers the prompt, triggers on user action, and handles appinstalled to update UI.",
             "dependencies": [6],
             "details": "Add an InstallButton component that stores the deferred beforeinstallprompt event, shows CTA when eligible, and calls prompt(). Handle userChoice outcome and hide CTA afterward. Listen for window 'appinstalled' to confirm install and maybe track analytics. Persist dismissal to avoid nagging.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "In a standalone-capable environment, verify the CTA appears, triggers the native prompt, and that 'appinstalled' fires; confirm CTA hides appropriately.",
             "parentId": "undefined"
           },

@@ -7,12 +7,25 @@ export function InstallAppButton({ className }: { className?: string }) {
   const [installed, setInstalled] = React.useState(false);
   const [supportsPrompt, setSupportsPrompt] = React.useState(false);
   const [isIOS, setIsIOS] = React.useState(false);
+  const [hidden, setHidden] = React.useState(false);
+
+  const DISMISS_KEY = 'pwa.install.dismissedAt';
+  const DISMISS_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
     setIsIOS(
       /iphone|ipad|ipod/i.test(navigator.userAgent) && !!(window as any).webkit
     );
+    // Respect recent dismissal
+    try {
+      const last = Number(window.localStorage.getItem(DISMISS_KEY) || '0');
+      if (last && Date.now() - last < DISMISS_COOLDOWN_MS) {
+        setHidden(true);
+      }
+    } catch {
+      // ignore
+    }
     const onPrompt = (e: any) => {
       e.preventDefault();
       setDeferred(e);
@@ -34,18 +47,36 @@ export function InstallAppButton({ className }: { className?: string }) {
   const install = async () => {
     if (!deferred) return;
     await deferred.prompt();
-    await deferred.userChoice;
+    const choice = await deferred.userChoice;
+    if (choice && choice.outcome !== 'accepted') {
+      try {
+        window.localStorage.setItem(DISMISS_KEY, String(Date.now()));
+      } catch {
+        // ignore
+      }
+      setHidden(true);
+    }
     setDeferred(null);
     setSupportsPrompt(false);
   };
 
-  if (installed) return null;
+  const dismiss = () => {
+    try {
+      window.localStorage.setItem(DISMISS_KEY, String(Date.now()));
+    } catch {
+      // ignore
+    }
+    setHidden(true);
+  };
+
+  if (installed || hidden) return null;
 
   // iOS Safari: no programmatic prompt
   if (isIOS) {
     return (
-      <div className={`text-xs text-gray-600 ${className ?? ''}`}>
-        להוספה למסך הבית: שתף → הוסף למסך הבית
+      <div className={`flex items-center gap-2 rounded border border-gray-200 bg-white/90 px-2 py-1 text-xs text-gray-700 shadow ${className ?? ''}`}>
+        <span>להוספה למסך הבית: שתף → הוסף למסך הבית</span>
+        <button onClick={dismiss} className="text-gray-500 hover:text-gray-700">×</button>
       </div>
     );
   }
@@ -53,14 +84,16 @@ export function InstallAppButton({ className }: { className?: string }) {
   if (!supportsPrompt) return null;
 
   return (
-    <button
-      onClick={install}
-      className={
-        className ??
-        'rounded bg-toyota-primary px-3 py-2 text-sm font-semibold text-white hover:bg-toyota-primary/90'
-      }
-    >
-      התקן אפליקציה
-    </button>
+    <div className={`flex items-center gap-2 rounded bg-white/90 px-2 py-1 shadow border border-gray-200 ${className ?? ''}`}>
+      <button
+        onClick={install}
+        className="rounded bg-toyota-primary px-3 py-1 text-sm font-semibold text-white hover:bg-toyota-primary/90"
+      >
+        התקן אפליקציה
+      </button>
+      <button onClick={dismiss} className="text-xs text-gray-600 hover:text-gray-800">
+        לא עכשיו
+      </button>
+    </div>
   );
 }
