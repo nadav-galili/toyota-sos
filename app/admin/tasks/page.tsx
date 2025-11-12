@@ -7,6 +7,7 @@ import type {
   Vehicle,
 } from '@/components/admin/TasksBoard';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { NavBar } from '@/components/ui/tubelight-navbar';
 
 /**
  * Admin Tasks Page (7.1)
@@ -125,9 +126,15 @@ export default async function AdminTasksPage() {
     // silently ignore vehicle fetch errors
   }
 
+  const navItems = [
+    { name: 'לוח מחוונים', url: '/admin/dashboard', icon: 'LayoutDashboard' },
+    { name: 'משימות', url: '/admin/tasks', icon: 'ClipboardList' },
+  ];
+
   return (
     <main dir="rtl" className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-full">
+      <NavBar items={navItems} className="z-40" />
+      <div className="max-w-full mt-20 sm:mt-24">
         <h1 className="mb-6 text-3xl font-bold text-gray-900">לוח משימות</h1>
 
         {(tasksError || driversError || assigneesError) && (

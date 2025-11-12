@@ -165,8 +165,10 @@ function DatePickerInput({
             />
           </PopoverTrigger>
           <PopoverContent
-            className="w-auto p-0 bg-white"
-            align="start"
+            className="w-auto p-0 bg-white z-[100]"
+            align="end"
+            side="bottom"
+            sideOffset={8}
             dir="rtl"
           >
             <Calendar

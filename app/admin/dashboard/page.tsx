@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { DashboardKPIs } from '@/components/admin/dashboard/DashboardKPIs';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/AuthProvider';
-import { Home, User, Briefcase, FileText } from 'lucide-react';
 import { NavBar } from '@/components/ui/tubelight-navbar';
 
 export default function AdminDashboardPage() {
@@ -13,10 +12,8 @@ export default function AdminDashboardPage() {
   const { logout } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
   const navItems = [
-    { name: 'Home', url: '#', icon: Home },
-    { name: 'About', url: '#', icon: User },
-    { name: 'Projects', url: '#', icon: Briefcase },
-    { name: 'Resume', url: '#', icon: FileText },
+    { name: 'לוח מחוונים', url: '/admin/dashboard', icon: 'LayoutDashboard' },
+    { name: 'משימות', url: '/admin/tasks', icon: 'ClipboardList' },
   ];
   const handleSignOut = async () => {
     try {
@@ -30,18 +27,18 @@ export default function AdminDashboardPage() {
 
   return (
     <div dir="rtl" className="min-h-screen bg-gray-50 p-4">
-      {/* //   <NavBar items={navItems} className="mb-4" /> */}
+      <NavBar items={navItems} className="z-40" />
       <div className="">
         <Button
           variant="outline"
-          className="text-sm fixed top-4 left-4 z-60 border-toyota-primary bg-toyota-primary text-white"
+          className="text-sm fixed top-4 left-4 z-50 border-toyota-primary bg-toyota-primary text-white"
           onClick={handleSignOut}
           disabled={signingOut}
         >
           יציאה
         </Button>
       </div>
-      <div className="mx-auto max-w-7xl space-y-4 mt-20">
+      <div className="mx-auto max-w-7xl space-y-4 mt-20 sm:mt-24">
         {/* Navbar */}
         {/* <div className="flex items-center justify-between rounded-lg bg-white p-3 shadow-sm border border-gray-200">
           <div className="flex items-center gap-3">

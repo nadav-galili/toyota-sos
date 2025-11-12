@@ -3,13 +3,14 @@
 import React, { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import Link from "next/link"
-import { LucideIcon } from "lucide-react"
+import { usePathname } from "next/navigation"
+import * as Icons from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface NavItem {
   name: string
   url: string
-  icon: LucideIcon
+  icon: string | React.ComponentType<{ size?: number; strokeWidth?: number }>
 }
 
 interface NavBarProps {
@@ -17,8 +18,17 @@ interface NavBarProps {
   className?: string
 }
 
+const iconMap: Record<string, React.ComponentType<{ size?: number; strokeWidth?: number }>> = {
+  LayoutDashboard: Icons.LayoutDashboard,
+  ClipboardList: Icons.ClipboardList,
+  Home: Icons.Home,
+  User: Icons.User,
+  Briefcase: Icons.Briefcase,
+  FileText: Icons.FileText,
+}
+
 export function NavBar({ items, className }: NavBarProps) {
-  const [activeTab, setActiveTab] = useState(items[0].name)
+  const pathname = usePathname()
   const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
@@ -34,20 +44,21 @@ export function NavBar({ items, className }: NavBarProps) {
   return (
     <div
       className={cn(
-        "fixed bottom-0 sm:top-0 left-1/2 -translate-x-1/2 z-50 mb-6 sm:pt-6",
+        "fixed bottom-0 sm:top-0 left-1/2 -translate-x-1/2 z-40 mb-6 sm:pt-6",
         className,
       )}
     >
       <div className="flex items-center gap-3 bg-background/5 border border-border backdrop-blur-lg py-1 px-1 rounded-full shadow-lg">
         {items.map((item) => {
-          const Icon = item.icon
-          const isActive = activeTab === item.name
+          const Icon = typeof item.icon === 'string' 
+            ? iconMap[item.icon] || Icons.LayoutDashboard
+            : item.icon
+          const isActive = pathname === item.url || pathname?.startsWith(item.url + '/')
 
           return (
             <Link
               key={item.name}
               href={item.url}
-              onClick={() => setActiveTab(item.name)}
               className={cn(
                 "relative cursor-pointer text-sm font-semibold px-6 py-2 rounded-full transition-colors",
                 "text-foreground/80 hover:text-primary",
