@@ -837,7 +837,7 @@
             "description": "Queue submissions when offline, persist to IndexedDB, and process on connectivity restoration or Background Sync, with retries and backoff; display sync progress in UI.",
             "dependencies": [1, 2, 3],
             "details": "Create a queue model per type with status and retryCount. In SW, listen for 'sync' events (tagged per queue) and process items; fallback to window 'online' to trigger sync if SyncManager unsupported. Implement exponential backoff and jitter, cap retries, mark success/failure, and emit progress via postMessage or BroadcastChannel. Update UI with sync state.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Submit items while offline, confirm they are queued. Go online and verify items send in order with retries on simulated failures; observe UI progress and final statuses.",
             "parentId": "undefined"
           },
