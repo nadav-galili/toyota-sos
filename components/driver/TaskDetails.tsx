@@ -3,6 +3,9 @@
 import React, { useEffect, useState } from 'react';
 import { createBrowserClient } from '@/lib/auth';
 import dayjs from '@/lib/dayjs';
+import { useFeatureFlag } from '@/lib/useFeatureFlag';
+import { FLAG_SIGNATURE_REQUIRED } from '@/lib/flagKeys';
+import { SignaturePad } from '@/components/driver/SignaturePad';
 
 type TaskDetailsData = {
   id: string;
@@ -32,6 +35,10 @@ export function TaskDetails({ taskId }: { taskId: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [task, setTask] = useState<TaskDetailsData | null>(null);
+  const signatureRequired = useFeatureFlag(FLAG_SIGNATURE_REQUIRED);
+  const [uploadedSignature, setUploadedSignature] = useState<{ path: string; signedUrl?: string | null; bytes: number } | null>(null);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [completeError, setCompleteError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -196,6 +203,60 @@ export function TaskDetails({ taskId }: { taskId: string }) {
       <Section id="time" title="חלון זמן">
         <div className="text-sm text-gray-800">{timeWindow}</div>
       </Section>
+
+      {/* Signature requirement + Complete action */}
+      {task.status !== 'completed' ? (
+        <Section id="complete" title="סיום משימה">
+          <div className="space-y-3">
+            {signatureRequired ? (
+              <>
+                <p className="text-sm text-gray-700">נדרש להשלים חתימה לפני סימון המשימה כהושלמה.</p>
+                <SignaturePad
+                  width={340}
+                  height={160}
+                  uploadBucket="signatures"
+                  taskId={task.id}
+                  onUploaded={(meta) => setUploadedSignature(meta)}
+                />
+                {uploadedSignature ? (
+                  <div className="text-xs text-gray-500">
+                    נשמר: {uploadedSignature.path} ({uploadedSignature.bytes}b)
+                  </div>
+                ) : null}
+              </>
+            ) : null}
+            {completeError ? (
+              <div className="rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700">{completeError}</div>
+            ) : null}
+            <button
+              type="button"
+              className="rounded-md bg-toyota-primary px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              disabled={isCompleting || (signatureRequired && !uploadedSignature)}
+              onClick={async () => {
+                setIsCompleting(true);
+                setCompleteError(null);
+                try {
+                  const supa = createBrowserClient();
+                  const { error: upErr } = await supa
+                    .from('tasks')
+                    .update({ status: 'completed' })
+                    .eq('id', task.id);
+                  if (upErr) {
+                    throw new Error((upErr as any)?.message || 'עדכון סטטוס נכשל');
+                  }
+                  setTask((prev) => (prev ? { ...prev, status: 'completed' } : prev));
+                } catch (e: any) {
+                  setCompleteError(e?.message || 'שגיאה בסיום המשימה');
+                } finally {
+                  setIsCompleting(false);
+                }
+              }}
+            >
+              סמן כהושלם
+            </button>
+          </div>
+        </Section>
+      ) : null}
     </div>
   );
 }

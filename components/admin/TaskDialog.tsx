@@ -4,7 +4,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import type { Driver, Client, Vehicle, Task, TaskPriority, TaskStatus, TaskType } from './TasksBoard';
 import { trackFormSubmitted } from '@/lib/events';
 import { useFeatureFlag } from '@/lib/useFeatureFlag';
-import { FLAG_MULTI_DRIVER } from '@/lib/flagKeys';
+import { FLAG_MULTI_DRIVER, FLAG_PDF_GENERATION } from '@/lib/flagKeys';
+import { downloadBlob, generateTaskPdfLikeBlob } from '@/utils/pdf';
 
 type Mode = 'create' | 'edit';
 
@@ -39,6 +40,7 @@ export function TaskDialog(props: TaskDialogProps) {
 
   // Feature flags
   const multiDriverEnabled = useFeatureFlag(FLAG_MULTI_DRIVER);
+  const pdfEnabled = useFeatureFlag(FLAG_PDF_GENERATION);
 
   // Form state
   const [clientsLocal, setClientsLocal] = useState<Client[]>(clients);
@@ -451,6 +453,30 @@ export function TaskDialog(props: TaskDialogProps) {
           </div>
 
           <div className="col-span-1 md:col-span-2 mt-2 flex items-center justify-end gap-2">
+            {pdfEnabled && (
+              <button
+                type="button"
+                className="rounded border border-gray-300 px-3 py-2 text-sm"
+                onClick={() => {
+                  const payload = {
+                    title,
+                    type,
+                    priority,
+                    status,
+                    details,
+                    estimated_start: estimatedStart,
+                    estimated_end: estimatedEnd,
+                    address,
+                    client_id: clientId,
+                    vehicle_id: vehicleId,
+                  };
+                  const blob = generateTaskPdfLikeBlob(payload);
+                  downloadBlob(blob, `task-${task?.id || 'new'}.pdf`);
+                }}
+              >
+                ייצוא PDF
+              </button>
+            )}
             <button type="button" className="rounded border border-gray-300 px-3 py-2 text-sm" onClick={() => onOpenChange(false)} disabled={submitting}>
               ביטול
             </button>
