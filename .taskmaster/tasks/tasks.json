@@ -857,7 +857,7 @@
             "description": "Add manifest.json with app name, icons, theme/background colors, start_url, and standalone display; ensure it is linked and valid.",
             "dependencies": [],
             "details": "Add public/manifest.json with multiple icon sizes (including maskable). Configure name/short_name, start_url, scope, display: 'standalone', theme_color, background_color, orientation. Link it in HTML head and ensure icons exist in public/. Validate with Lighthouse PWA checks.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Open Application > Manifest to verify fields and icons. Run Lighthouse PWA audit to confirm manifest is detected and valid.",
             "parentId": "undefined"
           },
