@@ -362,7 +362,7 @@ export function TaskDialog(props: TaskDialogProps) {
         aria-modal="true"
       >
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-bold">
+          <h2 className="text-lg font-bold text-toyota-primary">
             {mode === 'create' ? 'יצירת משימה' : 'עריכת משימה'}
           </h2>
           <button
@@ -385,7 +385,9 @@ export function TaskDialog(props: TaskDialogProps) {
           className="grid grid-cols-1 gap-3 md:grid-cols-2"
         >
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">כותרת</span>
+            <span className="text-md underline font-medium text-blue-500">
+              כותרת
+            </span>
             <input
               className="rounded border border-gray-300 p-2"
               value={title}
@@ -395,7 +397,9 @@ export function TaskDialog(props: TaskDialogProps) {
           </label>
 
           <label className="flex flex-col gap-1 ">
-            <span className="text-sm font-medium">סוג</span>
+            <span className="text-md underline font-medium text-blue-500">
+              סוג
+            </span>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -414,7 +418,11 @@ export function TaskDialog(props: TaskDialogProps) {
                   onValueChange={(value) => setType(value as TaskType)}
                 >
                   {types.map((t) => (
-                    <DropdownMenuRadioItem key={t} value={t}>
+                    <DropdownMenuRadioItem
+                      key={t}
+                      value={t}
+                      className="hover:bg-blue-600 hover:text-white"
+                    >
                       {t}
                     </DropdownMenuRadioItem>
                   ))}
@@ -424,37 +432,79 @@ export function TaskDialog(props: TaskDialogProps) {
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">עדיפות</span>
-            <select
-              className="rounded border border-gray-300 p-2"
-              value={priority}
-              onChange={(e) => setPriority(e.target.value as TaskPriority)}
-            >
-              {priorities.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
+            <span className="text-md underline font-medium text-blue-500">
+              עדיפות
+            </span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-md font-normal"
+                >
+                  {type}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                className="w-56 bg-white text-right *:text-right"
+                style={{ direction: 'rtl' }}
+              >
+                <DropdownMenuRadioGroup
+                  value={priority}
+                  onValueChange={(value) => setType(value as TaskType)}
+                >
+                  {priorities.map((p) => (
+                    <DropdownMenuRadioItem
+                      key={p}
+                      value={p}
+                      className="hover:bg-blue-600 hover:text-white"
+                    >
+                      {p}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">סטטוס</span>
-            <select
-              className="rounded border border-gray-300 p-2"
-              value={status}
-              onChange={(e) => setStatus(e.target.value as TaskStatus)}
-            >
-              {statuses.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
+            <span className="text-md underline font-medium text-blue-500">
+              סטטוס
+            </span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-md font-normal"
+                >
+                  {status}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                className="w-56 bg-white text-right *:text-right"
+                style={{ direction: 'rtl' }}
+              >
+                <DropdownMenuRadioGroup
+                  value={status}
+                  onValueChange={(value) => setStatus(value as TaskStatus)}
+                >
+                  {statuses.map((s) => (
+                    <DropdownMenuRadioItem
+                      key={s}
+                      value={s}
+                      className="hover:bg-blue-600 hover:text-white"
+                    >
+                      {s}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </label>
 
           <label className="col-span-1 md:col-span-2 flex flex-col gap-1">
-            <span className="text-sm font-medium">תיאור</span>
+            <span className="text-md underline font-medium text-blue-500">
+              תיאור
+            </span>
             <textarea
               className="rounded border border-gray-300 p-2"
               rows={3}
