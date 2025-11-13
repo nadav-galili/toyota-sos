@@ -19,7 +19,6 @@ import {
   useSensor,
   useSensors,
   DragOverlay,
-  useDraggable,
   useDroppable,
   closestCorners,
 } from '@dnd-kit/core';
@@ -49,10 +48,23 @@ import type {
   SortDir,
   TasksBoardProps,
   KanbanColumnProps,
-  TaskCardProps,
 } from '@/types/board';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { PostgresChangesPayload } from '@supabase/supabase-js/dist/module/lib/types';
+import {
+  TaskCard,
+  statusLabel,
+  priorityColor,
+  priorityLabel,
+  typeLabel,
+} from './TaskCard';
+
+type PostgresChangePayload = {
+  eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+  new?: unknown;
+  old?: unknown;
+  schema: string;
+  table: string;
+};
 
 // Re-export types for backward compatibility
 export type {
@@ -714,7 +726,7 @@ export function TasksBoard({
           .on(
             'postgres_changes',
             { event: '*', schema: 'public', table: 'tasks' },
-            (payload: PostgresChangesPayload) => {
+            (payload: PostgresChangePayload) => {
               setTasks((prev) => {
                 if (payload.eventType === 'INSERT') {
                   const row = payload.new as Task;
@@ -738,7 +750,7 @@ export function TasksBoard({
           .on(
             'postgres_changes',
             { event: '*', schema: 'public', table: 'task_assignees' },
-            (payload: PostgresChangesPayload) => {
+            (payload: PostgresChangePayload) => {
               setAssignees((prev) => {
                 if (payload.eventType === 'INSERT') {
                   const row = payload.new as TaskAssignee;
@@ -1174,194 +1186,4 @@ function KanbanColumn({
       </div>
     </div>
   );
-}
-
-/**
- * TaskCard Component
- * Renders a single task card within the Kanban board with drag support.
- */
-
-function TaskCard({
-  task,
-  columnId,
-  isActive,
-  assignees,
-  driverMap,
-  clientMap,
-  vehicleMap,
-  conflictInfo,
-  // onDragStart,
-  onEdit,
-  selected,
-  onToggleSelected,
-  showSelect,
-}: TaskCardProps) {
-  const client = clientMap.get(task.client_id || '');
-  const vehicle = vehicleMap.get(task.vehicle_id || '');
-  const leadAssignee = assignees.find((a) => a.is_lead);
-  const leadDriver = leadAssignee
-    ? driverMap.get(leadAssignee.driver_id)
-    : null;
-
-  // Setup draggable
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: task.id,
-    data: { type: 'task', taskId: task.id, sourceColumn: columnId },
-  });
-
-  return (
-    <div
-      ref={setNodeRef}
-      id={task.id}
-      className={`relative cursor-grab active:cursor-grabbing rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-all hover:shadow-md hover:border-gray-300 ${
-        isActive ? 'opacity-50 ring-2 ring-toyota-primary' : ''
-      } ${isDragging ? 'opacity-50' : ''}`}
-      aria-label={`משימה: ${task.title}`}
-      data-draggable-id={task.id}
-      {...attributes}
-      {...listeners}
-    >
-      {conflictInfo && (
-        <div className="absolute -top-2 -left-2 rounded bg-orange-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow">
-          עודכן ע&quot;י {conflictInfo.by || 'שרת'}{' '}
-          {conflictInfo.at
-            ? `(${new Date(conflictInfo.at).toLocaleTimeString()})`
-            : ''}
-        </div>
-      )}
-      {/* Header: Select + Title + Priority Badge */}
-      <div className="mb-2 flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2">
-          {showSelect && (
-            <input
-              type="checkbox"
-              checked={selected}
-              onChange={onToggleSelected}
-              aria-label="בחר משימה"
-            />
-          )}
-          <h4 className="flex-1 line-clamp-2 font-semibold text-gray-900 text-sm">
-            {task.title}
-          </h4>
-        </div>
-        <span
-          className={`shrink-0 inline-block rounded-full px-1.5 py-0.5 text-xs font-bold text-white ${priorityColor(
-            task.priority
-          )}`}
-        >
-          {priorityLabel(task.priority)}
-        </span>
-      </div>
-
-      {/* Type badge */}
-      <p className="mb-2 inline-block rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
-        {typeLabel(task.type)}
-      </p>
-
-      {/* Driver info */}
-      {leadDriver && (
-        <div className="mb-2 flex items-center gap-1 text-xs text-gray-600">
-          <span className="font-medium">👤</span>
-          <span className="truncate">{leadDriver.name || 'Unknown'}</span>
-        </div>
-      )}
-
-      {/* Client info */}
-      {client && (
-        <div className="mb-2 flex items-center gap-1 text-xs text-gray-600">
-          <span className="font-medium">🏢</span>
-          <span className="truncate">{client.name}</span>
-        </div>
-      )}
-
-      {/* Vehicle info */}
-      {vehicle && (
-        <div className="mb-2 flex items-center gap-1 text-xs text-gray-600">
-          <span className="font-medium">🚗</span>
-          <span className="font-mono font-bold">{vehicle.license_plate}</span>
-        </div>
-      )}
-
-      {/* Time window */}
-      <div className="mb-2 text-xs text-gray-500">
-        {formatDate(task.estimated_start)} - {formatDate(task.estimated_end)}
-      </div>
-
-      {/* Footer: Status + Actions */}
-      <div className="mt-2 flex items-center justify-between">
-        <span
-          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${statusColor(
-            task.status
-          )}`}
-        >
-          {statusLabel(task.status)}
-        </span>
-        <button
-          className="text-xs text-toyota-primary hover:underline"
-          onClick={() => onEdit(task)}
-        >
-          עריכה
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Utility functions for labels and colors
- */
-function statusLabel(status: TaskStatus): string {
-  const labels: Record<TaskStatus, string> = {
-    pending: 'ממתין',
-    in_progress: 'בתהליך',
-    blocked: 'חסום',
-    completed: 'הושלם',
-  };
-  return labels[status];
-}
-
-function statusColor(status: TaskStatus): string {
-  const colors: Record<TaskStatus, string> = {
-    pending: 'bg-gray-100 text-gray-800',
-    in_progress: 'bg-blue-100 text-blue-800',
-    blocked: 'bg-red-100 text-red-800',
-    completed: 'bg-green-100 text-green-800',
-  };
-  return colors[status];
-}
-
-function priorityLabel(priority: TaskPriority): string {
-  const labels: Record<TaskPriority, string> = {
-    low: 'נמוך',
-    medium: 'בינוני',
-    high: 'גבוה',
-  };
-  return labels[priority];
-}
-
-function priorityColor(priority: TaskPriority): string {
-  const colors: Record<TaskPriority, string> = {
-    low: 'bg-gray-500',
-    medium: 'bg-yellow-500',
-    high: 'bg-red-600',
-  };
-  return colors[priority];
-}
-
-function typeLabel(type: TaskType): string {
-  const labels: Record<TaskType, string> = {
-    pickup_or_dropoff_car: 'איסוף/הורדת רכב',
-    replacement_car_delivery: 'הסעת רכב חלופי',
-    drive_client_home: 'הסעת לקוח הביתה',
-    drive_client_to_dealership: 'הסעת לקוח למוסך',
-    licence_test: 'בדיקת רישיון',
-    rescue_stuck_car: 'חילוץ רכב תקוע',
-    other: 'אחר',
-  };
-  return labels[type];
-}
-
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('he-IL', { month: '2-digit', day: '2-digit' });
 }

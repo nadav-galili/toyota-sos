@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import type { TaskAssignee } from '@/types/task';
 
 /**
  * POST /api/admin/tasks
@@ -65,9 +66,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert assignments if provided
-    const inserts: any[] = [];
+    const inserts: TaskAssignee[] = [];
     if (lead_driver_id) {
       inserts.push({
+        id: crypto.randomUUID(),
         task_id: created.id,
         driver_id: lead_driver_id,
         is_lead: true,
@@ -79,6 +81,7 @@ export async function POST(request: NextRequest) {
         // skip if same as lead
         if (id && id !== lead_driver_id) {
           inserts.push({
+            id: crypto.randomUUID(),
             task_id: created.id,
             driver_id: id,
             is_lead: false,

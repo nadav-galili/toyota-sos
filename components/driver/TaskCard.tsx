@@ -29,7 +29,11 @@ export function TaskCard(props: TaskCardProps) {
   } = props;
 
   const priorityColor =
-    priority === 'high' ? 'bg-red-600' : priority === 'medium' ? 'bg-yellow-500' : 'bg-green-600';
+    priority === 'high'
+      ? 'bg-red-600'
+      : priority === 'medium'
+      ? 'bg-yellow-500'
+      : 'bg-green-600';
 
   const statusColor =
     status === 'completed'
@@ -42,22 +46,28 @@ export function TaskCard(props: TaskCardProps) {
 
   const timeWindow =
     estimatedStart && estimatedEnd
-      ? `${dayjs(estimatedStart).format('DD/MM/YYYY HH:mm')} – ${dayjs(estimatedEnd).format(
-          'DD/MM/YYYY HH:mm'
-        )}`
+      ? `${dayjs(estimatedStart).format('DD/MM/YYYY HH:mm')} – ${dayjs(
+          estimatedEnd
+        ).format('DD/MM/YYYY HH:mm')}`
       : estimatedEnd
       ? `עד ${dayjs(estimatedEnd).format('DD/MM/YYYY HH:mm')}`
       : 'ללא זמן יעד';
 
-  const wazeHref = address ? `waze://?navigate=yes&q=${encodeURIComponent(address)}` : undefined;
+  const wazeHref = address
+    ? `waze://?navigate=yes&q=${encodeURIComponent(address)}`
+    : undefined;
 
   return (
     <div className="rounded-lg border border-gray-200 p-4 shadow-sm bg-white">
       <div className="flex items-center justify-between gap-2">
-        <span className={`inline-flex px-2 py-1 rounded text-xs text-white ${priorityColor}`}>
+        <span
+          className={`inline-flex px-2 py-1 rounded text-xs text-white ${priorityColor}`}
+        >
           {priority}
         </span>
-        <span className={`inline-flex px-2 py-1 rounded text-xs text-white ${statusColor}`}>
+        <span
+          className={`inline-flex px-2 py-1 rounded text-xs text-white ${statusColor}`}
+        >
           {status}
         </span>
       </div>
@@ -90,5 +100,3 @@ export function TaskCard(props: TaskCardProps) {
     </div>
   );
 }
-
-
