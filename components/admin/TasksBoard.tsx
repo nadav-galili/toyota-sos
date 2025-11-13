@@ -102,7 +102,7 @@ export function TasksBoard({
   const [groupBy, setGroupBy] = useState<GroupBy>(initialGroupBy);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading] = useState(false);
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create');
@@ -140,6 +140,8 @@ export function TasksBoard({
     })
   );
 
+  // (handleDragEnd declared below, after persistence helpers)
+
   // Sync groupBy to URL and localStorage
   const persistGroupBy = useCallback((next: GroupBy) => {
     setGroupBy(next);
@@ -164,7 +166,7 @@ export function TasksBoard({
     if (typeof window === 'undefined' || !('BroadcastChannel' in window))
       return;
     const bc = new BroadcastChannel('sync-status');
-    const timers = new Map<string, any>();
+    const timers = new Map<string, ReturnType<typeof setTimeout>>();
     bc.onmessage = (ev: MessageEvent) => {
       const msg = ev.data;
       if (msg && msg.type === 'conflict:server-wins' && msg.id) {
@@ -327,7 +329,7 @@ export function TasksBoard({
         type: 'status' as const,
       }));
     }
-  }, [groupBy, taskAssignees, driverMap]);
+  }, [groupBy, assignees, driverMap]);
 
   // Get tasks for a specific column
   const getColumnTasks = useCallback(
@@ -352,12 +354,6 @@ export function TasksBoard({
   const openCreateDialog = useCallback(() => {
     setDialogMode('create');
     setDialogTask(null);
-    setDialogOpen(true);
-  }, []);
-
-  const openEditDialog = useCallback((task: Task) => {
-    setDialogMode('edit');
-    setDialogTask(task);
     setDialogOpen(true);
   }, []);
 
@@ -391,6 +387,8 @@ export function TasksBoard({
     },
     []
   );
+
+  // DnD: finalize drop and persist changes
 
   const handleUpdated = useCallback((updated: Task) => {
     setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
@@ -541,82 +539,7 @@ export function TasksBoard({
     setOverId(over?.id as string | null);
   }, []);
 
-  const handleDragEnd = useCallback(
-    (event: DragEndEvent) => {
-      const { active, over } = event;
-
-      setActiveId(null);
-      setOverId(null);
-      setDraggedTask(null);
-
-      // If no drop target or same target, do nothing
-      if (!over || active.id === over.id) {
-        return;
-      }
-
-      const taskId = active.id as string;
-      const targetColumnId = over.id as string;
-      const task = tasks.find((t) => t.id === taskId);
-
-      if (!task) return;
-
-      const updatePayload: Partial<Task> = {};
-
-      // Determine what changed based on groupBy mode and target column
-      if (groupBy === 'status') {
-        // Target column is a status
-        const newStatus = targetColumnId as TaskStatus;
-        if (task.status !== newStatus) {
-          updatePayload.status = newStatus;
-        }
-      } else if (groupBy === 'driver') {
-        // Target column is a driver - update task assignee
-        const targetDriverId = targetColumnId;
-        const currentAssignee = assignees.find(
-          (ta) => ta.task_id === taskId && ta.is_lead
-        );
-        if (currentAssignee?.driver_id === targetDriverId) {
-          return;
-        }
-        // Optimistic assignees update and persistence with rollback
-        const prevSnapshot = assignees;
-        setAssignees((prevAssignees) => {
-          const withoutLead = prevAssignees.filter(
-            (ta) => !(ta.task_id === taskId && ta.is_lead)
-          );
-          const newLead: TaskAssignee = {
-            id: `local-${taskId}`,
-            task_id: taskId,
-            driver_id: targetDriverId,
-            is_lead: true,
-            assigned_at: new Date().toISOString(),
-          };
-          return [...withoutLead, newLead];
-        });
-        persistDriverAssignment(taskId, targetDriverId, prevSnapshot);
-        return;
-      }
-
-      // If no changes, return
-      if (
-        groupBy === 'status' &&
-        (Object.keys(updatePayload).length === 0 || !updatePayload.status)
-      ) {
-        return;
-      }
-
-      // Optimistically update local state
-      setTasks((prevTasks) =>
-        prevTasks.map((t) => (t.id === taskId ? { ...t, ...updatePayload } : t))
-      );
-
-      // Persist to database via API
-      if (updatePayload.status) {
-        persistTaskUpdate(taskId, { status: updatePayload.status });
-      }
-    },
-    [tasks, taskAssignees, groupBy]
-  );
+  // handleDragEnd is declared after persistence helpers to satisfy lints
 
   // Persist task status update to database
   const persistTaskUpdate = useCallback(
@@ -709,7 +632,61 @@ export function TasksBoard({
         toastError('שגיאה בהקצאת נהג');
       }
     },
-    []
+    [tasks]
+  );
+
+  // DnD: finalize drop and persist changes
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      setActiveId(null);
+      setOverId(null);
+      setDraggedTask(null);
+      if (!over || active.id === over.id) return;
+      const taskId = active.id as string;
+      const targetColumnId = over.id as string;
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task) return;
+      const updatePayload: Partial<Task> = {};
+      if (groupBy === 'status') {
+        const newStatus = targetColumnId as TaskStatus;
+        if (task.status !== newStatus) updatePayload.status = newStatus;
+      } else if (groupBy === 'driver') {
+        const targetDriverId = targetColumnId;
+        const currentAssignee = assignees.find(
+          (ta) => ta.task_id === taskId && ta.is_lead
+        );
+        if (currentAssignee?.driver_id === targetDriverId) return;
+        const prevSnapshot = assignees;
+        setAssignees((prevAssignees) => {
+          const withoutLead = prevAssignees.filter(
+            (ta) => !(ta.task_id === taskId && ta.is_lead)
+          );
+          const newLead: TaskAssignee = {
+            id: `local-${taskId}`,
+            task_id: taskId,
+            driver_id: targetDriverId,
+            is_lead: true,
+            assigned_at: new Date().toISOString(),
+          };
+          return [...withoutLead, newLead];
+        });
+        persistDriverAssignment(taskId, targetDriverId, prevSnapshot);
+        return;
+      }
+      if (
+        groupBy === 'status' &&
+        (Object.keys(updatePayload).length === 0 || !updatePayload.status)
+      )
+        return;
+      setTasks((prevTasks) =>
+        prevTasks.map((t) => (t.id === taskId ? { ...t, ...updatePayload } : t))
+      );
+      if (updatePayload.status) {
+        persistTaskUpdate(taskId, { status: updatePayload.status });
+      }
+    },
+    [tasks, assignees, groupBy, persistDriverAssignment, persistTaskUpdate]
   );
 
   // Realtime updates (tasks, task_assignees)
@@ -775,7 +752,7 @@ export function TasksBoard({
         // Cleanup
         return () => {
           try {
-            channel && supa.removeChannel(channel);
+            if (channel) supa.removeChannel(channel);
           } catch {
             /* no-op */
           }
@@ -856,7 +833,9 @@ export function TasksBoard({
             <select
               className="rounded border border-gray-300 px-2 py-1 text-sm"
               value={filterType}
-              onChange={(e) => setFilterType(e.target.value as any)}
+              onChange={(e) =>
+                setFilterType(e.target.value as 'all' | TaskType)
+              }
             >
               <option value="all">כל הסוגים</option>
               <option value="pickup_or_dropoff_car">
@@ -876,7 +855,9 @@ export function TasksBoard({
             <select
               className="rounded border border-gray-300 px-2 py-1 text-sm"
               value={filterPriority}
-              onChange={(e) => setFilterPriority(e.target.value as any)}
+              onChange={(e) =>
+                setFilterPriority(e.target.value as 'all' | TaskPriority)
+              }
             >
               <option value="all">כל העדיפויות</option>
               <option value="low">עדיפות: נמוך</option>
@@ -1067,7 +1048,7 @@ export function TasksBoard({
  */
 function ColumnSkeleton() {
   return (
-    <div className="flex min-w-[320px] flex-shrink-0 flex-col rounded-lg border-2 border-gray-200 bg-gray-50 animate-pulse">
+    <div className="flex min-w-[320px] shrink-0 flex-col rounded-lg border-2 border-gray-200 bg-gray-50 animate-pulse">
       {/* Skeleton Header */}
       <div className="border-b border-gray-200 bg-white px-4 py-3">
         <div className="space-y-2">

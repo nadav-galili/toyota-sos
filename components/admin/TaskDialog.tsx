@@ -502,7 +502,7 @@ export function TaskDialog(props: TaskDialogProps) {
                   variant="outline"
                   className="w-full justify-start text-md font-normal"
                 >
-                  {type}
+                  {priority}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
@@ -511,7 +511,7 @@ export function TaskDialog(props: TaskDialogProps) {
               >
                 <DropdownMenuRadioGroup
                   value={priority}
-                  onValueChange={(value) => setType(value as TaskType)}
+                  onValueChange={(value) => setPriority(value as TaskPriority)}
                 >
                   {priorities.map((p) => (
                     <DropdownMenuRadioItem
