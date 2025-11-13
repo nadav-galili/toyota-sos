@@ -840,7 +840,7 @@ export function TasksBoard({
 
         {/* Kanban board container */}
         <div
-          className="h-[calc(100vh-200px)] overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
+          className="h-[calc(100vh-200px)] min-h-0 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
           role="main"
           aria-label="לוח משימות"
         >
@@ -989,7 +989,7 @@ export function TasksBoard({
                 </div>
               )}
               {/* Kanban grid with horizontal scroll */}
-              <div className="flex gap-6 overflow-x-auto p-4">
+              <div className="flex h-full gap-6 overflow-x-auto p-4">
                 {columns.map((column) => {
                   const columnTasks = getColumnTasks(column.id);
                   const isOver = overId === column.id;
@@ -1120,7 +1120,7 @@ function KanbanColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`flex min-w-[320px] shrink-0 flex-col rounded-lg border-2 transition-all ${
+      className={`flex h-full min-h-0 min-w-[320px] shrink-0 flex-col rounded-lg border-2 transition-all ${
         isOver
           ? 'border-toyota-primary/50 bg-toyota-50/30 shadow-md'
           : 'border-gray-200 bg-gray-50'
@@ -1156,7 +1156,7 @@ function KanbanColumn({
       </div>
 
       {/* Column Body - Scrollable task list */}
-      <div className="flex-1 space-y-3 overflow-y-auto p-3">
+      <div className="flex-1 space-y-3 overflow-y-auto p-3 pb-10">
         {tasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="mb-2 text-2xl">📭</div>

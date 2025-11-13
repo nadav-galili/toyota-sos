@@ -2,6 +2,8 @@
 
 /* eslint-disable max-lines */
 import React, { useEffect, useMemo, useState } from 'react';
+import { z } from 'zod';
+import dayjs from '@/lib/dayjs';
 import type { Task, TaskPriority, TaskStatus, TaskType } from '@/types/task';
 import type { Driver } from '@/types/user';
 import type { Client, Vehicle } from '@/types/entity';
@@ -18,7 +20,22 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Calendar } from 'lucide-react';
+
 type Mode = 'create' | 'edit';
+
+// Validation schema for estimated date (no past dates allowed)
+const estimatedDateSchema = z.date().refine((date) => {
+  const selectedTime = dayjs(date).startOf('day').valueOf();
+  const todayTime = dayjs().startOf('day').valueOf();
+  return selectedTime >= todayTime;
+}, 'תאריך לא יכול להיות בעבר');
 
 interface TaskDialogProps {
   open: boolean;
@@ -77,10 +94,20 @@ export function TaskDialog(props: TaskDialogProps) {
   );
   const [status, setStatus] = useState<TaskStatus>(task?.status ?? 'בהמתנה');
   const [details, setDetails] = useState(task?.details ?? '');
-  const [estimatedStart, setEstimatedStart] = useState(
-    task?.estimated_start ?? ''
+  const [estimatedDate, setEstimatedDate] = useState<Date>(
+    task?.estimated_start ? new Date(task.estimated_start) : new Date()
   );
-  const [estimatedEnd, setEstimatedEnd] = useState(task?.estimated_end ?? '');
+  const [estimatedDateError, setEstimatedDateError] = useState<string | null>(
+    null
+  );
+  const [estimatedStartTime, setEstimatedStartTime] = useState(
+    task?.estimated_start
+      ? dayjs(task.estimated_start).format('HH:mm')
+      : '09:00'
+  );
+  const [estimatedEndTime, setEstimatedEndTime] = useState(
+    task?.estimated_end ? dayjs(task.estimated_end).format('HH:mm') : '17:00'
+  );
   const [address, setAddress] = useState(task?.address ?? '');
   const [addressQuery, setAddressQuery] = useState(task?.address ?? '');
   const [addressSuggestions, setAddressSuggestions] = useState<string[]>([]);
@@ -106,8 +133,19 @@ export function TaskDialog(props: TaskDialogProps) {
       setPriority(task?.priority ?? 'בינונית');
       setStatus(task?.status ?? 'בהמתנה');
       setDetails(task?.details ?? '');
-      setEstimatedStart(task?.estimated_start ?? '');
-      setEstimatedEnd(task?.estimated_end ?? '');
+      setEstimatedDate(
+        task?.estimated_start ? new Date(task.estimated_start) : new Date()
+      );
+      setEstimatedStartTime(
+        task?.estimated_start
+          ? dayjs(task.estimated_start).format('HH:mm')
+          : '09:00'
+      );
+      setEstimatedEndTime(
+        task?.estimated_end
+          ? dayjs(task.estimated_end).format('HH:mm')
+          : '17:00'
+      );
       setAddress(task?.address ?? '');
       setAddressQuery(task?.address ?? '');
       setClientId(task?.client_id ?? '');
@@ -134,11 +172,16 @@ export function TaskDialog(props: TaskDialogProps) {
 
   const validate = (): string | null => {
     if (!title.trim()) return 'חובה להזין כותרת';
-    if (
-      estimatedStart &&
-      estimatedEnd &&
-      new Date(estimatedStart) > new Date(estimatedEnd)
-    ) {
+
+    // Validate date
+    const dateValidation = estimatedDateSchema.safeParse(estimatedDate);
+    if (!dateValidation.success) {
+      return dateValidation.error.issues[0].message;
+    }
+
+    const startTime = parseInt(estimatedStartTime.split(':')[0]);
+    const endTime = parseInt(estimatedEndTime.split(':')[0]);
+    if (startTime >= endTime) {
       return 'שעת התחלה לא יכולה להיות אחרי שעת סיום';
     }
     return null;
@@ -254,14 +297,23 @@ export function TaskDialog(props: TaskDialogProps) {
     setError(null);
     try {
       if (mode === 'create') {
+        const estimatedStartDatetime = dayjs(estimatedDate)
+          .set('hour', parseInt(estimatedStartTime.split(':')[0]))
+          .set('minute', parseInt(estimatedStartTime.split(':')[1]))
+          .toISOString();
+        const estimatedEndDatetime = dayjs(estimatedDate)
+          .set('hour', parseInt(estimatedEndTime.split(':')[0]))
+          .set('minute', parseInt(estimatedEndTime.split(':')[1]))
+          .toISOString();
+
         const body = {
           title: title.trim(),
           type,
           priority,
           status,
           details: details || null,
-          estimated_start: estimatedStart || null,
-          estimated_end: estimatedEnd || null,
+          estimated_start: estimatedStartDatetime || null,
+          estimated_end: estimatedEndDatetime || null,
           address: address || '',
           client_id: clientId || null,
           vehicle_id: vehicleId || null,
@@ -294,14 +346,23 @@ export function TaskDialog(props: TaskDialogProps) {
         onOpenChange(false);
       } else {
         if (!task) return;
+        const estimatedStartDatetime = dayjs(estimatedDate)
+          .set('hour', parseInt(estimatedStartTime.split(':')[0]))
+          .set('minute', parseInt(estimatedStartTime.split(':')[1]))
+          .toISOString();
+        const estimatedEndDatetime = dayjs(estimatedDate)
+          .set('hour', parseInt(estimatedEndTime.split(':')[0]))
+          .set('minute', parseInt(estimatedEndTime.split(':')[1]))
+          .toISOString();
+
         const update: Partial<Task> = {
           title: title.trim(),
           type,
           priority,
           status,
           details: details || null,
-          estimated_start: estimatedStart || undefined,
-          estimated_end: estimatedEnd || undefined,
+          estimated_start: estimatedStartDatetime || undefined,
+          estimated_end: estimatedEndDatetime || undefined,
           address: address || '',
           client_id: clientId || null,
           vehicle_id: vehicleId || null,
@@ -514,22 +575,66 @@ export function TaskDialog(props: TaskDialogProps) {
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">שעת התחלה מוערכת</span>
+            <span className="text-sm font-medium">תאריך</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={`w-full justify-start text-right font-normal ${
+                    estimatedDateError ? 'border-red-500' : ''
+                  }`}
+                >
+                  <Calendar className="ml-2 h-4 w-4" />
+                  {dayjs(estimatedDate).format('DD/MM/YYYY')}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <CalendarComponent
+                  mode="single"
+                  selected={estimatedDate}
+                  className="min-w-[14rem] [--cell-size:2.6rem] bg-white"
+                  onSelect={(date) => {
+                    if (date) {
+                      const result = estimatedDateSchema.safeParse(date);
+                      if (result.success) {
+                        setEstimatedDate(date);
+                        setEstimatedDateError(null);
+                      } else {
+                        setEstimatedDateError(result.error.issues[0].message);
+                      }
+                    }
+                  }}
+                  initialFocus
+                  disabled={(date) => {
+                    const today = dayjs().startOf('day');
+                    const selectedDay = dayjs(date).startOf('day');
+                    return selectedDay.isBefore(today);
+                  }}
+                />
+              </PopoverContent>
+            </Popover>
+            {estimatedDateError && (
+              <p className="text-sm text-red-600">{estimatedDateError}</p>
+            )}
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium">שעת התחלה</span>
             <input
+              type="time"
               className="rounded border border-gray-300 p-2"
-              type="datetime-local"
-              value={estimatedStart}
-              onChange={(e) => setEstimatedStart(e.target.value)}
+              value={estimatedStartTime}
+              onChange={(e) => setEstimatedStartTime(e.target.value)}
             />
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">שעת סיום מוערכת</span>
+            <span className="text-sm font-medium">שעת סיום</span>
             <input
+              type="time"
               className="rounded border border-gray-300 p-2"
-              type="datetime-local"
-              value={estimatedEnd}
-              onChange={(e) => setEstimatedEnd(e.target.value)}
+              value={estimatedEndTime}
+              onChange={(e) => setEstimatedEndTime(e.target.value)}
             />
           </label>
 
@@ -729,14 +834,23 @@ export function TaskDialog(props: TaskDialogProps) {
                 type="button"
                 className="rounded border border-gray-300 px-3 py-2 text-sm"
                 onClick={() => {
+                  const estimatedStartDatetime = dayjs(estimatedDate)
+                    .set('hour', parseInt(estimatedStartTime.split(':')[0]))
+                    .set('minute', parseInt(estimatedStartTime.split(':')[1]))
+                    .toISOString();
+                  const estimatedEndDatetime = dayjs(estimatedDate)
+                    .set('hour', parseInt(estimatedEndTime.split(':')[0]))
+                    .set('minute', parseInt(estimatedEndTime.split(':')[1]))
+                    .toISOString();
+
                   const payload = {
                     title,
                     type,
                     priority,
                     status,
                     details,
-                    estimated_start: estimatedStart,
-                    estimated_end: estimatedEnd,
+                    estimated_start: estimatedStartDatetime,
+                    estimated_end: estimatedEndDatetime,
                     address,
                     client_id: clientId,
                     vehicle_id: vehicleId,
