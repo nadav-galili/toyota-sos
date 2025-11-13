@@ -10,7 +10,14 @@ import { useFeatureFlag } from '@/lib/useFeatureFlag';
 import { FLAG_MULTI_DRIVER, FLAG_PDF_GENERATION } from '@/lib/flagKeys';
 import { downloadBlob, generateTaskPdfLikeBlob } from '@/utils/pdf';
 import { toastSuccess, toastError } from '@/lib/toast';
-
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
 type Mode = 'create' | 'edit';
 
 interface TaskDialogProps {
@@ -387,19 +394,33 @@ export function TaskDialog(props: TaskDialogProps) {
             />
           </label>
 
-          <label className="flex flex-col gap-1">
+          <label className="flex flex-col gap-1 ">
             <span className="text-sm font-medium">סוג</span>
-            <select
-              className="rounded border border-gray-300 p-2"
-              value={type}
-              onChange={(e) => setType(e.target.value as TaskType)}
-            >
-              {types.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-md font-normal"
+                >
+                  {type}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                className="w-56 bg-white text-right *:text-right"
+                style={{ direction: 'rtl' }}
+              >
+                <DropdownMenuRadioGroup
+                  value={type}
+                  onValueChange={(value) => setType(value as TaskType)}
+                >
+                  {types.map((t) => (
+                    <DropdownMenuRadioItem key={t} value={t}>
+                      {t}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </label>
 
           <label className="flex flex-col gap-1">

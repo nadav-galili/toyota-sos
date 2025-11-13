@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
+import dayjs from '@/lib/dayjs';
 import type { TaskStatus, TaskPriority, TaskType } from '@/types/task';
 import type { TaskCardProps } from '@/types/board';
 
@@ -189,6 +190,5 @@ export function typeLabel(type: TaskType): string {
 }
 
 function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('he-IL', { month: '2-digit', day: '2-digit' });
+  return dayjs(dateStr).format('HH:mm');
 }
