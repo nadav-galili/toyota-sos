@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import React, { useState, useEffect, useRef } from 'react';
 import { TaskCard, TaskCardProps } from '@/components/driver/TaskCard';
 import { TaskSkeleton } from '@/components/driver/TaskSkeleton';
-import { createBrowserClient } from '@/lib/auth';
+import { createBrowserClient, getDriverSession } from '@/lib/auth';
 
 export type DriverTask = TaskCardProps;
 
@@ -103,6 +103,11 @@ export function DriverHome() {
         setError(null);
       }
       const supa = createBrowserClient();
+      
+      // Get driver session from localStorage to pass driver_id if auth.uid() is null
+      const driverSession = getDriverSession();
+      const driverId = driverSession?.userId || null;
+      
       const params: Record<string, unknown> = {
         p_tab: tabState,
         p_limit: 10,
@@ -111,6 +116,11 @@ export function DriverHome() {
         params.p_cursor_updated = cursor.updated_at;
         params.p_cursor_id = cursor.id;
       }
+      // Pass driver_id if available (for localStorage-only sessions)
+      if (driverId) {
+        params.p_driver_id = driverId;
+      }
+      
       const { data, error } = (await supa.rpc('get_driver_tasks', params)) as {
         data: SupaTaskRow[] | null;
         error: unknown | null;
