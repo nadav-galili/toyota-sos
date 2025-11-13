@@ -1,7 +1,10 @@
 'use client';
 
+/* eslint-disable max-lines */
 import React, { useEffect, useMemo, useState } from 'react';
-import type { Driver, Client, Vehicle, Task, TaskPriority, TaskStatus, TaskType } from './TasksBoard';
+import type { Task, TaskPriority, TaskStatus, TaskType } from '@/types/task';
+import type { Driver } from '@/types/user';
+import type { Client, Vehicle } from '@/types/entity';
 import { trackFormSubmitted } from '@/lib/events';
 import { useFeatureFlag } from '@/lib/useFeatureFlag';
 import { FLAG_MULTI_DRIVER, FLAG_PDF_GENERATION } from '@/lib/flagKeys';
@@ -18,24 +21,38 @@ interface TaskDialogProps {
   clients: Client[];
   vehicles: Vehicle[];
   onOpenChange: (open: boolean) => void;
-  onCreated?: (task: Task, leadDriverId?: string, coDriverIds?: string[]) => void;
+  onCreated?: (
+    task: Task,
+    leadDriverId?: string,
+    coDriverIds?: string[]
+  ) => void;
   onUpdated?: (task: Task) => void;
 }
 
 const types: TaskType[] = [
-  'pickup_or_dropoff_car',
-  'replacement_car_delivery',
-  'drive_client_home',
-  'drive_client_to_dealership',
-  'licence_test',
-  'rescue_stuck_car',
-  'other',
+  'איסוף/הורדת רכב',
+  'הסעת רכב חלופי',
+  'הסעת לקוח הביתה',
+  'הסעת לקוח למוסך',
+  'ביצוע טסט',
+  'חילוץ רכב תקוע',
+  'אחר',
 ];
-const priorities: TaskPriority[] = ['low', 'medium', 'high'];
-const statuses: TaskStatus[] = ['pending', 'in_progress', 'blocked', 'completed'];
+const priorities: TaskPriority[] = ['נמוכה', 'בינונית', 'גבוהה'];
+const statuses: TaskStatus[] = ['בהמתנה', 'בעבודה', 'חסומה', 'הושלמה'];
 
 export function TaskDialog(props: TaskDialogProps) {
-  const { open, onOpenChange, mode, task, drivers, clients, vehicles, onCreated, onUpdated } = props;
+  const {
+    open,
+    onOpenChange,
+    mode,
+    task,
+    drivers,
+    clients,
+    vehicles,
+    onCreated,
+    onUpdated,
+  } = props;
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,11 +64,15 @@ export function TaskDialog(props: TaskDialogProps) {
   const [clientsLocal, setClientsLocal] = useState<Client[]>(clients);
   const [vehiclesLocal, setVehiclesLocal] = useState<Vehicle[]>(vehicles);
   const [title, setTitle] = useState(task?.title ?? '');
-  const [type, setType] = useState<TaskType>(task?.type ?? 'other');
-  const [priority, setPriority] = useState<TaskPriority>(task?.priority ?? 'medium');
-  const [status, setStatus] = useState<TaskStatus>(task?.status ?? 'pending');
+  const [type, setType] = useState<TaskType>(task?.type ?? 'אחר');
+  const [priority, setPriority] = useState<TaskPriority>(
+    task?.priority ?? 'בינונית'
+  );
+  const [status, setStatus] = useState<TaskStatus>(task?.status ?? 'בהמתנה');
   const [details, setDetails] = useState(task?.details ?? '');
-  const [estimatedStart, setEstimatedStart] = useState(task?.estimated_start ?? '');
+  const [estimatedStart, setEstimatedStart] = useState(
+    task?.estimated_start ?? ''
+  );
   const [estimatedEnd, setEstimatedEnd] = useState(task?.estimated_end ?? '');
   const [address, setAddress] = useState(task?.address ?? '');
   const [addressQuery, setAddressQuery] = useState(task?.address ?? '');
@@ -74,9 +95,9 @@ export function TaskDialog(props: TaskDialogProps) {
       // Reset on open to initial values
       setError(null);
       setTitle(task?.title ?? '');
-      setType(task?.type ?? 'other');
-      setPriority(task?.priority ?? 'medium');
-      setStatus(task?.status ?? 'pending');
+      setType(task?.type ?? 'אחר');
+      setPriority(task?.priority ?? 'בינונית');
+      setStatus(task?.status ?? 'בהמתנה');
       setDetails(task?.details ?? '');
       setEstimatedStart(task?.estimated_start ?? '');
       setEstimatedEnd(task?.estimated_end ?? '');
@@ -106,7 +127,11 @@ export function TaskDialog(props: TaskDialogProps) {
 
   const validate = (): string | null => {
     if (!title.trim()) return 'חובה להזין כותרת';
-    if (estimatedStart && estimatedEnd && new Date(estimatedStart) > new Date(estimatedEnd)) {
+    if (
+      estimatedStart &&
+      estimatedEnd &&
+      new Date(estimatedStart) > new Date(estimatedEnd)
+    ) {
       return 'שעת התחלה לא יכולה להיות אחרי שעת סיום';
     }
     return null;
@@ -131,7 +156,9 @@ export function TaskDialog(props: TaskDialogProps) {
         'בת ים, ישראל',
         'אשדוד, ישראל',
       ];
-      const results = pool.filter((s) => s.toLowerCase().includes(q.toLowerCase())).slice(0, 5);
+      const results = pool
+        .filter((s) => s.toLowerCase().includes(q.toLowerCase()))
+        .slice(0, 5);
       setAddressSuggestions(results);
     }, 250);
     return () => clearTimeout(h);
@@ -150,7 +177,11 @@ export function TaskDialog(props: TaskDialogProps) {
       const res = await fetch('/api/admin/clients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, phone: newClientPhone || null, email: newClientEmail || null }),
+        body: JSON.stringify({
+          name,
+          phone: newClientPhone || null,
+          email: newClientEmail || null,
+        }),
       });
       if (!res.ok) throw new Error(await res.text());
       const json = await res.json();
@@ -161,8 +192,9 @@ export function TaskDialog(props: TaskDialogProps) {
       setNewClientName('');
       setNewClientPhone('');
       setNewClientEmail('');
-    } catch (err: any) {
-      setError(err?.message || 'יצירת לקוח נכשלה');
+    } catch (err: unknown) {
+      const error = err as Error;
+      setError(error.message || 'יצירת לקוח נכשלה');
     }
   };
 
@@ -173,7 +205,11 @@ export function TaskDialog(props: TaskDialogProps) {
       const res = await fetch('/api/admin/vehicles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ license_plate, model: newVehicleModel || null, vin: newVehicleVin || null }),
+        body: JSON.stringify({
+          license_plate,
+          model: newVehicleModel || null,
+          vin: newVehicleVin || null,
+        }),
       });
       if (!res.ok) throw new Error(await res.text());
       const json = await res.json();
@@ -184,8 +220,9 @@ export function TaskDialog(props: TaskDialogProps) {
       setNewVehiclePlate('');
       setNewVehicleModel('');
       setNewVehicleVin('');
-    } catch (err: any) {
-      setError(err?.message || 'יצירת רכב נכשלה');
+    } catch (err: unknown) {
+      const error = err as Error;
+      setError(error.message || 'יצירת רכב נכשלה');
     }
   };
 
@@ -195,7 +232,12 @@ export function TaskDialog(props: TaskDialogProps) {
     if (v) {
       setError(v);
       try {
-        trackFormSubmitted({ form: 'TaskDialog', mode, success: false, error_message: v });
+        trackFormSubmitted({
+          form: 'TaskDialog',
+          mode,
+          success: false,
+          error_message: v,
+        });
       } catch {
         // optional analytics
       }
@@ -233,7 +275,12 @@ export function TaskDialog(props: TaskDialogProps) {
         toastSuccess('המשימה נוצרה בהצלחה!');
         onCreated?.(created, leadDriverId || undefined, coDriverIds);
         try {
-          trackFormSubmitted({ form: 'TaskDialog', mode, success: true, task_id: created.id });
+          trackFormSubmitted({
+            form: 'TaskDialog',
+            mode,
+            success: true,
+            task_id: created.id,
+          });
         } catch {
           // optional
         }
@@ -246,8 +293,8 @@ export function TaskDialog(props: TaskDialogProps) {
           priority,
           status,
           details: details || null,
-          estimated_start: estimatedStart || null,
-          estimated_end: estimatedEnd || null,
+          estimated_start: estimatedStart || undefined,
+          estimated_end: estimatedEnd || undefined,
           address: address || '',
           client_id: clientId || null,
           vehicle_id: vehicleId || null,
@@ -259,25 +306,37 @@ export function TaskDialog(props: TaskDialogProps) {
         });
         if (!res.ok) {
           const t = await res.text().catch(() => '');
-            throw new Error(t || 'עדכון משימה נכשל');
+          throw new Error(t || 'עדכון משימה נכשל');
         }
         const json = await res.json();
         const updated: Task = json.data;
         toastSuccess('המשימה עודכנה בהצלחה!');
         onUpdated?.(updated);
         try {
-          trackFormSubmitted({ form: 'TaskDialog', mode, success: true, task_id: updated.id });
+          trackFormSubmitted({
+            form: 'TaskDialog',
+            mode,
+            success: true,
+            task_id: updated.id,
+          });
         } catch {
           // optional
         }
         onOpenChange(false);
       }
-    } catch (err: any) {
-      const errorMessage = err?.message || 'שגיאה';
+    } catch (err: unknown) {
+      const error = err as Error;
+      const errorMessage = error.message || 'שגיאה';
       setError(errorMessage);
       toastError(errorMessage);
       try {
-        trackFormSubmitted({ form: 'TaskDialog', mode, success: false, task_id: task?.id, error_message: err?.message });
+        trackFormSubmitted({
+          form: 'TaskDialog',
+          mode,
+          success: false,
+          task_id: task?.id,
+          error_message: error.message,
+        });
       } catch {
         // optional
       }
@@ -290,64 +349,117 @@ export function TaskDialog(props: TaskDialogProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-2xl rounded-lg bg-white p-4 shadow-xl" role="dialog" aria-modal="true">
+      <div
+        className="w-full max-w-2xl rounded-lg bg-white p-4 shadow-xl"
+        role="dialog"
+        aria-modal="true"
+      >
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-bold">{mode === 'create' ? 'יצירת משימה' : 'עריכת משימה'}</h2>
-          <button className="text-gray-500 hover:text-gray-700" onClick={() => onOpenChange(false)} aria-label="סגור">
+          <h2 className="text-lg font-bold">
+            {mode === 'create' ? 'יצירת משימה' : 'עריכת משימה'}
+          </h2>
+          <button
+            className="text-gray-500 hover:text-gray-700"
+            onClick={() => onOpenChange(false)}
+            aria-label="סגור"
+          >
             ✕
           </button>
         </div>
 
         {error && (
-          <div className="mb-3 rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700">{error}</div>
+          <div className="mb-3 rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700">
+            {error}
+          </div>
         )}
 
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <form
+          onSubmit={handleSubmit}
+          className="grid grid-cols-1 gap-3 md:grid-cols-2"
+        >
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium">כותרת</span>
-            <input className="rounded border border-gray-300 p-2" value={title} onChange={(e) => setTitle(e.target.value)} required />
+            <input
+              className="rounded border border-gray-300 p-2"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+            />
           </label>
 
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium">סוג</span>
-            <select className="rounded border border-gray-300 p-2" value={type} onChange={(e) => setType(e.target.value as TaskType)}>
+            <select
+              className="rounded border border-gray-300 p-2"
+              value={type}
+              onChange={(e) => setType(e.target.value as TaskType)}
+            >
               {types.map((t) => (
-                <option key={t} value={t}>{t}</option>
+                <option key={t} value={t}>
+                  {t}
+                </option>
               ))}
             </select>
           </label>
 
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium">עדיפות</span>
-            <select className="rounded border border-gray-300 p-2" value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)}>
+            <select
+              className="rounded border border-gray-300 p-2"
+              value={priority}
+              onChange={(e) => setPriority(e.target.value as TaskPriority)}
+            >
               {priorities.map((p) => (
-                <option key={p} value={p}>{p}</option>
+                <option key={p} value={p}>
+                  {p}
+                </option>
               ))}
             </select>
           </label>
 
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium">סטטוס</span>
-            <select className="rounded border border-gray-300 p-2" value={status} onChange={(e) => setStatus(e.target.value as TaskStatus)}>
+            <select
+              className="rounded border border-gray-300 p-2"
+              value={status}
+              onChange={(e) => setStatus(e.target.value as TaskStatus)}
+            >
               {statuses.map((s) => (
-                <option key={s} value={s}>{s}</option>
+                <option key={s} value={s}>
+                  {s}
+                </option>
               ))}
             </select>
           </label>
 
           <label className="col-span-1 md:col-span-2 flex flex-col gap-1">
             <span className="text-sm font-medium">תיאור</span>
-            <textarea className="rounded border border-gray-300 p-2" rows={3} value={details} onChange={(e) => setDetails(e.target.value)} />
+            <textarea
+              className="rounded border border-gray-300 p-2"
+              rows={3}
+              value={details}
+              onChange={(e) => setDetails(e.target.value)}
+            />
           </label>
 
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium">שעת התחלה מוערכת</span>
-            <input className="rounded border border-gray-300 p-2" type="datetime-local" value={estimatedStart} onChange={(e) => setEstimatedStart(e.target.value)} />
+            <input
+              className="rounded border border-gray-300 p-2"
+              type="datetime-local"
+              value={estimatedStart}
+              onChange={(e) => setEstimatedStart(e.target.value)}
+            />
           </label>
 
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium">שעת סיום מוערכת</span>
-            <input className="rounded border border-gray-300 p-2" type="datetime-local" value={estimatedEnd} onChange={(e) => setEstimatedEnd(e.target.value)} />
+            <input
+              className="rounded border border-gray-300 p-2"
+              type="datetime-local"
+              value={estimatedEnd}
+              onChange={(e) => setEstimatedEnd(e.target.value)}
+            />
           </label>
 
           <label className="col-span-1 md:col-span-2 flex flex-col gap-1">
@@ -377,24 +489,61 @@ export function TaskDialog(props: TaskDialogProps) {
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium">לקוח</span>
             <div className="flex gap-2">
-              <select className="rounded border border-gray-300 p-2 flex-1" value={clientId} onChange={(e) => setClientId(e.target.value)}>
-              <option value="">—</option>
-              {clientsLocal.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
+              <select
+                className="rounded border border-gray-300 p-2 flex-1"
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
+              >
+                <option value="">—</option>
+                {clientsLocal.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
               </select>
-              <button type="button" className="rounded border border-gray-300 px-2 text-xs" onClick={() => setShowAddClient((v) => !v)}>
+              <button
+                type="button"
+                className="rounded border border-gray-300 px-2 text-xs"
+                onClick={() => setShowAddClient((v) => !v)}
+              >
                 חדש
               </button>
             </div>
             {showAddClient && (
               <div className="mt-2 grid grid-cols-3 gap-2">
-                <input className="rounded border border-gray-300 p-2 col-span-1" placeholder="שם" value={newClientName} onChange={(e) => setNewClientName(e.target.value)} />
-                <input className="rounded border border-gray-300 p-2 col-span-1" placeholder="טלפון" value={newClientPhone} onChange={(e) => setNewClientPhone(e.target.value)} />
-                <input className="rounded border border-gray-300 p-2 col-span-1" placeholder="אימייל" value={newClientEmail} onChange={(e) => setNewClientEmail(e.target.value)} />
+                <input
+                  className="rounded border border-gray-300 p-2 col-span-1"
+                  placeholder="שם"
+                  value={newClientName}
+                  onChange={(e) => setNewClientName(e.target.value)}
+                />
+                <input
+                  className="rounded border border-gray-300 p-2 col-span-1"
+                  placeholder="טלפון"
+                  value={newClientPhone}
+                  onChange={(e) => setNewClientPhone(e.target.value)}
+                />
+                <input
+                  className="rounded border border-gray-300 p-2 col-span-1"
+                  placeholder="אימייל"
+                  value={newClientEmail}
+                  onChange={(e) => setNewClientEmail(e.target.value)}
+                />
                 <div className="col-span-3 flex justify-end gap-2">
-                  <button type="button" className="rounded border border-gray-300 px-2 text-xs" onClick={() => setShowAddClient(false)}>בטל</button>
-                  <button type="button" className="rounded bg-toyota-primary px-2 py-1 text-xs font-semibold text-white" onClick={createClient}>צור</button>
+                  <button
+                    type="button"
+                    className="rounded border border-gray-300 px-2 text-xs"
+                    onClick={() => setShowAddClient(false)}
+                  >
+                    בטל
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded bg-toyota-primary px-2 py-1 text-xs font-semibold text-white"
+                    onClick={createClient}
+                  >
+                    צור
+                  </button>
                 </div>
               </div>
             )}
@@ -403,24 +552,61 @@ export function TaskDialog(props: TaskDialogProps) {
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium">רכב</span>
             <div className="flex gap-2">
-              <select className="rounded border border-gray-300 p-2 flex-1" value={vehicleId} onChange={(e) => setVehicleId(e.target.value)}>
-              <option value="">—</option>
-              {vehiclesLocal.map((v) => (
-                <option key={v.id} value={v.id}>{v.license_plate} · {v.model}</option>
-              ))}
+              <select
+                className="rounded border border-gray-300 p-2 flex-1"
+                value={vehicleId}
+                onChange={(e) => setVehicleId(e.target.value)}
+              >
+                <option value="">—</option>
+                {vehiclesLocal.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.license_plate} · {v.model}
+                  </option>
+                ))}
               </select>
-              <button type="button" className="rounded border border-gray-300 px-2 text-xs" onClick={() => setShowAddVehicle((v) => !v)}>
+              <button
+                type="button"
+                className="rounded border border-gray-300 px-2 text-xs"
+                onClick={() => setShowAddVehicle((v) => !v)}
+              >
                 חדש
               </button>
             </div>
             {showAddVehicle && (
               <div className="mt-2 grid grid-cols-3 gap-2">
-                <input className="rounded border border-gray-300 p-2 col-span-1" placeholder="מספר רישוי" value={newVehiclePlate} onChange={(e) => setNewVehiclePlate(e.target.value)} />
-                <input className="rounded border border-gray-300 p-2 col-span-1" placeholder="דגם" value={newVehicleModel} onChange={(e) => setNewVehicleModel(e.target.value)} />
-                <input className="rounded border border-gray-300 p-2 col-span-1" placeholder="VIN" value={newVehicleVin} onChange={(e) => setNewVehicleVin(e.target.value)} />
+                <input
+                  className="rounded border border-gray-300 p-2 col-span-1"
+                  placeholder="מספר רישוי"
+                  value={newVehiclePlate}
+                  onChange={(e) => setNewVehiclePlate(e.target.value)}
+                />
+                <input
+                  className="rounded border border-gray-300 p-2 col-span-1"
+                  placeholder="דגם"
+                  value={newVehicleModel}
+                  onChange={(e) => setNewVehicleModel(e.target.value)}
+                />
+                <input
+                  className="rounded border border-gray-300 p-2 col-span-1"
+                  placeholder="VIN"
+                  value={newVehicleVin}
+                  onChange={(e) => setNewVehicleVin(e.target.value)}
+                />
                 <div className="col-span-3 flex justify-end gap-2">
-                  <button type="button" className="rounded border border-gray-300 px-2 text-xs" onClick={() => setShowAddVehicle(false)}>בטל</button>
-                  <button type="button" className="rounded bg-toyota-primary px-2 py-1 text-xs font-semibold text-white" onClick={createVehicle}>צור</button>
+                  <button
+                    type="button"
+                    className="rounded border border-gray-300 px-2 text-xs"
+                    onClick={() => setShowAddVehicle(false)}
+                  >
+                    בטל
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded bg-toyota-primary px-2 py-1 text-xs font-semibold text-white"
+                    onClick={createVehicle}
+                  >
+                    צור
+                  </button>
                 </div>
               </div>
             )}
@@ -430,10 +616,16 @@ export function TaskDialog(props: TaskDialogProps) {
           <div className="col-span-1 md:col-span-2 grid grid-cols-1 gap-3 md:grid-cols-2">
             <label className="flex flex-col gap-1">
               <span className="text-sm font-medium">נהג מוביל</span>
-              <select className="rounded border border-gray-300 p-2" value={leadDriverId} onChange={(e) => setLeadDriverId(e.target.value)}>
+              <select
+                className="rounded border border-gray-300 p-2"
+                value={leadDriverId}
+                onChange={(e) => setLeadDriverId(e.target.value)}
+              >
                 <option value="">—</option>
                 {drivers.map((d) => (
-                  <option key={d.id} value={d.id}>{d.name || d.email}</option>
+                  <option key={d.id} value={d.id}>
+                    {d.name || d.email}
+                  </option>
                 ))}
               </select>
             </label>
@@ -443,7 +635,10 @@ export function TaskDialog(props: TaskDialogProps) {
                 <span className="text-sm font-medium">נהגי משנה</span>
                 <div className="max-h-28 overflow-auto rounded border border-gray-200 p-2">
                   {drivers.map((d) => (
-                    <label key={d.id} className="flex items-center gap-2 text-sm">
+                    <label
+                      key={d.id}
+                      className="flex items-center gap-2 text-sm"
+                    >
                       <input
                         type="checkbox"
                         checked={coDriversSet.has(d.id)}
@@ -482,10 +677,19 @@ export function TaskDialog(props: TaskDialogProps) {
                 ייצוא PDF
               </button>
             )}
-            <button type="button" className="rounded border border-gray-300 px-3 py-2 text-sm" onClick={() => onOpenChange(false)} disabled={submitting}>
+            <button
+              type="button"
+              className="rounded border border-gray-300 px-3 py-2 text-sm"
+              onClick={() => onOpenChange(false)}
+              disabled={submitting}
+            >
               ביטול
             </button>
-            <button type="submit" className="rounded bg-toyota-primary px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" disabled={submitting}>
+            <button
+              type="submit"
+              className="rounded bg-toyota-primary px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              disabled={submitting}
+            >
               {mode === 'create' ? 'צור משימה' : 'שמור שינויים'}
             </button>
           </div>
@@ -494,5 +698,3 @@ export function TaskDialog(props: TaskDialogProps) {
     </div>
   );
 }
-
-

@@ -1,6 +1,13 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, Suspense, useEffect } from 'react';
+/* eslint-disable max-lines */
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  Suspense,
+  useEffect,
+} from 'react';
 import {
   DndContext,
   DragEndEvent,
@@ -16,82 +23,52 @@ import {
   useDroppable,
   closestCorners,
 } from '@dnd-kit/core';
-import { trackTaskAssigned, trackTaskCreated, trackTaskStatusChange } from '@/lib/events';
-const LazyTaskDialog = React.lazy(() => import('./TaskDialog').then((m) => ({ default: m.TaskDialog })));
+import {
+  trackTaskAssigned,
+  trackTaskCreated,
+  trackTaskStatusChange,
+} from '@/lib/events';
+const LazyTaskDialog = React.lazy(() =>
+  import('./TaskDialog').then((m) => ({ default: m.TaskDialog }))
+);
 import { useFeatureFlag } from '@/lib/useFeatureFlag';
 import { FLAG_BULK_OPS } from '@/lib/flagKeys';
 import { toastSuccess, toastError } from '@/lib/toast';
+import type {
+  Task,
+  TaskStatus,
+  TaskPriority,
+  TaskType,
+  TaskAssignee,
+} from '@/types/task';
+import type { Driver } from '@/types/user';
+import type { Client, Vehicle } from '@/types/entity';
+import type {
+  GroupBy,
+  SortBy,
+  SortDir,
+  TasksBoardProps,
+  KanbanColumnProps,
+  TaskCardProps,
+} from '@/types/board';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { PostgresChangesPayload } from '@supabase/supabase-js/dist/module/lib/types';
 
-/**
- * Type definitions for TasksBoard state and data structures
- */
-export type TaskStatus = 'pending' | 'in_progress' | 'blocked' | 'completed';
-export type TaskPriority = 'low' | 'medium' | 'high';
-export type TaskType = 'pickup_or_dropoff_car' | 'replacement_car_delivery' | 'drive_client_home' | 'drive_client_to_dealership' | 'licence_test' | 'rescue_stuck_car' | 'other';
-export type GroupBy = 'driver' | 'status';
-export type SortBy = 'priority' | 'time' | 'driver';
-export type SortDir = 'asc' | 'desc';
-
-export interface Task {
-  id: string;
-  title: string;
-  type: TaskType;
-  priority: TaskPriority;
-  status: TaskStatus;
-  estimated_start: string;
-  estimated_end: string;
-  address: string;
-  details: string | null;
-  client_id: string | null;
-  vehicle_id: string | null;
-  created_by: string | null;
-  updated_by: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Driver {
-  id: string;
-  name: string | null;
-  email: string | null;
-  role: string;
-}
-
-export interface TaskAssignee {
-  id: string;
-  task_id: string;
-  driver_id: string;
-  is_lead: boolean;
-  assigned_at: string;
-}
-
-export interface Client {
-  id: string;
-  name: string;
-  phone: string | null;
-  email: string | null;
-}
-
-export interface Vehicle {
-  id: string;
-  license_plate: string;
-  model: string;
-  vin: string;
-}
-
-export interface DragItem {
-  type: string;
-  taskId: string;
-  sourceColumn: string;
-}
-
-export interface TasksBoardProps {
-  initialTasks: Task[];
-  drivers: Driver[];
-  taskAssignees: TaskAssignee[];
-  clients: Client[];
-  vehicles: Vehicle[];
-}
+// Re-export types for backward compatibility
+export type {
+  Task,
+  TaskStatus,
+  TaskPriority,
+  TaskType,
+  TaskAssignee,
+  Driver,
+  Client,
+  Vehicle,
+  GroupBy,
+  SortBy,
+  SortDir,
+  TasksBoardProps,
+};
 
 /**
  * TasksBoard Component (7.1)
@@ -122,12 +99,16 @@ export function TasksBoard({
   // Filters / search / sorting
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<'all' | TaskType>('all');
-  const [filterPriority, setFilterPriority] = useState<'all' | TaskPriority>('all');
+  const [filterPriority, setFilterPriority] = useState<'all' | TaskPriority>(
+    'all'
+  );
   const [overdueOnly, setOverdueOnly] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>('time');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   // Conflict ribbons (server-wins notifications)
-  const [conflictByTaskId, setConflictByTaskId] = useState<Record<string, { by?: string | null; at?: string | null }>>({});
+  const [conflictByTaskId, setConflictByTaskId] = useState<
+    Record<string, { by?: string | null; at?: string | null }>
+  >({});
 
   // Feature flags
   const bulkEnabled = useFeatureFlag(FLAG_BULK_OPS);
@@ -155,7 +136,11 @@ export function TasksBoard({
         window.localStorage.setItem('tasksBoard.groupBy', next);
         const current = new URL(window.location.href);
         current.searchParams.set('groupBy', next);
-        window.history.replaceState(null, '', `${current.pathname}?${current.searchParams.toString()}`);
+        window.history.replaceState(
+          null,
+          '',
+          `${current.pathname}?${current.searchParams.toString()}`
+        );
       } catch {
         // no-op
       }
@@ -164,13 +149,17 @@ export function TasksBoard({
 
   // Listen for conflict ribbons via BroadcastChannel from SW
   useEffect(() => {
-    if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
+    if (typeof window === 'undefined' || !('BroadcastChannel' in window))
+      return;
     const bc = new BroadcastChannel('sync-status');
     const timers = new Map<string, any>();
     bc.onmessage = (ev: MessageEvent) => {
       const msg = ev.data;
       if (msg && msg.type === 'conflict:server-wins' && msg.id) {
-        setConflictByTaskId((prev) => ({ ...prev, [msg.id]: { by: msg.updatedBy || null, at: msg.updatedAt || null } }));
+        setConflictByTaskId((prev) => ({
+          ...prev,
+          [msg.id]: { by: msg.updatedBy || null, at: msg.updatedAt || null },
+        }));
         // auto-clear after 10s
         if (timers.has(msg.id)) {
           clearTimeout(timers.get(msg.id));
@@ -186,7 +175,9 @@ export function TasksBoard({
       }
     };
     return () => {
-      try { bc.close(); } catch {}
+      try {
+        bc.close();
+      } catch {}
       timers.forEach((t) => clearTimeout(t));
     };
   }, []);
@@ -196,7 +187,9 @@ export function TasksBoard({
     if (typeof window === 'undefined') return;
     const url = new URL(window.location.href);
     const hasParam = url.searchParams.has('groupBy');
-    const stored = window.localStorage.getItem('tasksBoard.groupBy') as GroupBy | null;
+    const stored = window.localStorage.getItem(
+      'tasksBoard.groupBy'
+    ) as GroupBy | null;
     if (!hasParam && (stored === 'driver' || stored === 'status')) {
       persistGroupBy(stored);
     }
@@ -237,18 +230,27 @@ export function TasksBoard({
   const filteredSortedTasks = useMemo(() => {
     const now = Date.now();
     const normalized = search.trim().toLowerCase();
-    const priorityRank: Record<TaskPriority, number> = { low: 1, medium: 2, high: 3 };
+    const priorityRank: Record<TaskPriority, number> = {
+      נמוכה: 1,
+      בינונית: 2,
+      גבוהה: 3,
+    };
 
     let list = tasks.filter((t) => {
       if (filterType !== 'all' && t.type !== filterType) return false;
-      if (filterPriority !== 'all' && t.priority !== filterPriority) return false;
+      if (filterPriority !== 'all' && t.priority !== filterPriority)
+        return false;
       if (overdueOnly) {
         const end = new Date(t.estimated_end).getTime();
-        if (!(end < now && t.status !== 'completed')) return false;
+        if (!(end < now && t.status !== 'הושלמה')) return false;
       }
       if (normalized) {
-        const clientName = t.client_id ? (clientMap.get(t.client_id)?.name || '') : '';
-        const vehiclePlate = t.vehicle_id ? (vehicleMap.get(t.vehicle_id)?.license_plate || '') : '';
+        const clientName = t.client_id
+          ? clientMap.get(t.client_id)?.name || ''
+          : '';
+        const vehiclePlate = t.vehicle_id
+          ? vehicleMap.get(t.vehicle_id)?.license_plate || ''
+          : '';
         const hay = `${t.title} ${clientName} ${vehiclePlate}`.toLowerCase();
         if (!hay.includes(normalized)) return false;
       }
@@ -261,20 +263,37 @@ export function TasksBoard({
         return diff === 0 ? a.title.localeCompare(b.title) : diff;
       }
       if (sortBy === 'driver') {
-        const la = (taskAssigneeMap.get(a.id)?.find((x) => x.is_lead)?.driver_id) || '';
-        const lb = (taskAssigneeMap.get(b.id)?.find((x) => x.is_lead)?.driver_id) || '';
-        const na = la ? (driverMap.get(la)?.name || '') : '';
-        const nb = lb ? (driverMap.get(lb)?.name || '') : '';
+        const la =
+          taskAssigneeMap.get(a.id)?.find((x) => x.is_lead)?.driver_id || '';
+        const lb =
+          taskAssigneeMap.get(b.id)?.find((x) => x.is_lead)?.driver_id || '';
+        const na = la ? driverMap.get(la)?.name || '' : '';
+        const nb = lb ? driverMap.get(lb)?.name || '' : '';
         return na.localeCompare(nb);
       }
       // time (estimated_start)
       const ta = new Date(a.estimated_start).getTime();
       const tb = new Date(b.estimated_start).getTime();
-      return (sortDir === 'asc' ? ta - tb : tb - ta) || a.title.localeCompare(b.title);
+      return (
+        (sortDir === 'asc' ? ta - tb : tb - ta) ||
+        a.title.localeCompare(b.title)
+      );
     });
 
     return list;
-  }, [tasks, search, filterType, filterPriority, overdueOnly, sortBy, sortDir, clientMap, vehicleMap, driverMap, taskAssigneeMap]);
+  }, [
+    tasks,
+    search,
+    filterType,
+    filterPriority,
+    overdueOnly,
+    sortBy,
+    sortDir,
+    clientMap,
+    vehicleMap,
+    driverMap,
+    taskAssigneeMap,
+  ]);
 
   // Compute columns based on groupBy mode
   const columns = useMemo(() => {
@@ -289,7 +308,7 @@ export function TasksBoard({
       }));
     } else {
       // Group by status: create columns for each status
-      const statuses: TaskStatus[] = ['pending', 'in_progress', 'blocked', 'completed'];
+      const statuses: TaskStatus[] = ['בהמתנה', 'בעבודה', 'חסומה', 'הושלמה'];
       return statuses.map((status) => ({
         id: status,
         label: statusLabel(status),
@@ -306,7 +325,9 @@ export function TasksBoard({
         const assignedTaskIds = assignees
           .filter((ta) => ta.driver_id === columnId)
           .map((ta) => ta.task_id);
-        return filteredSortedTasks.filter((t) => assignedTaskIds.includes(t.id));
+        return filteredSortedTasks.filter((t) =>
+          assignedTaskIds.includes(t.id)
+        );
       } else {
         // Filter tasks by status
         return filteredSortedTasks.filter((t) => t.status === columnId);
@@ -328,19 +349,36 @@ export function TasksBoard({
     setDialogOpen(true);
   }, []);
 
-  const handleCreated = useCallback((created: Task, leadId?: string, coIds?: string[]) => {
-    setTasks((prev) => [created, ...prev]);
-    const inserts: TaskAssignee[] = [];
-    if (leadId) {
-      inserts.push({ id: `local-${created.id}-lead`, task_id: created.id, driver_id: leadId, is_lead: true, assigned_at: new Date().toISOString() });
-    }
-    (coIds || []).forEach((id) => {
-      inserts.push({ id: `local-${created.id}-${id}`, task_id: created.id, driver_id: id, is_lead: false, assigned_at: new Date().toISOString() });
-    });
-    if (inserts.length > 0) setAssignees((prev) => [...prev, ...inserts]);
-    // Toast is shown in TaskDialog, no need to show it here
-    try { trackTaskCreated(created, leadId); } catch {}
-  }, []);
+  const handleCreated = useCallback(
+    (created: Task, leadId?: string, coIds?: string[]) => {
+      setTasks((prev) => [created, ...prev]);
+      const inserts: TaskAssignee[] = [];
+      if (leadId) {
+        inserts.push({
+          id: `local-${created.id}-lead`,
+          task_id: created.id,
+          driver_id: leadId,
+          is_lead: true,
+          assigned_at: new Date().toISOString(),
+        });
+      }
+      (coIds || []).forEach((id) => {
+        inserts.push({
+          id: `local-${created.id}-${id}`,
+          task_id: created.id,
+          driver_id: id,
+          is_lead: false,
+          assigned_at: new Date().toISOString(),
+        });
+      });
+      if (inserts.length > 0) setAssignees((prev) => [...prev, ...inserts]);
+      // Toast is shown in TaskDialog, no need to show it here
+      try {
+        trackTaskCreated(created, leadId);
+      } catch {}
+    },
+    []
+  );
 
   const handleUpdated = useCallback((updated: Task) => {
     setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
@@ -355,74 +393,93 @@ export function TasksBoard({
     });
   }, []);
 
-  const selectAllInColumn = useCallback((columnId: string, checked: boolean) => {
-    const ids = getColumnTasks(columnId).map((t) => t.id);
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (checked) ids.forEach((id) => next.add(id));
-      else ids.forEach((id) => next.delete(id));
-      return next;
-    });
-  }, [getColumnTasks]);
+  const selectAllInColumn = useCallback(
+    (columnId: string, checked: boolean) => {
+      const ids = getColumnTasks(columnId).map((t) => t.id);
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (checked) ids.forEach((id) => next.add(id));
+        else ids.forEach((id) => next.delete(id));
+        return next;
+      });
+    },
+    [getColumnTasks]
+  );
 
   // Bulk actions
-  const bulkReassign = useCallback(async (driverId: string) => {
-    const ids = Array.from(selectedIds);
-    if (ids.length === 0) return;
-    const prevAssignees = assignees;
-    // optimistic
-    setAssignees((prev) => {
-      const withoutLeads = prev.filter((ta) => !ids.includes(ta.task_id) || !ta.is_lead);
-      const adds: TaskAssignee[] = ids.map((taskId) => ({
-        id: `local-${taskId}-${driverId}`,
-        task_id: taskId,
-        driver_id: driverId,
-        is_lead: true,
-        assigned_at: new Date().toISOString(),
-      }));
-      return [...withoutLeads, ...adds];
-    });
-    const results = await Promise.allSettled(
-      ids.map((taskId) =>
-        fetch(`/api/admin/tasks/${taskId}/assign`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ driver_id: driverId }),
-        })
-      )
-    );
-    const anyFailed = results.some((r) => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.ok));
-    if (anyFailed) {
-      setAssignees(prevAssignees);
-      toastError('שגיאה בהקצאת נהג');
-    } else {
-      toastSuccess('נהג הוקצה בהצלחה');
-    }
-  }, [assignees, selectedIds]);
+  const bulkReassign = useCallback(
+    async (driverId: string) => {
+      const ids = Array.from(selectedIds);
+      if (ids.length === 0) return;
+      const prevAssignees = assignees;
+      // optimistic
+      setAssignees((prev) => {
+        const withoutLeads = prev.filter(
+          (ta) => !ids.includes(ta.task_id) || !ta.is_lead
+        );
+        const adds: TaskAssignee[] = ids.map((taskId) => ({
+          id: `local-${taskId}-${driverId}`,
+          task_id: taskId,
+          driver_id: driverId,
+          is_lead: true,
+          assigned_at: new Date().toISOString(),
+        }));
+        return [...withoutLeads, ...adds];
+      });
+      const results = await Promise.allSettled(
+        ids.map((taskId) =>
+          fetch(`/api/admin/tasks/${taskId}/assign`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ driver_id: driverId }),
+          })
+        )
+      );
+      const anyFailed = results.some(
+        (r) =>
+          r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.ok)
+      );
+      if (anyFailed) {
+        setAssignees(prevAssignees);
+        toastError('שגיאה בהקצאת נהג');
+      } else {
+        toastSuccess('נהג הוקצה בהצלחה');
+      }
+    },
+    [assignees, selectedIds]
+  );
 
-  const bulkChangePriority = useCallback(async (priority: TaskPriority) => {
-    const ids = Array.from(selectedIds);
-    if (ids.length === 0) return;
-    const prevTasks = tasks;
-    // optimistic
-    setTasks((prev) => prev.map((t) => (ids.includes(t.id) ? { ...t, priority } : t)));
-    const results = await Promise.allSettled(
-      ids.map((taskId) =>
-        fetch(`/api/admin/tasks/${taskId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ priority }),
-        })
-      )
-    );
-    const anyFailed = results.some((r) => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.ok));
-    if (anyFailed) {
-      setTasks(prevTasks);
-      toastError('שגיאה בעדכון עדיפות');
-    } else {
-      toastSuccess('עדיפות עודכנה');
-    }
-  }, [tasks, selectedIds]);
+  const bulkChangePriority = useCallback(
+    async (priority: TaskPriority) => {
+      const ids = Array.from(selectedIds);
+      if (ids.length === 0) return;
+      const prevTasks = tasks;
+      // optimistic
+      setTasks((prev) =>
+        prev.map((t) => (ids.includes(t.id) ? { ...t, priority } : t))
+      );
+      const results = await Promise.allSettled(
+        ids.map((taskId) =>
+          fetch(`/api/admin/tasks/${taskId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ priority }),
+          })
+        )
+      );
+      const anyFailed = results.some(
+        (r) =>
+          r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.ok)
+      );
+      if (anyFailed) {
+        setTasks(prevTasks);
+        toastError('שגיאה בעדכון עדיפות');
+      } else {
+        toastSuccess('עדיפות עודכנה');
+      }
+    },
+    [tasks, selectedIds]
+  );
 
   const bulkDelete = useCallback(async () => {
     const ids = Array.from(selectedIds);
@@ -439,7 +496,10 @@ export function TasksBoard({
         })
       )
     );
-    const anyFailed = results.some((r) => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.ok));
+    const anyFailed = results.some(
+      (r) =>
+        r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.ok)
+    );
     if (anyFailed) {
       setTasks(prevTasks);
       setAssignees(prevAssignees);
@@ -451,96 +511,100 @@ export function TasksBoard({
   }, [tasks, assignees, selectedIds]);
 
   // DnD event handlers
-  const handleDragStart = useCallback((event: DragStartEvent) => {
-    const { active } = event;
-    const taskId = active.id as string;
-    
-    // Find the task to display in DragOverlay
-    const task = tasks.find((t) => t.id === taskId);
-    setDraggedTask(task || null);
-    setActiveId(taskId);
-  }, [tasks]);
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const { active } = event;
+      const taskId = active.id as string;
+
+      // Find the task to display in DragOverlay
+      const task = tasks.find((t) => t.id === taskId);
+      setDraggedTask(task || null);
+      setActiveId(taskId);
+    },
+    [tasks]
+  );
 
   const handleDragOver = useCallback((event: DragOverEvent) => {
     const { over } = event;
     setOverId(over?.id as string | null);
   }, []);
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
-    
-    setActiveId(null);
-    setOverId(null);
-    setDraggedTask(null);
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
 
-    // If no drop target or same target, do nothing
-    if (!over || active.id === over.id) {
-      return;
-    }
+      setActiveId(null);
+      setOverId(null);
+      setDraggedTask(null);
 
-    const taskId = active.id as string;
-    const targetColumnId = over.id as string;
-    const task = tasks.find((t) => t.id === taskId);
-
-    if (!task) return;
-
-    let updatePayload: Partial<Task> = {};
-
-    // Determine what changed based on groupBy mode and target column
-    if (groupBy === 'status') {
-      // Target column is a status
-      const newStatus = targetColumnId as TaskStatus;
-      if (task.status !== newStatus) {
-        updatePayload.status = newStatus;
-      }
-    } else if (groupBy === 'driver') {
-      // Target column is a driver - update task assignee
-      const targetDriverId = targetColumnId;
-      const currentAssignee = assignees.find((ta) => ta.task_id === taskId && ta.is_lead);
-      if (currentAssignee?.driver_id === targetDriverId) {
+      // If no drop target or same target, do nothing
+      if (!over || active.id === over.id) {
         return;
       }
-      // Optimistic assignees update and persistence with rollback
-      const prevSnapshot = assignees;
-      setAssignees((prevAssignees) => {
-        const withoutLead = prevAssignees.filter((ta) => !(ta.task_id === taskId && ta.is_lead));
-        const newLead: TaskAssignee = {
-          id: `local-${taskId}`,
-          task_id: taskId,
-          driver_id: targetDriverId,
-          is_lead: true,
-          assigned_at: new Date().toISOString(),
-        };
-        return [...withoutLead, newLead];
-      });
-      persistDriverAssignment(taskId, targetDriverId, prevSnapshot);
-      return;
-    }
 
-    // If no changes, return
-    if (groupBy === 'status' && (Object.keys(updatePayload).length === 0 || !updatePayload.status)) {
-      return;
-    }
+      const taskId = active.id as string;
+      const targetColumnId = over.id as string;
+      const task = tasks.find((t) => t.id === taskId);
 
-    // Optimistically update local state
-    setTasks((prevTasks) =>
-      prevTasks.map((t) =>
-        t.id === taskId
-          ? { ...t, ...updatePayload }
-          : t
-      )
-    );
+      if (!task) return;
 
-    // Persist to database via API
-    if (updatePayload.status) {
-      persistTaskUpdate(taskId, { status: updatePayload.status });
-    }
+      const updatePayload: Partial<Task> = {};
 
-    // If changing driver assignment, also persist that
-    if (groupBy === 'driver' && taskAssignees.some((ta) => ta.task_id === taskId)) {
-      persistDriverAssignment(taskId, targetColumnId);
-    }
-  }, [tasks, taskAssignees, groupBy]);
+      // Determine what changed based on groupBy mode and target column
+      if (groupBy === 'status') {
+        // Target column is a status
+        const newStatus = targetColumnId as TaskStatus;
+        if (task.status !== newStatus) {
+          updatePayload.status = newStatus;
+        }
+      } else if (groupBy === 'driver') {
+        // Target column is a driver - update task assignee
+        const targetDriverId = targetColumnId;
+        const currentAssignee = assignees.find(
+          (ta) => ta.task_id === taskId && ta.is_lead
+        );
+        if (currentAssignee?.driver_id === targetDriverId) {
+          return;
+        }
+        // Optimistic assignees update and persistence with rollback
+        const prevSnapshot = assignees;
+        setAssignees((prevAssignees) => {
+          const withoutLead = prevAssignees.filter(
+            (ta) => !(ta.task_id === taskId && ta.is_lead)
+          );
+          const newLead: TaskAssignee = {
+            id: `local-${taskId}`,
+            task_id: taskId,
+            driver_id: targetDriverId,
+            is_lead: true,
+            assigned_at: new Date().toISOString(),
+          };
+          return [...withoutLead, newLead];
+        });
+        persistDriverAssignment(taskId, targetDriverId, prevSnapshot);
+        return;
+      }
+
+      // If no changes, return
+      if (
+        groupBy === 'status' &&
+        (Object.keys(updatePayload).length === 0 || !updatePayload.status)
+      ) {
+        return;
+      }
+
+      // Optimistically update local state
+      setTasks((prevTasks) =>
+        prevTasks.map((t) => (t.id === taskId ? { ...t, ...updatePayload } : t))
+      );
+
+      // Persist to database via API
+      if (updatePayload.status) {
+        persistTaskUpdate(taskId, { status: updatePayload.status });
+      }
+    },
+    [tasks, taskAssignees, groupBy]
+  );
 
   // Persist task status update to database
   const persistTaskUpdate = useCallback(
@@ -565,16 +629,19 @@ export function TasksBoard({
           toastError('שגיאה בעדכון משימה');
         } else {
           toastSuccess('המשימה עודכנה');
-      try {
-        // Find the latest task snapshot
-        setTasks((prev) => {
-          const t = prev.find((x) => x.id === taskId);
-          if (t && (update as any).status) {
-            trackTaskStatusChange({ ...t, updated_at: new Date().toISOString() }, (update as any).status as string);
-          }
-          return prev;
-        });
-      } catch {}
+          try {
+            // Find the latest task snapshot
+            setTasks((prev) => {
+              const t = prev.find((x) => x.id === taskId);
+              if (t && (update as unknown as Task).status) {
+                trackTaskStatusChange(
+                  { ...t, updated_at: new Date().toISOString() },
+                  (update as unknown as Task).status as string
+                );
+              }
+              return prev;
+            });
+          } catch {}
         }
       } catch (error) {
         console.error('Error persisting task update:', error);
@@ -594,7 +661,11 @@ export function TasksBoard({
 
   // Persist driver assignment update to database
   const persistDriverAssignment = useCallback(
-    async (taskId: string, newDriverId: string, prevSnapshot?: TaskAssignee[]) => {
+    async (
+      taskId: string,
+      newDriverId: string,
+      prevSnapshot?: TaskAssignee[]
+    ) => {
       try {
         const response = await fetch(`/api/admin/tasks/${taskId}/assign`, {
           method: 'PATCH',
@@ -603,24 +674,27 @@ export function TasksBoard({
         });
 
         if (!response.ok) {
-          console.error('Failed to update driver assignment:', response.statusText);
+          console.error(
+            'Failed to update driver assignment:',
+            response.statusText
+          );
           if (prevSnapshot) {
             setAssignees(prevSnapshot);
           }
           toastError('שגיאה בהקצאת נהג');
         } else {
           toastSuccess('נהג עודכן');
-      try {
-        const t = tasks.find((x) => x.id === taskId);
-        if (t) trackTaskAssigned(t, newDriverId);
-      } catch {}
+          try {
+            const t = tasks.find((x) => x.id === taskId);
+            if (t) trackTaskAssigned(t, newDriverId);
+          } catch {}
         }
       } catch (error) {
         console.error('Error persisting driver assignment:', error);
         if (prevSnapshot) {
           setAssignees(prevSnapshot);
         }
-        setToast({ message: 'שגיאה בהקצאת נהג', type: 'error' });
+        toastError('שגיאה בהקצאת נהג');
       }
     },
     []
@@ -630,59 +704,77 @@ export function TasksBoard({
   useEffect(() => {
     if (typeof window === 'undefined') return;
     // Lazy load browser client to avoid SSR issues
-    let supa: any;
+    let supa: SupabaseClient;
     (async () => {
       try {
         const { createBrowserClient } = await import('@/lib/auth');
         supa = createBrowserClient();
         const channel = supa
           .channel('realtime:admin-tasks')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, (payload: any) => {
-            setTasks((prev) => {
-              if (payload.eventType === 'INSERT') {
-                const row = payload.new as Task;
-                if (prev.find((t) => t.id === row.id)) return prev;
-                return [row, ...prev];
-              }
-              if (payload.eventType === 'UPDATE') {
-                const row = payload.new as Task;
-                return prev.map((t) => (t.id === row.id ? { ...t, ...row } : t));
-              }
-              if (payload.eventType === 'DELETE') {
-                const row = payload.old as Task;
-                return prev.filter((t) => t.id !== row.id);
-              }
-              return prev;
-            });
-          })
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'task_assignees' }, (payload: any) => {
-            setAssignees((prev) => {
-              if (payload.eventType === 'INSERT') {
-                const row = payload.new as TaskAssignee;
-                if (prev.find((a) => a.id === row.id)) return prev;
-                return [...prev, row];
-              }
-              if (payload.eventType === 'UPDATE') {
-                const row = payload.new as TaskAssignee;
-                return prev.map((a) => (a.id === row.id ? { ...a, ...row } : a));
-              }
-              if (payload.eventType === 'DELETE') {
-                const row = payload.old as TaskAssignee;
-                return prev.filter((a) => a.id !== row.id);
-              }
-              return prev;
-            });
-          })
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'tasks' },
+            (payload: PostgresChangesPayload) => {
+              setTasks((prev) => {
+                if (payload.eventType === 'INSERT') {
+                  const row = payload.new as Task;
+                  if (prev.find((t) => t.id === row.id)) return prev;
+                  return [row, ...prev];
+                }
+                if (payload.eventType === 'UPDATE') {
+                  const row = payload.new as Task;
+                  return prev.map((t) =>
+                    t.id === row.id ? { ...t, ...row } : t
+                  );
+                }
+                if (payload.eventType === 'DELETE') {
+                  const row = payload.old as Task;
+                  return prev.filter((t) => t.id !== row.id);
+                }
+                return prev;
+              });
+            }
+          )
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'task_assignees' },
+            (payload: PostgresChangesPayload) => {
+              setAssignees((prev) => {
+                if (payload.eventType === 'INSERT') {
+                  const row = payload.new as TaskAssignee;
+                  if (prev.find((a) => a.id === row.id)) return prev;
+                  return [...prev, row];
+                }
+                if (payload.eventType === 'UPDATE') {
+                  const row = payload.new as TaskAssignee;
+                  return prev.map((a) =>
+                    a.id === row.id ? { ...a, ...row } : a
+                  );
+                }
+                if (payload.eventType === 'DELETE') {
+                  const row = payload.old as TaskAssignee;
+                  return prev.filter((a) => a.id !== row.id);
+                }
+                return prev;
+              });
+            }
+          )
           .subscribe();
         // Cleanup
         return () => {
-          try { channel && supa.removeChannel(channel); } catch { /* no-op */ }
+          try {
+            channel && supa.removeChannel(channel);
+          } catch {
+            /* no-op */
+          }
         };
       } catch {
         // no-op
       }
     })();
-    return () => { /* channel cleanup in inner func */ };
+    return () => {
+      /* channel cleanup in inner func */
+    };
   }, []);
 
   return (
@@ -697,9 +789,13 @@ export function TasksBoard({
         {/* Group toggle - Segmented control style */}
         <div className="flex items-center gap-4">
           <label className="text-sm font-medium text-gray-700">קבץ לפי:</label>
-        <div className="inline-flex rounded-lg border border-gray-300 bg-gray-100 p-1" role="group" aria-label="קבץ לפי">
+          <div
+            className="inline-flex rounded-lg border border-gray-300 bg-gray-100 p-1"
+            role="group"
+            aria-label="קבץ לפי"
+          >
             <button
-            onClick={() => persistGroupBy('status')}
+              onClick={() => persistGroupBy('status')}
               className={`px-4 py-2 text-sm font-medium rounded transition-colors ${
                 groupBy === 'status'
                   ? 'bg-white text-toyota-primary shadow-sm'
@@ -710,7 +806,7 @@ export function TasksBoard({
               סטטוס
             </button>
             <button
-            onClick={() => persistGroupBy('driver')}
+              onClick={() => persistGroupBy('driver')}
               className={`px-4 py-2 text-sm font-medium rounded transition-colors ${
                 groupBy === 'driver'
                   ? 'bg-white text-toyota-primary shadow-sm'
@@ -736,160 +832,178 @@ export function TasksBoard({
           role="main"
           aria-label="לוח משימות"
         >
-        {/* Filters & Search & Sort */}
-        <div className="flex flex-wrap items-center gap-3 border-b border-gray-100 px-4 py-2 bg-white">
-          <input
-            type="text"
-            placeholder="חפש משימות (כותרת / לקוח / רכב)"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-64 rounded border border-gray-300 px-2 py-1 text-sm"
-          />
-          <select
-            className="rounded border border-gray-300 px-2 py-1 text-sm"
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value as any)}
-          >
-            <option value="all">כל הסוגים</option>
-            <option value="pickup_or_dropoff_car">סוג: איסוף/הורדת רכב</option>
-            <option value="replacement_car_delivery">סוג: הסעת רכב חלופי</option>
-            <option value="drive_client_home">סוג: הסעת לקוח הביתה</option>
-            <option value="drive_client_to_dealership">סוג: הסעת לקוח למוסך</option>
-            <option value="licence_test">סוג: בדיקת רישיון</option>
-            <option value="rescue_stuck_car">סוג: חילוץ רכב תקוע</option>
-            <option value="other">סוג: אחר</option>
-          </select>
-          <select
-            className="rounded border border-gray-300 px-2 py-1 text-sm"
-            value={filterPriority}
-            onChange={(e) => setFilterPriority(e.target.value as any)}
-          >
-            <option value="all">כל העדיפויות</option>
-            <option value="low">עדיפות: נמוך</option>
-            <option value="medium">עדיפות: בינוני</option>
-            <option value="high">עדיפות: גבוה</option>
-          </select>
-          <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-            <input type="checkbox" checked={overdueOnly} onChange={(e) => setOverdueOnly(e.target.checked)} />
-            באיחור בלבד
-          </label>
-          <div className="ml-auto flex items-center gap-2">
+          {/* Filters & Search & Sort */}
+          <div className="flex flex-wrap items-center gap-3 border-b border-gray-100 px-4 py-2 bg-white">
+            <input
+              type="text"
+              placeholder="חפש משימות (כותרת / לקוח / רכב)"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-64 rounded border border-gray-300 px-2 py-1 text-sm"
+            />
             <select
               className="rounded border border-gray-300 px-2 py-1 text-sm"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortBy)}
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value as any)}
             >
-              <option value="time">זמן</option>
-              <option value="priority">עדיפות</option>
-              <option value="driver">נהג</option>
+              <option value="all">כל הסוגים</option>
+              <option value="pickup_or_dropoff_car">
+                סוג: איסוף/הורדת רכב
+              </option>
+              <option value="replacement_car_delivery">
+                סוג: הסעת רכב חלופי
+              </option>
+              <option value="drive_client_home">סוג: הסעת לקוח הביתה</option>
+              <option value="drive_client_to_dealership">
+                סוג: הסעת לקוח למוסך
+              </option>
+              <option value="licence_test">סוג: בדיקת רישיון</option>
+              <option value="rescue_stuck_car">סוג: חילוץ רכב תקוע</option>
+              <option value="other">סוג: אחר</option>
             </select>
-            {sortBy === 'time' && (
+            <select
+              className="rounded border border-gray-300 px-2 py-1 text-sm"
+              value={filterPriority}
+              onChange={(e) => setFilterPriority(e.target.value as any)}
+            >
+              <option value="all">כל העדיפויות</option>
+              <option value="low">עדיפות: נמוך</option>
+              <option value="medium">עדיפות: בינוני</option>
+              <option value="high">עדיפות: גבוה</option>
+            </select>
+            <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={overdueOnly}
+                onChange={(e) => setOverdueOnly(e.target.checked)}
+              />
+              באיחור בלבד
+            </label>
+            <div className="ml-auto flex items-center gap-2">
               <select
                 className="rounded border border-gray-300 px-2 py-1 text-sm"
-                value={sortDir}
-                onChange={(e) => setSortDir(e.target.value as SortDir)}
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as SortBy)}
               >
-                <option value="asc">מהקודם לאחרון</option>
-                <option value="desc">מהאחרון לקודם</option>
+                <option value="time">זמן</option>
+                <option value="priority">עדיפות</option>
+                <option value="driver">נהג</option>
               </select>
-            )}
-          </div>
-        </div>
-        {isLoading ? (
-          // Loading skeletons - show 4 skeleton columns
-          <div className="flex gap-6 overflow-x-auto p-4">
-            {[1, 2, 3, 4].map((i) => (
-              <ColumnSkeleton key={i} />
-            ))}
-          </div>
-        ) : columns.length === 0 ? (
-          // Empty state
-          <div className="flex h-full w-full items-center justify-center">
-            <div className="text-center">
-              <p className="text-2xl mb-4">📭</p>
-              <p className="text-lg font-semibold text-gray-700">אין עמודות להצגה</p>
-              <p className="text-sm text-gray-500 mt-2">בדוק את הגדרות הקיבוץ שלך</p>
+              {sortBy === 'time' && (
+                <select
+                  className="rounded border border-gray-300 px-2 py-1 text-sm"
+                  value={sortDir}
+                  onChange={(e) => setSortDir(e.target.value as SortDir)}
+                >
+                  <option value="asc">מהקודם לאחרון</option>
+                  <option value="desc">מהאחרון לקודם</option>
+                </select>
+              )}
             </div>
           </div>
-        ) : (
-          <>
-            {bulkEnabled && selectedIds.size > 0 && (
-              <div className="flex items-center gap-3 border-b border-gray-200 bg-gray-50 px-4 py-2">
-                <span className="text-sm text-gray-700">נבחרו {selectedIds.size}</span>
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-gray-600">הקצה נהג:</label>
-                  <select
-                    className="rounded border border-gray-300 p-1 text-sm"
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val) {
-                        bulkReassign(val);
-                        e.currentTarget.selectedIndex = 0;
-                      }
-                    }}
-                  >
-                    <option value="">בחר</option>
-                    {drivers.map((d) => (
-                      <option key={d.id} value={d.id}>{d.name || d.email}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-gray-600">עדיפות:</label>
-                  <select
-                    className="rounded border border-gray-300 p-1 text-sm"
-                    onChange={(e) => {
-                      const val = e.target.value as TaskPriority;
-                      if (val) {
-                        bulkChangePriority(val);
-                        e.currentTarget.selectedIndex = 0;
-                      }
-                    }}
-                  >
-                    <option value="">בחר</option>
-                    <option value="low">נמוך</option>
-                    <option value="medium">בינוני</option>
-                    <option value="high">גבוה</option>
-                  </select>
-                </div>
-                <button
-                  className="ml-auto rounded border border-red-300 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-100"
-                  onClick={() => {
-                    if (confirm('למחוק את המשימות שנבחרו?')) bulkDelete();
-                  }}
-                >
-                  מחק נבחרים
-                </button>
-              </div>
-            )}
-            {/* Kanban grid with horizontal scroll */}
+          {isLoading ? (
+            // Loading skeletons - show 4 skeleton columns
             <div className="flex gap-6 overflow-x-auto p-4">
-              {columns.map((column) => {
-                const columnTasks = getColumnTasks(column.id);
-                const isOver = overId === column.id;
-                return (
-                  <KanbanColumn
-                    key={column.id}
-                    column={column}
-                    tasks={columnTasks}
-                    isOver={isOver}
-                    activeTaskId={activeId}
-                    selectedIds={selectedIds}
-                    taskAssigneeMap={taskAssigneeMap}
-                    driverMap={driverMap}
-                    clientMap={clientMap}
-                    vehicleMap={vehicleMap}
-                    conflict={conflictByTaskId}
-                    onDragStart={handleDragStart}
+              {[1, 2, 3, 4].map((i) => (
+                <ColumnSkeleton key={i} />
+              ))}
+            </div>
+          ) : columns.length === 0 ? (
+            // Empty state
+            <div className="flex h-full w-full items-center justify-center">
+              <div className="text-center">
+                <p className="text-2xl mb-4">📭</p>
+                <p className="text-lg font-semibold text-gray-700">
+                  אין עמודות להצגה
+                </p>
+                <p className="text-sm text-gray-500 mt-2">
+                  בדוק את הגדרות הקיבוץ שלך
+                </p>
+              </div>
+            </div>
+          ) : (
+            <>
+              {bulkEnabled && selectedIds.size > 0 && (
+                <div className="flex items-center gap-3 border-b border-gray-200 bg-gray-50 px-4 py-2">
+                  <span className="text-sm text-gray-700">
+                    נבחרו {selectedIds.size}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-gray-600">הקצה נהג:</label>
+                    <select
+                      className="rounded border border-gray-300 p-1 text-sm"
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val) {
+                          bulkReassign(val);
+                          e.currentTarget.selectedIndex = 0;
+                        }
+                      }}
+                    >
+                      <option value="">בחר</option>
+                      {drivers.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name || d.email}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-gray-600">עדיפות:</label>
+                    <select
+                      className="rounded border border-gray-300 p-1 text-sm"
+                      onChange={(e) => {
+                        const val = e.target.value as TaskPriority;
+                        if (val) {
+                          bulkChangePriority(val);
+                          e.currentTarget.selectedIndex = 0;
+                        }
+                      }}
+                    >
+                      <option value="">בחר</option>
+                      <option value="low">נמוך</option>
+                      <option value="medium">בינוני</option>
+                      <option value="high">גבוה</option>
+                    </select>
+                  </div>
+                  <button
+                    className="ml-auto rounded border border-red-300 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-100"
+                    onClick={() => {
+                      if (confirm('למחוק את המשימות שנבחרו?')) bulkDelete();
+                    }}
+                  >
+                    מחק נבחרים
+                  </button>
+                </div>
+              )}
+              {/* Kanban grid with horizontal scroll */}
+              <div className="flex gap-6 overflow-x-auto p-4">
+                {columns.map((column) => {
+                  const columnTasks = getColumnTasks(column.id);
+                  const isOver = overId === column.id;
+                  return (
+                    <KanbanColumn
+                      key={column.id}
+                      column={column}
+                      tasks={columnTasks}
+                      isOver={isOver}
+                      activeTaskId={activeId}
+                      selectedIds={selectedIds}
+                      taskAssigneeMap={taskAssigneeMap}
+                      driverMap={driverMap}
+                      clientMap={clientMap}
+                      vehicleMap={vehicleMap}
+                      conflict={conflictByTaskId}
+                      onDragStart={handleDragStart}
                       toggleSelected={toggleSelected}
                       selectAllInColumn={selectAllInColumn}
                       bulkEnabled={!!bulkEnabled}
-                  />
-                );
-              })}
-            </div>
-          </>
-        )}
+                    />
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -901,7 +1015,11 @@ export function TasksBoard({
               <h4 className="flex-1 line-clamp-2 font-semibold text-gray-900 text-sm">
                 {draggedTask.title}
               </h4>
-              <span className={`shrink-0 inline-block rounded-full px-1.5 py-0.5 text-xs font-bold text-white ${priorityColor(draggedTask.priority)}`}>
+              <span
+                className={`shrink-0 inline-block rounded-full px-1.5 py-0.5 text-xs font-bold text-white ${priorityColor(
+                  draggedTask.priority
+                )}`}
+              >
                 {priorityLabel(draggedTask.priority)}
               </span>
             </div>
@@ -964,22 +1082,6 @@ function ColumnSkeleton() {
  * KanbanColumn Component
  * Renders a single column in the Kanban board with header and task cards.
  */
-interface KanbanColumnProps {
-  column: { id: string; label: string; type: 'driver' | 'status' };
-  tasks: Task[];
-  isOver: boolean;
-  activeTaskId: string | null;
-  selectedIds: Set<string>;
-  taskAssigneeMap: Map<string, TaskAssignee[]>;
-  driverMap: Map<string, Driver>;
-  clientMap: Map<string, Client>;
-  vehicleMap: Map<string, Vehicle>;
-  conflict: Record<string, { by?: string | null; at?: string | null }>;
-  onDragStart: (event: DragStartEvent) => void;
-  toggleSelected: (taskId: string) => void;
-  selectAllInColumn: (columnId: string, checked: boolean) => void;
-  bulkEnabled: boolean;
-}
 
 function KanbanColumn({
   column,
@@ -1006,7 +1108,7 @@ function KanbanColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`flex min-w-[320px] flex-shrink-0 flex-col rounded-lg border-2 transition-all ${
+      className={`flex min-w-[320px] shrink-0 flex-col rounded-lg border-2 transition-all ${
         isOver
           ? 'border-toyota-primary/50 bg-toyota-50/30 shadow-md'
           : 'border-gray-200 bg-gray-50'
@@ -1078,21 +1180,6 @@ function KanbanColumn({
  * TaskCard Component
  * Renders a single task card within the Kanban board with drag support.
  */
-interface TaskCardProps {
-  task: Task;
-  columnId: string;
-  isActive: boolean;
-  assignees: TaskAssignee[];
-  driverMap: Map<string, Driver>;
-  clientMap: Map<string, Client>;
-  vehicleMap: Map<string, Vehicle>;
-  conflictInfo?: { by?: string | null; at?: string | null };
-  onDragStart: (event: DragStartEvent) => void;
-  onEdit: (task: Task) => void;
-  selected: boolean;
-  onToggleSelected: () => void;
-  showSelect: boolean;
-}
 
 function TaskCard({
   task,
@@ -1103,7 +1190,7 @@ function TaskCard({
   clientMap,
   vehicleMap,
   conflictInfo,
-  onDragStart,
+  // onDragStart,
   onEdit,
   selected,
   onToggleSelected,
@@ -1112,7 +1199,9 @@ function TaskCard({
   const client = clientMap.get(task.client_id || '');
   const vehicle = vehicleMap.get(task.vehicle_id || '');
   const leadAssignee = assignees.find((a) => a.is_lead);
-  const leadDriver = leadAssignee ? driverMap.get(leadAssignee.driver_id) : null;
+  const leadDriver = leadAssignee
+    ? driverMap.get(leadAssignee.driver_id)
+    : null;
 
   // Setup draggable
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -1134,18 +1223,32 @@ function TaskCard({
     >
       {conflictInfo && (
         <div className="absolute -top-2 -left-2 rounded bg-orange-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow">
-          עודכן ע"י {conflictInfo.by || 'שרת'} {conflictInfo.at ? `(${new Date(conflictInfo.at).toLocaleTimeString()})` : ''}
+          עודכן ע&quot;י {conflictInfo.by || 'שרת'}{' '}
+          {conflictInfo.at
+            ? `(${new Date(conflictInfo.at).toLocaleTimeString()})`
+            : ''}
         </div>
       )}
       {/* Header: Select + Title + Priority Badge */}
       <div className="mb-2 flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
           {showSelect && (
-            <input type="checkbox" checked={selected} onChange={onToggleSelected} aria-label="בחר משימה" />
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={onToggleSelected}
+              aria-label="בחר משימה"
+            />
           )}
-          <h4 className="flex-1 line-clamp-2 font-semibold text-gray-900 text-sm">{task.title}</h4>
+          <h4 className="flex-1 line-clamp-2 font-semibold text-gray-900 text-sm">
+            {task.title}
+          </h4>
         </div>
-        <span className={`shrink-0 inline-block rounded-full px-1.5 py-0.5 text-xs font-bold text-white ${priorityColor(task.priority)}`}>
+        <span
+          className={`shrink-0 inline-block rounded-full px-1.5 py-0.5 text-xs font-bold text-white ${priorityColor(
+            task.priority
+          )}`}
+        >
           {priorityLabel(task.priority)}
         </span>
       </div>
@@ -1186,10 +1289,17 @@ function TaskCard({
 
       {/* Footer: Status + Actions */}
       <div className="mt-2 flex items-center justify-between">
-        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${statusColor(task.status)}`}>
+        <span
+          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${statusColor(
+            task.status
+          )}`}
+        >
           {statusLabel(task.status)}
         </span>
-        <button className="text-xs text-toyota-primary hover:underline" onClick={() => onEdit(task)}>
+        <button
+          className="text-xs text-toyota-primary hover:underline"
+          onClick={() => onEdit(task)}
+        >
           עריכה
         </button>
       </div>
@@ -1255,4 +1365,3 @@ function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
   return date.toLocaleDateString('he-IL', { month: '2-digit', day: '2-digit' });
 }
-

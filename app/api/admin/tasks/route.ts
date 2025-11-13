@@ -35,7 +35,10 @@ export async function POST(request: NextRequest) {
     } = body || {};
 
     if (!title || !type || !priority || !status) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
     }
 
     const admin = getSupabaseAdmin();
@@ -89,9 +92,11 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ ok: true, data: created }, { status: 200 });
-  } catch (err: any) {
-    return NextResponse.json({ error: err?.message || 'Internal server error' }, { status: 500 });
+  } catch (err: unknown) {
+    const error = err as Error;
+    return NextResponse.json(
+      { error: error.message || 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
-
-
