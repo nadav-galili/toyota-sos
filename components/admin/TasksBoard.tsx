@@ -19,7 +19,6 @@ import {
   useSensor,
   useSensors,
   DragOverlay,
-  useDroppable,
   closestCorners,
 } from '@dnd-kit/core';
 import {
@@ -42,16 +41,9 @@ import type {
 } from '@/types/task';
 import type { Driver } from '@/types/user';
 import type { Client, Vehicle } from '@/types/entity';
-import type {
-  GroupBy,
-  SortBy,
-  SortDir,
-  TasksBoardProps,
-  KanbanColumnProps,
-} from '@/types/board';
+import type { GroupBy, SortBy, SortDir, TasksBoardProps } from '@/types/board';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
-  TaskCard,
   statusLabel,
   priorityColor,
   priorityLabel,
@@ -66,6 +58,18 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { ArrowUpDownIcon, ListIcon, PlusIcon, UsersIcon } from 'lucide-react';
+import { ColumnSkeleton } from './ColumnSkeleton';
+import { KanbanColumn } from './KanbanColumn';
+import {
+  buildClientMap,
+  buildDriverMap,
+  buildTaskAssigneeMap,
+  buildVehicleMap,
+  computeColumns,
+  filterTasks,
+  getColumnTasks as getColumnTasksUtil,
+  sortTasks,
+} from '@/utils/admin/tasksBoardMappers';
 
 type PostgresChangePayload = {
   eventType: 'INSERT' | 'UPDATE' | 'DELETE';
@@ -220,90 +224,36 @@ export function TasksBoard({
   }, []);
 
   // Create lookup maps
-  const driverMap = useMemo(() => {
-    const map = new Map<string, Driver>();
-    drivers.forEach((d) => map.set(d.id, d));
-    return map;
-  }, [drivers]);
+  const driverMap = useMemo(() => buildDriverMap(drivers), [drivers]);
 
-  const taskAssigneeMap = useMemo(() => {
-    const map = new Map<string, TaskAssignee[]>();
-    assignees.forEach((ta) => {
-      if (!map.has(ta.task_id)) {
-        map.set(ta.task_id, []);
-      }
-      map.get(ta.task_id)!.push(ta);
-    });
-    return map;
-  }, [assignees]);
+  const taskAssigneeMap = useMemo(
+    () => buildTaskAssigneeMap(assignees),
+    [assignees]
+  );
 
-  const clientMap = useMemo(() => {
-    const map = new Map<string, Client>();
-    clients.forEach((c) => map.set(c.id, c));
-    return map;
-  }, [clients]);
+  const clientMap = useMemo(() => buildClientMap(clients), [clients]);
 
-  const vehicleMap = useMemo(() => {
-    const map = new Map<string, Vehicle>();
-    vehicles.forEach((v) => map.set(v.id, v));
-    return map;
-  }, [vehicles]);
+  const vehicleMap = useMemo(() => buildVehicleMap(vehicles), [vehicles]);
 
   // Compute filtered + sorted tasks snapshot
   const filteredSortedTasks = useMemo(() => {
-    const now = Date.now();
-    const normalized = search.trim().toLowerCase();
-    const priorityRank: Record<TaskPriority, number> = {
-      נמוכה: 1,
-      בינונית: 2,
-      גבוהה: 3,
-    };
-
-    let list = tasks.filter((t) => {
-      if (filterType !== 'all' && t.type !== filterType) return false;
-      if (filterPriority !== 'all' && t.priority !== filterPriority)
-        return false;
-      if (overdueOnly) {
-        const end = new Date(t.estimated_end).getTime();
-        if (!(end < now && t.status !== 'הושלמה')) return false;
-      }
-      if (normalized) {
-        const clientName = t.client_id
-          ? clientMap.get(t.client_id)?.name || ''
-          : '';
-        const vehiclePlate = t.vehicle_id
-          ? vehicleMap.get(t.vehicle_id)?.license_plate || ''
-          : '';
-        const hay = `${t.title} ${clientName} ${vehiclePlate}`.toLowerCase();
-        if (!hay.includes(normalized)) return false;
-      }
-      return true;
+    const filtered = filterTasks({
+      tasks,
+      search,
+      filterType,
+      filterPriority,
+      overdueOnly,
+      clientMap,
+      vehicleMap,
     });
 
-    list = list.slice().sort((a, b) => {
-      if (sortBy === 'עדיפות') {
-        const diff = priorityRank[b.priority] - priorityRank[a.priority];
-        return diff === 0 ? a.title.localeCompare(b.title) : diff;
-      }
-      if (sortBy === 'נהג') {
-        const la =
-          taskAssigneeMap.get(a.id)?.find((x) => x.is_lead)?.driver_id || '';
-        const lb =
-          taskAssigneeMap.get(b.id)?.find((x) => x.is_lead)?.driver_id || '';
-        const na = la ? driverMap.get(la)?.name || '' : '';
-        const nb = lb ? driverMap.get(lb)?.name || '' : '';
-        return na.localeCompare(nb);
-      }
-      // time (estimated_start)
-      const ta = new Date(a.estimated_start).getTime();
-      const tb = new Date(b.estimated_start).getTime();
-      return (
-        (sortDir === 'asc' ? ta - tb : tb - ta) ||
-        a.title.localeCompare(b.title)
-      );
+    return sortTasks({
+      tasks: filtered,
+      sortBy,
+      sortDir,
+      driverMap,
+      taskAssigneeMap,
     });
-
-    return list;
   }, [
     tasks,
     search,
@@ -319,43 +269,26 @@ export function TasksBoard({
   ]);
 
   // Compute columns based on groupBy mode
-  const columns = useMemo(() => {
-    if (groupBy === 'driver') {
-      // Group by driver: create columns for each assigned driver
-      const driverIds = new Set<string>();
-      assignees.forEach((ta) => driverIds.add(ta.driver_id));
-      return Array.from(driverIds).map((driverId) => ({
-        id: driverId,
-        label: driverMap.get(driverId)?.name || 'Unknown Driver',
-        type: 'driver' as const,
-      }));
-    } else {
-      // Group by status: create columns for each status
-      const statuses: TaskStatus[] = ['בהמתנה', 'בעבודה', 'חסומה', 'הושלמה'];
-      return statuses.map((status) => ({
-        id: status,
-        label: statusLabel(status),
-        type: 'status' as const,
-      }));
-    }
-  }, [groupBy, assignees, driverMap]);
+  const columns = useMemo(
+    () =>
+      computeColumns({
+        groupBy,
+        assignees,
+        driverMap,
+        statusLabel,
+      }),
+    [groupBy, assignees, driverMap]
+  );
 
   // Get tasks for a specific column
   const getColumnTasks = useCallback(
-    (columnId: string): Task[] => {
-      if (groupBy === 'driver') {
-        // Filter tasks assigned to this driver
-        const assignedTaskIds = assignees
-          .filter((ta) => ta.driver_id === columnId)
-          .map((ta) => ta.task_id);
-        return filteredSortedTasks.filter((t) =>
-          assignedTaskIds.includes(t.id)
-        );
-      } else {
-        // Filter tasks by status
-        return filteredSortedTasks.filter((t) => t.status === columnId);
-      }
-    },
+    (columnId: string): Task[] =>
+      getColumnTasksUtil({
+        columnId,
+        groupBy,
+        assignees,
+        filteredSortedTasks,
+      }),
     [filteredSortedTasks, groupBy, assignees]
   );
 
@@ -1167,134 +1100,5 @@ export function TasksBoard({
         </Suspense>
       )}
     </DndContext>
-  );
-}
-
-/**
- * ColumnSkeleton Component
- * Renders a skeleton loader for a column during data loading.
- */
-function ColumnSkeleton() {
-  return (
-    <div className="flex min-w-[320px] shrink-0 flex-col rounded-lg border-2 border-gray-200 bg-gray-50 animate-pulse">
-      {/* Skeleton Header */}
-      <div className="border-b border-gray-200 bg-white px-4 py-3">
-        <div className="space-y-2">
-          <div className="h-5 bg-gray-300 rounded w-24"></div>
-          <div className="h-4 bg-gray-200 rounded w-16"></div>
-        </div>
-      </div>
-
-      {/* Skeleton Tasks */}
-      <div className="flex-1 space-y-3 p-3">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="rounded-lg bg-white p-3 space-y-2">
-            <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-            <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-            <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/**
- * KanbanColumn Component
- * Renders a single column in the Kanban board with header and task cards.
- */
-
-function KanbanColumn({
-  column,
-  tasks,
-  isOver,
-  activeTaskId,
-  selectedIds,
-  taskAssigneeMap,
-  driverMap,
-  clientMap,
-  vehicleMap,
-  conflict,
-  onDragStart,
-  toggleSelected,
-  selectAllInColumn,
-  bulkEnabled,
-}: KanbanColumnProps) {
-  // Setup droppable
-  const { setNodeRef } = useDroppable({
-    id: column.id,
-    data: { type: column.type },
-  });
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={`flex h-full min-h-0 min-w-[320px] shrink-0 flex-col rounded-lg border-2 transition-all ${
-        isOver
-          ? 'border-toyota-primary/50 bg-toyota-50/30 shadow-md'
-          : 'border-gray-200 bg-gray-50'
-      }`}
-      role="region"
-      aria-label={`עמודה: ${column.label}`}
-      data-drop-target={column.id}
-    >
-      {/* Column Header */}
-      <div className="sticky top-0 border-b border-gray-200 bg-white px-4 py-3 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-bold text-blue-700 underline text-xl">
-              {column.label}
-            </h3>
-            <p className="text-xs font-medium text-gray-500">
-              {tasks.length} {tasks.length === 1 ? 'משימה' : 'משימות'}
-            </p>
-          </div>
-          <div className="rounded-full bg-gray-100 px-2.5 py-1 text-sm font-semibold text-gray-700">
-            {tasks.length}
-          </div>
-        </div>
-        <div className="mt-2 flex items-center justify-between">
-          {bulkEnabled && (
-            <label className="inline-flex items-center gap-2 text-xs text-gray-600">
-              <input
-                type="checkbox"
-                onChange={(e) => selectAllInColumn(column.id, e.target.checked)}
-              />
-              בחר הכל
-            </label>
-          )}
-        </div>
-      </div>
-
-      {/* Column Body - Scrollable task list */}
-      <div className="flex-1 space-y-3 overflow-y-auto p-3 pb-10">
-        {tasks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="mb-2 text-2xl">📭</div>
-            <p className="text-sm font-medium text-gray-400">אין משימות</p>
-            <p className="text-xs text-gray-300">גרור משימה לכאן</p>
-          </div>
-        ) : (
-          tasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              columnId={column.id}
-              isActive={activeTaskId === task.id}
-              assignees={taskAssigneeMap.get(task.id) || []}
-              driverMap={driverMap}
-              clientMap={clientMap}
-              vehicleMap={vehicleMap}
-              conflictInfo={conflict[task.id]}
-              onDragStart={onDragStart}
-              onEdit={() => {}}
-              selected={selectedIds.has(task.id)}
-              onToggleSelected={() => toggleSelected(task.id)}
-              showSelect={bulkEnabled}
-            />
-          ))
-        )}
-      </div>
-    </div>
   );
 }
