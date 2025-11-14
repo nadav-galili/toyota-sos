@@ -26,8 +26,9 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { Calendar } from 'lucide-react';
-
+import { Calendar, PlusIcon } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 type Mode = 'create' | 'edit';
 
 // Validation schema for estimated date (no past dates allowed)
@@ -112,7 +113,9 @@ export function TaskDialog(props: TaskDialogProps) {
   const [addressQuery, setAddressQuery] = useState(task?.address ?? '');
   const [addressSuggestions, setAddressSuggestions] = useState<string[]>([]);
   const [clientId, setClientId] = useState<string>(task?.client_id ?? '');
+  const [clientQuery, setClientQuery] = useState<string>('');
   const [vehicleId, setVehicleId] = useState<string>(task?.vehicle_id ?? '');
+  const [vehicleQuery, setVehicleQuery] = useState<string>('');
   const [leadDriverId, setLeadDriverId] = useState<string>('');
   const [coDriverIds, setCoDriverIds] = useState<string[]>([]);
   const [showAddClient, setShowAddClient] = useState(false);
@@ -149,7 +152,25 @@ export function TaskDialog(props: TaskDialogProps) {
       setAddress(task?.address ?? '');
       setAddressQuery(task?.address ?? '');
       setClientId(task?.client_id ?? '');
+      if (task?.client_id) {
+        const existing = clients.find((c) => c.id === task.client_id);
+        setClientQuery(existing?.name ?? '');
+      } else {
+        setClientQuery('');
+      }
       setVehicleId(task?.vehicle_id ?? '');
+      if (task?.vehicle_id) {
+        const existingVehicle = vehicles.find((v) => v.id === task.vehicle_id);
+        setVehicleQuery(
+          existingVehicle
+            ? `${existingVehicle.license_plate}${
+                existingVehicle.model ? ` · ${existingVehicle.model}` : ''
+              }`
+            : ''
+        );
+      } else {
+        setVehicleQuery('');
+      }
       setLeadDriverId('');
       setCoDriverIds([]);
       setClientsLocal(clients);
@@ -160,6 +181,26 @@ export function TaskDialog(props: TaskDialogProps) {
   }, [open, task, clients, vehicles]);
 
   const coDriversSet = useMemo(() => new Set(coDriverIds), [coDriverIds]);
+
+  const clientSuggestions = useMemo(() => {
+    const q = clientQuery.trim().toLowerCase();
+    if (!q) return [];
+    return clientsLocal
+      .filter((c) => c.name.toLowerCase().includes(q))
+      .slice(0, 8);
+  }, [clientsLocal, clientQuery]);
+
+  const vehicleSuggestions = useMemo(() => {
+    const q = vehicleQuery.trim().toLowerCase();
+    if (!q) return [];
+    return vehiclesLocal
+      .filter((v) => {
+        const plate = v.license_plate?.toLowerCase() ?? '';
+        const model = v.model?.toLowerCase() ?? '';
+        return plate.includes(q) || model.includes(q);
+      })
+      .slice(0, 8);
+  }, [vehiclesLocal, vehicleQuery]);
 
   const toggleCoDriver = (id: string) => {
     setCoDriverIds((prev) => {
@@ -238,6 +279,7 @@ export function TaskDialog(props: TaskDialogProps) {
       const created: Client = json.data;
       setClientsLocal((prev) => [...prev, created]);
       setClientId(created.id);
+      setClientQuery(created.name || '');
       setShowAddClient(false);
       setNewClientName('');
       setNewClientPhone('');
@@ -663,25 +705,48 @@ export function TaskDialog(props: TaskDialogProps) {
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">לקוח</span>
             <div className="flex gap-2">
-              <select
-                className="rounded border border-gray-300 p-2 flex-1"
-                value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
-              >
-                <option value="">—</option>
-                {clientsLocal.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+              <div className="grid w-full max-w-sm items-center gap-1">
+                <Label htmlFor="client">לקוח</Label>
+                <Input
+                  type="text"
+                  id="client"
+                  placeholder="לקוח"
+                  value={clientQuery}
+                  onChange={(e) => {
+                    setClientQuery(e.target.value);
+                    setClientId('');
+                  }}
+                />
+                {clientSuggestions.length > 0 && !clientId && (
+                  <div className="mt-1 max-h-40 w-full overflow-y-auto rounded border border-gray-300 bg-white text-sm shadow-sm">
+                    {clientSuggestions.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        className="flex w-full items-center justify-between px-2 py-1 text-right hover:bg-blue-50"
+                        onClick={() => {
+                          setClientId(c.id);
+                          setClientQuery(c.name);
+                        }}
+                      >
+                        <span>{c.name}</span>
+                        {c.phone && (
+                          <span className="text-xs text-gray-500">
+                            {c.phone}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <button
                 type="button"
-                className="rounded border border-gray-300 px-2 text-xs"
+                className="rounded border border-gray-300 px-2 text-xs h-9 self-end bg-blue-500 text-white flex items-center justify-center"
                 onClick={() => setShowAddClient((v) => !v)}
               >
+                <PlusIcon className="w-4 h-4" />
                 חדש
               </button>
             </div>
@@ -726,25 +791,53 @@ export function TaskDialog(props: TaskDialogProps) {
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">רכב</span>
             <div className="flex gap-2">
-              <select
-                className="rounded border border-gray-300 p-2 flex-1"
-                value={vehicleId}
-                onChange={(e) => setVehicleId(e.target.value)}
-              >
-                <option value="">—</option>
-                {vehiclesLocal.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.license_plate} · {v.model}
-                  </option>
-                ))}
-              </select>
+              <div className="grid w-full max-w-sm items-center gap-1">
+                <Label htmlFor="vehicle">רכב</Label>
+                <Input
+                  type="text"
+                  id="vehicle"
+                  placeholder="רכב"
+                  value={vehicleQuery}
+                  onChange={(e) => {
+                    setVehicleQuery(e.target.value);
+                    setVehicleId(''); // Clear vehicleId when typing to show suggestions
+                  }}
+                />
+                {vehicleSuggestions.length > 0 && !vehicleId && (
+                  <div className="mt-1 max-h-40 w-full overflow-y-auto rounded border border-gray-300 bg-white text-sm shadow-sm">
+                    {vehicleSuggestions.map((v) => (
+                      <button
+                        key={v.id}
+                        type="button"
+                        className="flex w-full items-center justify-between px-2 py-1 text-right hover:bg-blue-50"
+                        onClick={() => {
+                          setVehicleId(v.id);
+                          setVehicleQuery(
+                            `${v.license_plate}${
+                              v.model ? ` · ${v.model}` : ''
+                            }`
+                          );
+                        }}
+                      >
+                        <span>
+                          {v.license_plate}
+                          {v.model ? ` · ${v.model}` : ''}
+                        </span>
+                        {v.vin && (
+                          <span className="text-xs text-gray-500">{v.vin}</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <button
                 type="button"
-                className="rounded border border-gray-300 px-2 text-xs"
+                className="rounded border border-gray-300 px-2 text-xs h-9 self-end bg-blue-500 text-white flex items-center justify-center"
                 onClick={() => setShowAddVehicle((v) => !v)}
               >
+                <PlusIcon className="w-4 h-4" />
                 חדש
               </button>
             </div>

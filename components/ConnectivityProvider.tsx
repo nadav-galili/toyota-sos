@@ -17,12 +17,10 @@ export function useConnectivity() {
 }
 
 export function ConnectivityProvider({ children }: { children: React.ReactNode }) {
-  const [isOnline, setIsOnline] = React.useState<boolean>(
-    typeof navigator !== 'undefined' ? navigator.onLine : true
-  );
-  const [lastOnlineAt, setLastOnlineAt] = React.useState<number | null>(
-    typeof navigator !== 'undefined' && navigator.onLine ? Date.now() : null
-  );
+  // Start as "online" by default to avoid false offline state on initial load.
+  // We'll rely on real 'online' / 'offline' events to update this.
+  const [isOnline, setIsOnline] = React.useState<boolean>(true);
+  const [lastOnlineAt, setLastOnlineAt] = React.useState<number | null>(null);
 
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -30,7 +28,9 @@ export function ConnectivityProvider({ children }: { children: React.ReactNode }
       setIsOnline(true);
       setLastOnlineAt(Date.now());
     };
-    const onOffline = () => setIsOnline(false);
+    const onOffline = () => {
+      setIsOnline(false);
+    };
     window.addEventListener('online', onOnline);
     window.addEventListener('offline', onOffline);
     return () => {
