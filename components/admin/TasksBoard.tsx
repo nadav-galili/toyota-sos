@@ -65,6 +65,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import { ArrowUpDownIcon } from 'lucide-react';
 
 type PostgresChangePayload = {
   eventType: 'INSERT' | 'UPDATE' | 'DELETE';
@@ -123,7 +124,7 @@ export function TasksBoard({
     'all'
   );
   const [overdueOnly, setOverdueOnly] = useState(false);
-  const [sortBy, setSortBy] = useState<SortBy>('time');
+  const [sortBy, setSortBy] = useState<SortBy>('זמן');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   // Conflict ribbons (server-wins notifications)
   const [conflictByTaskId, setConflictByTaskId] = useState<
@@ -280,11 +281,11 @@ export function TasksBoard({
     });
 
     list = list.slice().sort((a, b) => {
-      if (sortBy === 'priority') {
+      if (sortBy === 'עדיפות') {
         const diff = priorityRank[b.priority] - priorityRank[a.priority];
         return diff === 0 ? a.title.localeCompare(b.title) : diff;
       }
-      if (sortBy === 'driver') {
+      if (sortBy === 'נהג') {
         const la =
           taskAssigneeMap.get(a.id)?.find((x) => x.is_lead)?.driver_id || '';
         const lb =
@@ -830,7 +831,7 @@ export function TasksBoard({
           aria-label="לוח משימות"
         >
           {/* Filters & Search & Sort */}
-          <div className="flex flex-wrap items-center gap-3 border-b border-gray-100 px-4 py-2 bg-white">
+          <div className="relative z-50 flex flex-wrap items-center gap-3 border-b border-gray-100 px-4 py-2 bg-white">
             <input
               type="text"
               placeholder="חפש משימות (כותרת / לקוח / רכב)"
@@ -889,18 +890,53 @@ export function TasksBoard({
                 </DropdownMenu>
               );
             })()}
-            <select
-              className="rounded border border-gray-300 px-2 py-1 text-sm"
-              value={filterPriority}
-              onChange={(e) =>
-                setFilterPriority(e.target.value as 'all' | TaskPriority)
-              }
-            >
-              <option value="all">כל העדיפויות</option>
-              <option value="low">עדיפות: נמוך</option>
-              <option value="medium">עדיפות: בינוני</option>
-              <option value="high">עדיפות: גבוה</option>
-            </select>
+            {(() => {
+              const priorityOptions: Array<{
+                value: 'all' | TaskPriority;
+                label: string;
+              }> = [
+                { value: 'all', label: 'כל העדיפויות' },
+                { value: 'נמוכה', label: 'נמוכה' },
+                { value: 'בינונית', label: 'בינונית' },
+                { value: 'גבוהה', label: 'גבוהה' },
+              ];
+              const currentLabel =
+                priorityOptions.find((o) => o.value === filterPriority)
+                  ?.label || 'כל העדיפויות';
+              return (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="text-sm font-normal justify-start"
+                    >
+                      {currentLabel}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    className="w-44 bg-white text-right *:text-right"
+                    style={{ direction: 'rtl' }}
+                  >
+                    <DropdownMenuRadioGroup
+                      value={filterPriority}
+                      onValueChange={(value) =>
+                        setFilterPriority(value as 'all' | TaskPriority)
+                      }
+                    >
+                      {priorityOptions.map(({ value, label }) => (
+                        <DropdownMenuRadioItem
+                          key={value as string}
+                          value={value as string}
+                          className="hover:bg-blue-600 hover:text-white"
+                        >
+                          {label}
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              );
+            })()}
             <label className="inline-flex items-center gap-2 text-sm text-gray-700">
               <input
                 type="checkbox"
@@ -910,24 +946,74 @@ export function TasksBoard({
               באיחור בלבד
             </label>
             <div className="ml-auto flex items-center gap-2">
-              <select
-                className="rounded border border-gray-300 px-2 py-1 text-sm"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as SortBy)}
-              >
-                <option value="time">זמן</option>
-                <option value="priority">עדיפות</option>
-                <option value="driver">נהג</option>
-              </select>
-              {sortBy === 'time' && (
-                <select
-                  className="rounded border border-gray-300 px-2 py-1 text-sm"
-                  value={sortDir}
-                  onChange={(e) => setSortDir(e.target.value as SortDir)}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="text-sm font-normal justify-start"
+                  >
+                    <ArrowUpDownIcon className="w-4 h-4" />
+                    <span className="text-sm font-normal text-gray-700 mr-2">
+                      סדר על פי
+                    </span>
+                    <span className="text-sm font-normal text-blue-700">
+                      {sortBy}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  className="z-1000 w-44 bg-white text-right *:text-right"
+                  style={{ direction: 'rtl' }}
+                  sideOffset={8}
                 >
-                  <option value="asc">מהקודם לאחרון</option>
-                  <option value="desc">מהאחרון לקודם</option>
-                </select>
+                  <DropdownMenuRadioGroup
+                    value={sortBy}
+                    onValueChange={(value) => setSortBy(value as SortBy)}
+                  >
+                    <DropdownMenuRadioItem value="זמן">
+                      זמן
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="עדיפות">
+                      עדיפות
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="נהג">
+                      נהג
+                    </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {sortBy === 'זמן' && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="text-sm font-normal justify-start"
+                    >
+                      <ArrowUpDownIcon className="w-4 h-4" />
+                      <span className="text-sm font-normal text-gray-700 mr-2">
+                        סדר
+                      </span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    className="z-1000 w-44 bg-white text-right *:text-right"
+                    style={{ direction: 'rtl' }}
+                    sideOffset={8}
+                  >
+                    <DropdownMenuRadioGroup
+                      value={sortDir}
+                      onValueChange={(value) => setSortDir(value as SortDir)}
+                    >
+                      <DropdownMenuRadioItem value="asc">
+                        מהקודם לאחרון
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="desc">
+                        מהאחרון לקודם
+                      </DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
           </div>

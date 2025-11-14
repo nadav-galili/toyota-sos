@@ -8,7 +8,7 @@ import type { Driver } from './user';
 import type { Client, Vehicle } from './entity';
 
 export type GroupBy = 'driver' | 'status';
-export type SortBy = 'priority' | 'time' | 'driver';
+export type SortBy = 'עדיפות' | 'זמן' | 'נהג';
 export type SortDir = 'asc' | 'desc';
 
 export interface DragItem {
@@ -57,4 +57,3 @@ export interface TaskCardProps {
   onToggleSelected: () => void;
   showSelect: boolean;
 }
-
