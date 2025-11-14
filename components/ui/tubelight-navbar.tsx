@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -32,25 +32,9 @@ const iconMap: Record<
 
 export function NavBar({ items, className }: NavBarProps) {
   const pathname = usePathname();
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   return (
-    <div
-      className={cn(
-        'fixed  sm:top-0 left-1/2 -translate-x-1/2 z-50 mb-6 sm:pt-6',
-        className
-      )}
-    >
+    <div className={cn('w-full flex justify-center my-4', className)}>
       <div className="flex items-center gap-3 bg-background/5 border border-border backdrop-blur-lg py-1 px-1 rounded-full shadow-lg">
         {items.map((item) => {
           const Icon =
