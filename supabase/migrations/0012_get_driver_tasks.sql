@@ -89,10 +89,11 @@ begin
         -- Tasks that are due today or started today
         (t.estimated_end >= v_today_start and t.estimated_end <= v_today_end)
         or (t.estimated_start >= v_today_start and t.estimated_start <= v_today_end)
-        or (t.status = 'in_progress' and t.estimated_end >= v_today_start)
+        -- NOTE: compare status via text to avoid enum value mismatches across environments
+        or (t.status::text = 'in_progress' and t.estimated_end >= v_today_start)
       when 'overdue' then
         -- Tasks that are not completed and past their estimated_end
-        t.status != 'completed'
+        t.status::text != 'completed'
         and t.estimated_end is not null
         and t.estimated_end < v_now
       when 'all' then
@@ -102,7 +103,7 @@ begin
         -- Default to today if invalid tab
         (t.estimated_end >= v_today_start and t.estimated_end <= v_today_end)
         or (t.estimated_start >= v_today_start and t.estimated_start <= v_today_end)
-        or (t.status = 'in_progress' and t.estimated_end >= v_today_start)
+        or (t.status::text = 'in_progress' and t.estimated_end >= v_today_start)
     end
   )
   -- Pagination cursor: if cursor provided, get tasks after that cursor
