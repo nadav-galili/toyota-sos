@@ -10,6 +10,16 @@ import { driverSchema } from '@/lib/schemas/driver';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { toastError, toastSuccess } from '@/lib/toast';
 
 type DriverRow = {
   id: string;
@@ -52,9 +62,13 @@ export function DriverCredentialsManager({ initialDrivers = [] }: Props) {
   const [drivers, setDrivers] = useState<DriverRow[]>(initialDrivers);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [page, setPage] = useState(0);
   const pageSize = 10;
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create');
+  const [editingDriver, setEditingDriver] = useState<DriverRow | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const {
     register,
@@ -112,8 +126,32 @@ export function DriverCredentialsManager({ initialDrivers = [] }: Props) {
     [page, pageSize, drivers.length],
   );
 
+  const openCreateDialog = () => {
+    setDialogMode('create');
+    setEditingDriver(null);
+    reset({
+      name: '',
+      employeeId: '',
+      email: '',
+    });
+    setError(null);
+    setDialogOpen(true);
+  };
+
+  const openEditDialog = (driver: DriverRow) => {
+    setDialogMode('edit');
+    setEditingDriver(driver);
+    reset({
+      name: driver.name ?? '',
+      employeeId: driver.employee_id ?? '',
+      email: driver.email ?? '',
+    });
+    setError(null);
+    setDialogOpen(true);
+  };
+
   const onSubmit = async (values: FormValues) => {
-    setCreating(true);
+    setSubmitting(true);
     setError(null);
     try {
       const payload: DriverInput = {
@@ -122,22 +160,41 @@ export function DriverCredentialsManager({ initialDrivers = [] }: Props) {
         email: values.email,
       };
 
-      const res = await fetch('/api/admin/drivers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      let res: Response;
+      if (dialogMode === 'create') {
+        res = await fetch('/api/admin/drivers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        if (!editingDriver) {
+          throw new Error('לא נמצא נהג לעריכה');
+        }
+        res = await fetch(`/api/admin/drivers/${editingDriver.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
 
       if (res.status === 401) {
-        setError('אין הרשאה ליצור נהג חדש');
+        const msg =
+          dialogMode === 'create'
+            ? 'אין הרשאה ליצור נהג חדש'
+            : 'אין הרשאה לעדכן נהג';
+        setError(msg);
+        toastError(msg);
         return;
       }
 
       if (res.status === 409) {
         const json = await res.json().catch(() => ({}));
-        setError(
-          json?.error || 'מספר עובד כבר קיים, לא ניתן ליצור נהג עם אותו מספר עובד',
-        );
+        const msg =
+          json?.error ||
+          'מספר עובד כבר קיים, לא ניתן להשתמש באותו מספר עובד';
+        setError(msg);
+        toastError(msg);
         return;
       }
 
@@ -145,37 +202,87 @@ export function DriverCredentialsManager({ initialDrivers = [] }: Props) {
         const json = await res.json().catch(() => ({}));
         const msg = json?.error || 'נתונים לא תקינים';
         setError(msg);
+        toastError(msg);
         return;
       }
 
       if (!res.ok) {
         const txt = await res.text().catch(() => '');
-        throw new Error(txt || 'שגיאה ביצירת נהג');
+        throw new Error(
+          txt ||
+            (dialogMode === 'create'
+              ? 'שגיאה ביצירת נהג'
+              : 'שגיאה בעדכון נהג'),
+        );
       }
+
+      const successMsg =
+        dialogMode === 'create' ? 'נהג נוצר בהצלחה' : 'נהג עודכן בהצלחה';
+      toastSuccess(successMsg);
 
       reset({
         name: '',
         employeeId: '',
         email: '',
       });
+      setDialogOpen(false);
       setPage(0);
       await loadDrivers();
     } catch (e: any) {
-      setError(e?.message || 'שגיאה ביצירת נהג');
+      const msg =
+        e?.message ||
+        (dialogMode === 'create'
+          ? 'שגיאה ביצירת נהג'
+          : 'שגיאה בעדכון נהג');
+      setError(msg);
+      toastError(msg);
     } finally {
-      setCreating(false);
+      setSubmitting(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingId) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/drivers/${deletingId}`, {
+        method: 'DELETE',
+      });
+      if (res.status === 401) {
+        const msg = 'אין הרשאה למחוק נהג';
+        setError(msg);
+        toastError(msg);
+        return;
+      }
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        const msg = json?.error || 'שגיאה במחיקת נהג';
+        setError(msg);
+        toastError(msg);
+        return;
+      }
+      toastSuccess('נהג נמחק בהצלחה');
+      setDeletingId(null);
+      await loadDrivers();
+    } catch (e: any) {
+      const msg = e?.message || 'שגיאה במחיקת נהג';
+      setError(msg);
+      toastError(msg);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
     <section
       dir="rtl"
-      className="mt-4 grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)]"
+      className="mt-4 space-y-4"
       aria-label="ניהול פרטי הנהגים"
     >
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">כל הנהגים</h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold">כל הנהגים</h2>
+        <div className="flex items-center gap-2">
           <Button
             type="button"
             variant="outline"
@@ -185,7 +292,16 @@ export function DriverCredentialsManager({ initialDrivers = [] }: Props) {
           >
             רענן
           </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={openCreateDialog}
+          >
+            הוסף נהג חדש
+          </Button>
         </div>
+      </div>
+      <div className="space-y-3">
         {loading ? <div className="text-sm">טוען נהגים...</div> : null}
         {error ? (
           <div role="alert" className="rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700">
@@ -237,9 +353,7 @@ export function DriverCredentialsManager({ initialDrivers = [] }: Props) {
                           variant="outline"
                           size="sm"
                           className="h-7 px-2 text-[11px]"
-                          disabled
-                          aria-disabled="true"
-                          title="עריכה תתווסף בהמשך"
+                          onClick={() => openEditDialog(d)}
                         >
                           ערוך
                         </Button>
@@ -248,9 +362,7 @@ export function DriverCredentialsManager({ initialDrivers = [] }: Props) {
                           variant="outline"
                           size="sm"
                           className="h-7 px-2 text-[11px]"
-                          disabled
-                          aria-disabled="true"
-                          title="מחיקה תתווסף בהמשך"
+                          onClick={() => setDeletingId(d.id)}
                         >
                           מחק
                         </Button>
@@ -289,61 +401,101 @@ export function DriverCredentialsManager({ initialDrivers = [] }: Props) {
         ) : null}
       </div>
 
-      <div className="space-y-3 rounded border bg-white p-4">
-        <h2 className="text-lg font-semibold">יצירת נהג חדש</h2>
-        <p className="text-xs text-gray-600">
-          טופס זה יוצר משתמש נהג חדש ומקצה לו מספר עובד ייחודי. סיסמת ברירת מחדל
-          נגזרת ממספר העובד, והכניסה בפועל מתבצעת לפי מספר עובד בלבד.
-        </p>
-        <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
-          <div className="space-y-1.5">
-            <Label htmlFor="driver-name">שם הנהג</Label>
-            <Input
-              id="driver-name"
-              placeholder="שם מלא"
-              {...register('name')}
-            />
-            {errors.name ? (
-              <p className="text-xs text-red-600">{errors.name.message}</p>
-            ) : null}
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="driver-employee-id">מספר עובד</Label>
-            <Input
-              id="driver-employee-id"
-              placeholder="לדוגמה: D0006 או 12345"
-              {...register('employeeId')}
-            />
-            {errors.employeeId ? (
-              <p className="text-xs text-red-600">
-                {errors.employeeId.message}
-              </p>
-            ) : null}
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="driver-email">
-              אימייל (אופציונלי עבור ניהול מתקדם)
-            </Label>
-            <Input
-              id="driver-email"
-              type="email"
-              placeholder="example@toyota.co.il"
-              {...register('email')}
-            />
-            {errors.email ? (
-              <p className="text-xs text-red-600">{errors.email.message}</p>
-            ) : null}
-          </div>
-
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={creating}
+      <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {dialogMode === 'create' ? 'יצירת נהג חדש' : 'עריכת נהג'}
+            </AlertDialogTitle>
+          </AlertDialogHeader>
+          <form
+            className="mt-3 space-y-4"
+            onSubmit={handleSubmit(onSubmit)}
           >
-            {creating ? 'יוצר נהג...' : 'צור נהג'}
-          </Button>
-        </form>
-      </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="driver-name">שם הנהג</Label>
+              <Input
+                id="driver-name"
+                placeholder="שם מלא"
+                {...register('name')}
+              />
+              {errors.name ? (
+                <p className="text-xs text-red-600">{errors.name.message}</p>
+              ) : null}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="driver-employee-id">מספר עובד</Label>
+              <Input
+                id="driver-employee-id"
+                placeholder="לדוגמה: 1234"
+                {...register('employeeId')}
+              />
+              {errors.employeeId ? (
+                <p className="text-xs text-red-600">
+                  {errors.employeeId.message}
+                </p>
+              ) : null}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="driver-email">
+                אימייל (אופציונלי עבור ניהול מתקדם)
+              </Label>
+              <Input
+                id="driver-email"
+                type="email"
+                placeholder="example@toyota.co.il"
+                {...register('email')}
+              />
+              {errors.email ? (
+                <p className="text-xs text-red-600">{errors.email.message}</p>
+              ) : null}
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogAction
+                type="submit"
+                className="bg-toyota-primary hover:bg-toyota-primary/90"
+                disabled={submitting}
+              >
+                {dialogMode === 'create'
+                  ? submitting
+                    ? 'יוצר נהג...'
+                    : 'צור נהג'
+                  : submitting
+                    ? 'מעדכן נהג...'
+                    : 'עדכן נהג'}
+              </AlertDialogAction>
+              <AlertDialogCancel type="button" disabled={submitting}>
+                ביטול
+              </AlertDialogCancel>
+            </AlertDialogFooter>
+          </form>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!deletingId} onOpenChange={(open) => !open && setDeletingId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>מחיקת נהג</AlertDialogTitle>
+          </AlertDialogHeader>
+          <p className="mt-2 text-xs text-gray-700">
+            האם אתה בטוח שברצונך למחוק את הנהג? פעולה זו אינה הפיכה ועלולה להסיר
+            שיוכים למשימות.
+          </p>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              type="button"
+              className="bg-red-600 hover:bg-red-700"
+              disabled={submitting}
+              onClick={confirmDelete}
+            >
+              מחק
+            </AlertDialogAction>
+            <AlertDialogCancel type="button" disabled={submitting}>
+              ביטול
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }

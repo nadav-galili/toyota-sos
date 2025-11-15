@@ -10,9 +10,9 @@ export const driverSchema = z.object({
   employeeId: z
     .string()
     .trim()
-    .min(3, 'מספר עובד חייב להכיל לפחות 3 תווים')
-    .max(20, 'מספר עובד לא יכול להכיל יותר מ-20 תווים')
-    .regex(/^\S+$/, 'מספר עובד לא יכול להכיל רווחים'),
+    .min(2, 'מספר עובד חייב להכיל לפחות 2 ספרות')
+    .max(20, 'מספר עובד לא יכול להכיל יותר מ-20 ספרות')
+    .regex(/^\d+$/, 'מספר עובד חייב להכיל רק ספרות'),
   // Optional email; empty string will be treated as undefined in the UI layer
   email: z
     .string()
