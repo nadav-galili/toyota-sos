@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button';
 import type { DriverRow } from '@/utils/admin/drivers/types';
 import { formatDriverTimestamp } from '@/utils/admin/drivers/dialogs';
-import { PlusIcon } from 'lucide-react';
+import { PencilIcon, PlusIcon, Trash2Icon, TrashIcon } from 'lucide-react';
 
 type DriverListViewProps = {
   drivers: DriverRow[];
@@ -118,7 +118,7 @@ export function DriverListView({
                           className="h-7 px-2 text-[11px]"
                           onClick={() => onOpenEdit(d)}
                         >
-                          ערוך
+                          <PencilIcon className="w-4 h-4 text-blue-500 hover:text-blue-600" />
                         </Button>
                         <Button
                           type="button"
@@ -127,7 +127,7 @@ export function DriverListView({
                           className="h-7 px-2 text-[11px]"
                           onClick={() => onStartDelete(d.id)}
                         >
-                          מחק
+                          <Trash2Icon className="w-4 h-4 text-red-500 hover:text-red-600" />
                         </Button>
                       </div>
                     </td>
