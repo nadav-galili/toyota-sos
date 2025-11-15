@@ -15,6 +15,7 @@ import type {
   OverdueByDriverPoint,
   FunnelStep,
 } from '@/lib/dashboard/queries';
+import { DashboardCharts } from '@/components/admin/DashboardCharts';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -462,6 +463,9 @@ export function DashboardKPIs() {
   return (
     <PeriodProvider>
       <KPIsGrid />
+      <div className="mt-6">
+        <DashboardCharts />
+      </div>
     </PeriodProvider>
   );
 }
