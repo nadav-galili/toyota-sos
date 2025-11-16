@@ -1,6 +1,7 @@
 'use client';
 
 import dayjs from '@/lib/dayjs';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 export type TaskCardProps = {
   id: string;
@@ -13,6 +14,7 @@ export type TaskCardProps = {
   address?: string | null;
   clientName?: string | null;
   vehicle?: { licensePlate?: string | null; model?: string | null } | null;
+  onStatusChange?: (next: TaskCardProps['status']) => void;
 };
 
 export function TaskCard(props: TaskCardProps) {
@@ -26,6 +28,7 @@ export function TaskCard(props: TaskCardProps) {
     address,
     clientName,
     vehicle,
+    onStatusChange,
   } = props;
 
   const priorityColor =
@@ -34,15 +37,6 @@ export function TaskCard(props: TaskCardProps) {
       : priority === 'בינונית'
       ? 'bg-yellow-500'
       : 'bg-green-600';
-
-  const statusColor =
-    status === 'הושלמה'
-      ? 'bg-green-600'
-      : status === 'בעבודה'
-      ? 'bg-blue-600'
-      : status === 'חסומה'
-      ? 'bg-gray-700'
-      : 'bg-gray-500';
 
   const timeWindow =
     estimatedStart && estimatedEnd
@@ -65,11 +59,20 @@ export function TaskCard(props: TaskCardProps) {
         >
           {priority}
         </span>
-        <span
-          className={`inline-flex px-2 py-1 rounded text-xs text-white ${statusColor}`}
+        <ToggleGroup
+          type="single"
+          value={status}
+          onValueChange={(value) => {
+            if (!value || value === status) return;
+            onStatusChange?.(value as TaskCardProps['status']);
+          }}
+          aria-label="סטטוס משימה"
         >
-          {status}
-        </span>
+          <ToggleGroupItem value="בהמתנה">בהמתנה</ToggleGroupItem>
+          <ToggleGroupItem value="בעבודה">בעבודה</ToggleGroupItem>
+          <ToggleGroupItem value="חסומה">חסומה</ToggleGroupItem>
+          <ToggleGroupItem value="הושלמה">הושלמה</ToggleGroupItem>
+        </ToggleGroup>
       </div>
 
       <h3 className="mt-2 text-lg font-semibold">{title}</h3>

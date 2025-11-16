@@ -6,17 +6,27 @@ export function ServiceWorkerRegister() {
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!('serviceWorker' in navigator)) return;
+
+    // Disable existing service workers + caches for now.
     const controller = new AbortController();
-    const register = async () => {
+    const cleanup = async () => {
       try {
-        // Register the core SW; scope defaults to '/'
-        await navigator.serviceWorker.register('/sw.js', { scope: '/', type: 'classic' });
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
       } catch {
-        // ignore registration failures in dev/test
+        // ignore
+      }
+      if ('caches' in window) {
+        try {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((k) => caches.delete(k)));
+        } catch {
+          // ignore
+        }
       }
     };
-    // Defer a tick to avoid blocking first paint
-    const t = setTimeout(register, 0);
+
+    const t = setTimeout(cleanup, 0);
     return () => {
       clearTimeout(t);
       controller.abort();

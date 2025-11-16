@@ -315,7 +315,24 @@ export function DriverHome() {
           <ul className="space-y-3" role="list" aria-busy={isRefreshing}>
             {remoteTasks.map((task) => (
               <li key={task.id} role="listitem">
-                <TaskCard {...task} />
+                <TaskCard
+                  {...task}
+                  onStatusChange={async (next) => {
+                    if (!client || next === task.status) return;
+                    const { error: upErr } = await client
+                      .from('tasks')
+                      .update({ status: next })
+                      .eq('id', task.id);
+                    if (upErr) {
+                      return;
+                    }
+                    setRemoteTasks((prev) =>
+                      prev.map((t) =>
+                        t.id === task.id ? { ...t, status: next } : t
+                      )
+                    );
+                  }}
+                />
               </li>
             ))}
           </ul>
