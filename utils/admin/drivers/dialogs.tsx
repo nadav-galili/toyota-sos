@@ -99,7 +99,7 @@ export function DriverEditDialog({
               </p>
             ) : null}
           </div>
-          <div className="space-y-1.5">
+          {/* <div className="space-y-1.5">
             <Label htmlFor="driver-email">
               אימייל (אופציונלי עבור ניהול מתקדם)
             </Label>
@@ -112,7 +112,7 @@ export function DriverEditDialog({
             {errors.email ? (
               <p className="text-xs text-red-600">{errors.email.message}</p>
             ) : null}
-          </div>
+          </div> */}
           <AlertDialogFooter>
             <Button
               type="submit"
@@ -124,8 +124,8 @@ export function DriverEditDialog({
                   ? 'יוצר נהג...'
                   : 'צור נהג'
                 : submitting
-                  ? 'מעדכן נהג...'
-                  : 'עדכן נהג'}
+                ? 'מעדכן נהג...'
+                : 'עדכן נהג'}
             </Button>
             <AlertDialogCancel type="button" disabled={submitting}>
               ביטול
@@ -182,5 +182,3 @@ export function DeleteDriverDialog({
     </AlertDialog>
   );
 }
-
-

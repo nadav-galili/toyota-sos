@@ -6,8 +6,8 @@ export type TaskCardProps = {
   id: string;
   title: string;
   type: string;
-  priority: 'low' | 'medium' | 'high';
-  status: 'pending' | 'in_progress' | 'blocked' | 'completed';
+  priority: 'נמוכה' | 'בינונית' | 'גבוהה';
+  status: 'בהמתנה' | 'בעבודה' | 'חסומה' | 'הושלמה';
   estimatedStart?: string | Date | null;
   estimatedEnd?: string | Date | null;
   address?: string | null;
@@ -29,28 +29,28 @@ export function TaskCard(props: TaskCardProps) {
   } = props;
 
   const priorityColor =
-    priority === 'high'
+    priority === 'גבוהה'
       ? 'bg-red-600'
-      : priority === 'medium'
+      : priority === 'בינונית'
       ? 'bg-yellow-500'
       : 'bg-green-600';
 
   const statusColor =
-    status === 'completed'
+    status === 'הושלמה'
       ? 'bg-green-600'
-      : status === 'in_progress'
+      : status === 'בעבודה'
       ? 'bg-blue-600'
-      : status === 'blocked'
+      : status === 'חסומה'
       ? 'bg-gray-700'
       : 'bg-gray-500';
 
   const timeWindow =
     estimatedStart && estimatedEnd
-      ? `${dayjs(estimatedStart).format('DD/MM/YYYY HH:mm')} – ${dayjs(
+      ? `${dayjs(estimatedStart).format('HH:mm')} – ${dayjs(
           estimatedEnd
-        ).format('DD/MM/YYYY HH:mm')}`
+        ).format('HH:mm')}`
       : estimatedEnd
-      ? `עד ${dayjs(estimatedEnd).format('DD/MM/YYYY HH:mm')}`
+      ? `עד ${dayjs(estimatedEnd).format('HH:mm')}`
       : 'ללא זמן יעד';
 
   const wazeHref = address

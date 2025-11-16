@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 'use client';
 
 import dayjs from '@/lib/dayjs';
@@ -31,7 +32,7 @@ function intersectsToday(
 function isOverdue(task: DriverTask): boolean {
   return (
     !!task.estimatedEnd &&
-    task.status !== 'completed' &&
+    task.status !== 'הושלמה' &&
     dayjs(task.estimatedEnd).isBefore(dayjs())
   );
 }
@@ -128,15 +129,11 @@ export function DriverHome() {
         params.p_driver_id = driverId;
       }
 
-      // eslint-disable-next-line no-console
-      console.log('[DriverHome] get_driver_tasks params', params);
-
       const { data, error } = (await supa.rpc('get_driver_tasks', params)) as {
         data: SupaTaskRow[] | null;
-        error: any | null;
+        error: Error | null;
       };
       if (error) {
-        // eslint-disable-next-line no-console
         console.error('[DriverHome] get_driver_tasks RPC error', error);
         setError('טעינת משימות נכשלה. נסה שוב.');
         setIsInitialLoading(false);
@@ -322,29 +319,29 @@ export function DriverHome() {
               </li>
             ))}
           </ul>
-
           {!error && remoteTasks.length === 0 ? (
-            <div className="text-center text-sm text-gray-500 py-10" aria-live="polite">
+            <div
+              className="text-center text-sm text-gray-500 py-10"
+              aria-live="polite"
+            >
               אין משימות להצגה
             </div>
           ) : null}
+          {hasMore ? (
+            <div className="flex justify-center">
+              <button
+                type="button"
+                className="rounded-md bg-gray-100 px-4 py-2 text-sm hover:bg-gray-200"
+                disabled={isLoadingMore}
+                onClick={() => fetchPageRef.current(false)}
+              >
+                {isLoadingMore ? 'טוען…' : 'טען עוד'}
+              </button>
+            </div>
+          ) : null}
 
-        {/* Load more button (fallback) */}
-        {hasMore ? (
-          <div className="flex justify-center">
-            <button
-              type="button"
-              className="rounded-md bg-gray-100 px-4 py-2 text-sm hover:bg-gray-200"
-              disabled={isLoadingMore}
-              onClick={() => fetchPageRef.current(false)}
-            >
-              {isLoadingMore ? 'טוען…' : 'טען עוד'}
-            </button>
-          </div>
-        ) : null}
-
-        {/* Sentinel for infinite scroll */}
-        <div ref={sentinelRef} />
+          {/* Sentinel for infinite scroll */}
+          <div ref={sentinelRef} />
         </div>
       )}
     </div>

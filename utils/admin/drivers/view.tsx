@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button';
 import type { DriverRow } from '@/utils/admin/drivers/types';
 import { formatDriverTimestamp } from '@/utils/admin/drivers/dialogs';
-import { PencilIcon, PlusIcon, Trash2Icon, TrashIcon } from 'lucide-react';
+import { PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 
 type DriverListViewProps = {
   drivers: DriverRow[];
@@ -28,7 +28,7 @@ export function DriverListView({
   canNext,
   loading,
   error,
-  onRefresh,
+  // onRefresh,
   onOpenCreate,
   onOpenEdit,
   onPageChange,
@@ -37,13 +37,12 @@ export function DriverListView({
   return (
     <section
       dir="rtl"
-      className="mt-4 space-y-4 container mx-auto"
+      className="mt-4 space-y-4 container mx-auto max-w-5xl"
       aria-label="ניהול פרטי הנהגים"
     >
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold">כל הנהגים</h2>
         <div className="flex items-center gap-2">
-          <Button
+          {/* <Button
             type="button"
             variant="outline"
             size="sm"
@@ -51,7 +50,7 @@ export function DriverListView({
             disabled={loading}
           >
             רענן
-          </Button>
+          </Button> */}
           <Button
             type="button"
             size="sm"
@@ -73,7 +72,7 @@ export function DriverListView({
             {error}
           </div>
         ) : null}
-        <div className="overflow-x-auto rounded border bg-white">
+        <div className="overflow-x-auto rounded border bg-white ">
           <table className="min-w-full text-sm rtl:text-right">
             <thead className="bg-gray-50">
               <tr className="text-xs font-semibold text-gray-600">
@@ -81,7 +80,7 @@ export function DriverListView({
                 <th className="px-3 py-2 text-right">מספר עובד</th>
 
                 <th className="px-3 py-2 text-right">נוצר</th>
-                <th className="px-3 py-2 text-right">עודכן</th>
+                {/* //   <th className="px-3 py-2 text-right">עודכן</th> */}
                 <th className="px-3 py-2 text-right">פעולות</th>
               </tr>
             </thead>
@@ -106,9 +105,9 @@ export function DriverListView({
                     <td className="px-3 py-2">
                       {formatDriverTimestamp(d.created_at)}
                     </td>
-                    <td className="px-3 py-2">
+                    {/* <td className="px-3 py-2">
                       {formatDriverTimestamp(d.updated_at)}
-                    </td>
+                    </td> */}
                     <td className="px-3 py-2">
                       <div className="flex gap-2">
                         <Button
