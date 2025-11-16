@@ -190,6 +190,59 @@ export function DriverHome() {
     return () => obs.disconnect();
   }, [hasMore, isLoadingMore]);
 
+  // Realtime updates from admin/other clients -> driver board
+  useEffect(() => {
+    if (!client) return;
+    const supa = client;
+    const channel = (
+      supa as unknown as {
+        channel: (name: string) => {
+          on: (
+            event: string,
+            filter: { event: string; schema: string; table: string },
+            cb: (payload: { new?: SupaTaskRow }) => void
+          ) => { subscribe: () => unknown };
+        };
+      }
+    )
+      .channel('realtime:driver-tasks')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'tasks' },
+        (payload) => {
+          const row = payload.new;
+          if (!row || !row.id) return;
+          setRemoteTasks((prev): DriverTask[] =>
+            prev.map((t) =>
+              t.id === row.id
+                ? {
+                    ...t,
+                    status: row.status ?? t.status,
+                    title: row.title,
+                    type: row.type,
+                    priority: row.priority,
+                    estimatedStart: row.estimated_start,
+                    estimatedEnd: row.estimated_end,
+                    address: row.address,
+                  }
+                : t
+            )
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      try {
+        (
+          supa as unknown as { removeChannel: (c: unknown) => void }
+        ).removeChannel(channel);
+      } catch {
+        // ignore cleanup errors
+      }
+    };
+  }, [client]);
+
   return (
     <div
       className="space-y-4"
