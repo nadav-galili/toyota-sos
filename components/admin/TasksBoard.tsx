@@ -349,7 +349,15 @@ export function TasksBoard({
 
   const handleCreated = useCallback(
     (created: Task, leadId?: string, coIds?: string[]) => {
-      setTasks((prev) => [created, ...prev]);
+      // Avoid duplicates if realtime INSERT already added this task
+      setTasks((prev) => {
+        const exists = prev.some((t) => t.id === created.id);
+        if (exists) {
+          return prev.map((t) => (t.id === created.id ? created : t));
+        }
+        return [created, ...prev];
+      });
+
       const inserts: TaskAssignee[] = [];
       if (leadId) {
         inserts.push({
@@ -369,7 +377,22 @@ export function TasksBoard({
           assigned_at: new Date().toISOString(),
         });
       });
-      if (inserts.length > 0) setAssignees((prev) => [...prev, ...inserts]);
+      if (inserts.length > 0) {
+        setAssignees((prev) => {
+          // Remove any placeholder assignees for this task/driver combo to avoid duplicates
+          const filtered = prev.filter(
+            (ta) =>
+              !inserts.some(
+                (ins) =>
+                  ins.task_id === ta.task_id &&
+                  ins.driver_id === ta.driver_id &&
+                  ins.is_lead === ta.is_lead
+              )
+          );
+          return [...filtered, ...inserts];
+        });
+      }
+
       // Toast is shown in TaskDialog, no need to show it here
       try {
         trackTaskCreated(created, leadId);
