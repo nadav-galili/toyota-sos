@@ -8,6 +8,8 @@ import { TaskCard, TaskCardProps } from '@/components/driver/TaskCard';
 import { TaskSkeleton } from '@/components/driver/TaskSkeleton';
 import { getDriverSession } from '@/lib/auth';
 import { useAuth } from '@/components/AuthProvider';
+import { ChecklistModal } from '@/components/driver/ChecklistModal';
+import { getStartChecklistForTaskType } from '@/components/driver/checklists';
 
 export type DriverTask = TaskCardProps;
 
@@ -75,6 +77,14 @@ export function DriverHome() {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Checklist flow state: when a status change requires a start checklist
+  const [checklistState, setChecklistState] = useState<{
+    task: DriverTask;
+    nextStatus: DriverTask['status'];
+  } | null>(null);
+
+  const driverId = getDriverSession()?.userId || null;
 
   function mergeById(prev: DriverTask[], next: DriverTask[]): DriverTask[] {
     if (!prev.length) return next;
@@ -351,6 +361,17 @@ export function DriverHome() {
                   {...task}
                   onStatusChange={async (next) => {
                     if (!client || next === task.status) return;
+
+                    // If moving into "בעבודה" and this task type has a start checklist,
+                    // open the checklist modal instead of immediately updating status.
+                    if (next === 'בעבודה') {
+                      const schema = getStartChecklistForTaskType(task.type);
+                      if (schema && schema.length > 0) {
+                        setChecklistState({ task, nextStatus: next });
+                        return;
+                      }
+                    }
+
                     const { error: upErr } = await client
                       .from('tasks')
                       .update({ status: next })
@@ -393,6 +414,44 @@ export function DriverHome() {
           <div ref={sentinelRef} />
         </div>
       )}
+
+      {/* Mandatory start checklist for specific task types (e.g. licence_test / "ביצוע טסט") */}
+      {checklistState ? (
+        <ChecklistModal
+          open={!!checklistState}
+          onOpenChange={(open) => {
+            if (!open) {
+              setChecklistState(null);
+            }
+          }}
+          schema={getStartChecklistForTaskType(checklistState.task.type) ?? []}
+          title="צ׳ק-ליסט לפני יציאה לטסט"
+          description="לפני תחילת ביצוע טסט, אשר שאספת את כל המסמכים הנדרשים."
+          persist
+          taskId={checklistState.task.id}
+          driverId={driverId || undefined}
+          forceCompletion
+          onSubmit={async () => {
+            if (!client || !checklistState) return;
+            const { error: upErr } = await client
+              .from('tasks')
+              .update({ status: checklistState.nextStatus })
+              .eq('id', checklistState.task.id);
+            if (upErr) {
+              // Let ChecklistModal show persistence errors for the form itself;
+              // here we simply avoid updating local state on failure.
+              return;
+            }
+            setRemoteTasks((prev) =>
+              prev.map((t) =>
+                t.id === checklistState.task.id
+                  ? { ...t, status: checklistState.nextStatus }
+                  : t
+              )
+            );
+          }}
+        />
+      ) : null}
     </div>
   );
 }
