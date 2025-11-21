@@ -1,7 +1,30 @@
 'use client';
-import { WeeklyTrendsChart } from '@/components/admin/dashboard/charts/WeeklyTrendsChart';
-import { DriverCompletionChart } from '@/components/admin/dashboard/charts/DriverCompletionChart';
-import { DriverDurationChart } from '@/components/admin/dashboard/charts/DriverDurationChart';
+
+import dynamic from 'next/dynamic';
+
+const WeeklyTrendsChart = dynamic(
+  () =>
+    import('@/components/admin/dashboard/charts/WeeklyTrendsChart').then(
+      (mod) => ({ default: mod.WeeklyTrendsChart })
+    ),
+  { ssr: false }
+);
+
+const DriverCompletionChart = dynamic(
+  () =>
+    import('@/components/admin/dashboard/charts/DriverCompletionChart').then(
+      (mod) => ({ default: mod.DriverCompletionChart })
+    ),
+  { ssr: false }
+);
+
+const DriverDurationChart = dynamic(
+  () =>
+    import('@/components/admin/dashboard/charts/DriverDurationChart').then(
+      (mod) => ({ default: mod.DriverDurationChart })
+    ),
+  { ssr: false }
+);
 
 export function DashboardCharts() {
   return (
