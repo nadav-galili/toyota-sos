@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { fetchDashboardData } from '@/lib/dashboard/queries';
+import {
+  fetchDashboardData,
+  clearCacheForRange,
+} from '@/lib/dashboard/queries';
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,6 +11,7 @@ export async function GET(request: NextRequest) {
     const from = searchParams.get('from');
     const to = searchParams.get('to');
     const tz = searchParams.get('tz') || 'UTC';
+    const cacheBust = searchParams.get('_t'); // Cache-busting parameter from realtime
 
     if (!from || !to) {
       return NextResponse.json({ error: 'missing-range' }, { status: 400 });
@@ -18,6 +22,12 @@ export async function GET(request: NextRequest) {
       timezone: tz,
     };
     const admin = getSupabaseAdmin();
+
+    // If cache-busting parameter is present (from realtime), clear cache for this range
+    if (cacheBust) {
+      clearCacheForRange(range);
+    }
+
     const data = await fetchDashboardData(range, admin);
     return NextResponse.json({ ok: true, data }, { status: 200 });
   } catch (e: unknown) {

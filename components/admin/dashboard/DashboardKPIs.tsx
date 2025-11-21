@@ -110,6 +110,8 @@ export function DashboardKPIs() {
         u.searchParams.set('from', range.start);
         u.searchParams.set('to', range.end);
         if (range.timezone) u.searchParams.set('tz', range.timezone);
+        // Add cache-busting timestamp for realtime updates
+        u.searchParams.set('_t', Date.now().toString());
         const resp = await fetch(u.toString());
         if (!resp.ok) return;
         const json = await resp.json();
@@ -179,6 +181,10 @@ export function DashboardKPIs() {
       { metric: 'overdueCount', value: data.summary.overdueCount },
       { metric: 'onTimeRatePct', value: data.summary.onTimeRatePct },
       { metric: 'slaViolations', value: data.summary.slaViolations },
+      {
+        metric: 'driverUtilizationPct',
+        value: data.summary.driverUtilizationPct,
+      },
     ];
     const summaryCsv = (toCsv(summaryRows, ['metric', 'value']) || '').slice(1); // strip BOM, we add once at the end
     secs.push('Section,Summary');
@@ -426,10 +432,34 @@ export function DashboardKPIs() {
         />
         <KpiCard
           title="ניצולת נהגים"
-          value="—"
+          value={`${summary?.driverUtilizationPct ?? 0}%`}
           loading={loading}
           error={error}
-          actionArea={<button className="text-xs text-gray-400">CSV</button>}
+          secondary="אחוז נהגים עם משימות פעילות"
+          actionArea={
+            <button
+              className="text-xs text-toyota-primary hover:underline"
+              onClick={() => {
+                if (!summary) return;
+                const rows = [
+                  {
+                    metric: 'driverUtilizationPct',
+                    value: summary.driverUtilizationPct,
+                  },
+                ];
+                const csv = toCsv(rows, ['metric', 'value']);
+                downloadCsv(
+                  makeCsvFilename(
+                    'dashboard_driver_utilization',
+                    range.timezone
+                  ),
+                  csv
+                );
+              }}
+            >
+              CSV
+            </button>
+          }
         />
         <KpiCard
           title="ביטולים/השמות מחדש"

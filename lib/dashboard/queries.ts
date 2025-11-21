@@ -37,6 +37,7 @@ export interface DashboardMetricsSummary {
   overdueCount: number;
   onTimeRatePct: number; // 0..100
   slaViolations: number;
+  driverUtilizationPct: number; // 0..100
 }
 
 export interface DashboardDatasets {
@@ -54,10 +55,19 @@ export interface DashboardData {
 // Simple in-memory cache (server-runtime only)
 type CacheEntry<T> = { value: T; expiresAt: number };
 const FIVE_MINUTES_MS = 5 * 60 * 1000;
+const THIRTY_SECONDS_MS = 30 * 1000; // Shorter TTL for recent data
 const cache = new Map<string, CacheEntry<unknown>>();
 
 function makeKey(kind: string, range: DateRange) {
   return `${kind}:${range.start}:${range.end}:${range.timezone || 'UTC'}`;
+}
+
+function isRecentRange(range: DateRange): boolean {
+  // Check if the range includes today or is very recent (within last 24 hours)
+  const now = new Date();
+  const rangeEnd = new Date(range.end);
+  const hoursDiff = (now.getTime() - rangeEnd.getTime()) / (1000 * 60 * 60);
+  return hoursDiff < 24;
 }
 
 function getCached<T>(key: string): T | null {
@@ -72,6 +82,18 @@ function getCached<T>(key: string): T | null {
 
 function setCached<T>(key: string, value: T, ttlMs: number = FIVE_MINUTES_MS) {
   cache.set(key, { value, expiresAt: Date.now() + ttlMs });
+}
+
+// Clear cache for a specific date range pattern
+export function clearCacheForRange(range: DateRange) {
+  const prefix = `${range.start}:${range.end}:${range.timezone || 'UTC'}`;
+  const keysToDelete: string[] = [];
+  for (const key of cache.keys()) {
+    if (key.includes(prefix)) {
+      keysToDelete.push(key);
+    }
+  }
+  keysToDelete.forEach((key) => cache.delete(key));
 }
 
 function getClient(client?: SupabaseClient) {
@@ -109,7 +131,9 @@ export async function getTasksCreatedCount(
     .gte('created_at', range.start)
     .lt('created_at', range.end);
   const value = error ? 0 : count || 0;
-  setCached(key, value);
+  // Use shorter TTL for recent date ranges to ensure fresh data
+  const ttl = isRecentRange(range) ? THIRTY_SECONDS_MS : FIVE_MINUTES_MS;
+  setCached(key, value, ttl);
   return value;
 }
 
@@ -129,7 +153,9 @@ export async function getTasksCompletedCount(
     .gte('updated_at', range.start)
     .lt('updated_at', range.end);
   const value = error ? 0 : count || 0;
-  setCached(key, value);
+  // Use shorter TTL for recent date ranges to ensure fresh data
+  const ttl = isRecentRange(range) ? THIRTY_SECONDS_MS : FIVE_MINUTES_MS;
+  setCached(key, value, ttl);
   return value;
 }
 
@@ -220,6 +246,67 @@ export async function getSlaViolations(
   }
   setCached(key, violations);
   return violations;
+}
+
+export async function getDriverUtilization(
+  range: DateRange,
+  client?: SupabaseClient
+): Promise<number> {
+  const key = makeKey('driverUtilization', range);
+  const cached = getCached<number>(key);
+  if (cached !== null) return cached;
+  const supa = getClient(client);
+
+  // Get all drivers
+  const { data: allDrivers, error: driversError } = await supa
+    .from('profiles')
+    .select('id')
+    .eq('role', 'driver')
+    .limit(1000);
+
+  if (driversError || !allDrivers || allDrivers.length === 0) {
+    setCached(key, 0);
+    return 0;
+  }
+
+  const totalDrivers = allDrivers.length;
+
+  // Get drivers with active tasks (assigned tasks that are not completed) in the range
+  const { data: activeAssignments, error: assignmentsError } = await supa
+    .from('task_assignees')
+    .select('driver_id, tasks(id, status)')
+    .eq('is_lead', true)
+    .gte('assigned_at', range.start)
+    .lt('assigned_at', range.end)
+    .limit(5000);
+
+  if (assignmentsError || !activeAssignments) {
+    setCached(key, 0);
+    return 0;
+  }
+
+  // Count unique drivers with at least one non-completed task
+  const driversWithActiveTasks = new Set<string>();
+
+  (activeAssignments as any[]).forEach((row) => {
+    const tasks = row.tasks;
+    if (!tasks) return;
+    const taskArray = Array.isArray(tasks) ? tasks : [tasks];
+    const task = taskArray[0];
+    if (!task || !task.status) return;
+    // Active task: not completed
+    if (task.status !== 'הושלמה') {
+      driversWithActiveTasks.add(row.driver_id as string);
+    }
+  });
+
+  const utilizationPct =
+    totalDrivers === 0
+      ? 0
+      : Math.round((driversWithActiveTasks.size / totalDrivers) * 100);
+
+  setCached(key, utilizationPct);
+  return utilizationPct;
 }
 
 // Datasets
@@ -411,6 +498,7 @@ export async function fetchDashboardData(
     overdueCount,
     onTimeRatePct,
     slaViolations,
+    driverUtilizationPct,
     createdCompletedSeries,
     overdueByDriver,
     onTimeVsLate,
@@ -421,6 +509,7 @@ export async function fetchDashboardData(
     getOverdueCount(range, client),
     getOnTimeRate(range, client),
     getSlaViolations(range, client),
+    getDriverUtilization(range, client),
     getCreatedCompletedSeries(range, client),
     getOverdueByDriver(range, client),
     getOnTimeVsLate(range, client),
@@ -434,6 +523,7 @@ export async function fetchDashboardData(
       overdueCount,
       onTimeRatePct,
       slaViolations,
+      driverUtilizationPct,
     },
     datasets: {
       createdCompletedSeries,
