@@ -2,8 +2,7 @@
 'use client';
 
 import React from 'react';
-import { PeriodProvider, usePeriod } from './PeriodContext';
-import { PeriodFilter } from './PeriodFilter';
+import { usePeriod } from './PeriodContext';
 import { KpiCard } from './KpiCard';
 import { toCsv, downloadCsv, makeCsvFilename } from '@/utils/csv';
 // fetch from server API to avoid RLS issues and ensure service-role-backed metrics
@@ -15,7 +14,6 @@ import type {
   OverdueByDriverPoint,
   FunnelStep,
 } from '@/lib/dashboard/queries';
-import { DashboardCharts } from '@/components/admin/DashboardCharts';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -36,7 +34,7 @@ function debounce<F extends (...args: unknown[]) => void>(
   };
 }
 
-function KPIsGrid() {
+export function DashboardKPIs() {
   const { range } = usePeriod();
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -317,9 +315,6 @@ function KPIsGrid() {
         >
           ייצוא CSV כולל
         </button>
-        <div className="ml-auto">
-          <PeriodFilter />
-        </div>
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         <KpiCard
@@ -456,16 +451,5 @@ function KPIsGrid() {
         onClose={() => setDdOpen(false)}
       />
     </div>
-  );
-}
-
-export function DashboardKPIs() {
-  return (
-    <PeriodProvider>
-      <KPIsGrid />
-      <div className="mt-6">
-        <DashboardCharts />
-      </div>
-    </PeriodProvider>
   );
 }
