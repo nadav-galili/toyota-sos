@@ -60,7 +60,7 @@ function useDriverCompletion() {
         const json = await resp.json();
         if (!json?.ok) throw new Error(json?.error || 'failed');
         const pts: DriverCompletionPoint[] = (json.drivers || []).map(
-          (d: any) => ({
+          (d: DriverCompletionPoint) => ({
             driverId: d.driverId,
             driverName: d.driverName || '—',
             completionRate: d.completionRate ?? 0,
@@ -87,9 +87,7 @@ function useDriverCompletion() {
     if (!raw) return [];
     const copy = [...raw];
     if (sortBy === 'name') {
-      copy.sort((a, b) =>
-        a.driverName.localeCompare(b.driverName, 'he-IL')
-      );
+      copy.sort((a, b) => a.driverName.localeCompare(b.driverName, 'he-IL'));
     } else {
       copy.sort((a, b) => b.completionRate - a.completionRate);
     }
@@ -103,9 +101,7 @@ export function DriverCompletionChart() {
   const { data, loading, error, sortBy, setSortBy } = useDriverCompletion();
 
   if (loading) {
-    return (
-      <div className="mt-4 h-64 animate-pulse rounded-md bg-gray-100" />
-    );
+    return <div className="mt-4 h-64 animate-pulse rounded-md bg-gray-100" />;
   }
 
   if (error) {
@@ -189,8 +185,8 @@ export function DriverCompletionChart() {
                 radius={[4, 4, 0, 0]}
                 label={({ x, y, width, value }) => {
                   if (typeof value !== 'number') return null;
-                  const cx = (x ?? 0) + (width ?? 0) / 2;
-                  const cy = (y ?? 0) - 6;
+                  const cx = Number(x ?? 0) + Number(width ?? 0) / 2;
+                  const cy = Number(y ?? 0) - 6;
                   return (
                     <text
                       x={cx}
@@ -204,10 +200,7 @@ export function DriverCompletionChart() {
                 }}
               >
                 {data.map((entry) => (
-                  <Cell
-                    key={entry.driverId}
-                    fill={entry.color}
-                  />
+                  <Cell key={entry.driverId} fill={entry.color} />
                 ))}
               </Bar>
             </BarChart>
@@ -217,4 +210,3 @@ export function DriverCompletionChart() {
     </div>
   );
 }
-
