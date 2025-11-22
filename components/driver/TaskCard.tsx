@@ -151,7 +151,7 @@ export function TaskCard(props: TaskCardProps) {
         {wazeHref ? (
           <a
             href={wazeHref}
-            className="inline-flex items-center justify-center rounded-md bg-toyota-primary px-3 py-2 text-sm text-white hover:bg-red-700"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-sm text-white hover:bg-red-700"
           >
             פתיחה ב-Waze
           </a>

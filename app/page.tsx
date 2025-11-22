@@ -24,7 +24,11 @@ export default function Home() {
 
   if (loading) {
     // Optional: render a loading spinner or skeleton
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading...
+      </div>
+    );
   }
 
   return (
@@ -33,7 +37,7 @@ export default function Home() {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-toyota-primary rounded-lg" />
+            <div className="w-8 h-8 bg-primary rounded-lg" />
             <span className="text-xl font-bold text-gray-900">
               Toyota S.O.S
             </span>
@@ -56,9 +60,7 @@ export default function Home() {
             <h1 className="text-5xl sm:text-6xl font-bold text-gray-900 leading-tight">
               Field Service Excellence
             </h1>
-            <h2 className="text-4xl font-bold text-toyota-primary">
-              Toyota S.O.S
-            </h2>
+            <h2 className="text-4xl font-bold text-primary">Toyota S.O.S</h2>
             <p className="text-2xl text-center  mt-4">מערכת ניהול משימות שדה</p>
           </div>
 
@@ -75,7 +77,7 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
             <Button
               size="lg"
-              className="bg-toyota-primary hover:bg-red-700 text-white px-8 py-6 text-lg font-semibold"
+              className="bg-primary hover:bg-red-700 text-white px-8 py-6 text-lg font-semibold"
               onClick={() => router.push('/auth/login')}
             >
               Get Started
@@ -109,8 +111,8 @@ export default function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Feature 1 */}
-            <div className="p-8 bg-gray-50 rounded-lg border border-gray-200 hover:border-toyota-primary transition">
-              <div className="w-12 h-12 bg-toyota-primary rounded-lg flex items-center justify-center mb-4">
+            <div className="p-8 bg-gray-50 rounded-lg border border-gray-200 hover:border-primary transition">
+              <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center mb-4">
                 <span className="text-white text-xl">📋</span>
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">
@@ -123,8 +125,8 @@ export default function Home() {
             </div>
 
             {/* Feature 2 */}
-            <div className="p-8 bg-gray-50 rounded-lg border border-gray-200 hover:border-toyota-primary transition">
-              <div className="w-12 h-12 bg-toyota-primary rounded-lg flex items-center justify-center mb-4">
+            <div className="p-8 bg-gray-50 rounded-lg border border-gray-200 hover:border-primary transition">
+              <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center mb-4">
                 <span className="text-white text-xl">🚗</span>
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">
@@ -137,8 +139,8 @@ export default function Home() {
             </div>
 
             {/* Feature 3 */}
-            <div className="p-8 bg-gray-50 rounded-lg border border-gray-200 hover:border-toyota-primary transition">
-              <div className="w-12 h-12 bg-toyota-primary rounded-lg flex items-center justify-center mb-4">
+            <div className="p-8 bg-gray-50 rounded-lg border border-gray-200 hover:border-primary transition">
+              <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center mb-4">
                 <span className="text-white text-xl">📊</span>
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">
@@ -161,7 +163,7 @@ export default function Home() {
           </h2>
           <Button
             size="lg"
-            className="bg-toyota-primary hover:bg-red-700 text-white px-8 py-6 text-lg font-semibold"
+            className="bg-primary hover:bg-red-700 text-white px-8 py-6 text-lg font-semibold"
             onClick={() => router.push('/auth/login')}
           >
             Sign In Now

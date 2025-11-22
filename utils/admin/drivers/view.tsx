@@ -55,7 +55,7 @@ export function DriverListView({
             type="button"
             size="sm"
             onClick={onOpenCreate}
-            className="bg-toyota-primary text-white hover:bg-toyota-primary/80"
+            className="bg-primary text-white hover:bg-primary/80"
           >
             <PlusIcon className="w-4 h-4" />
             הוסף נהג חדש

@@ -319,7 +319,7 @@ export function DriverHome() {
               className={[
                 'rounded-md py-2 text-sm font-medium transition-colors',
                 active
-                  ? 'bg-toyota-primary text-white'
+                  ? 'bg-primary text-white'
                   : 'bg-gray-100 text-gray-800 hover:bg-gray-200',
               ].join(' ')}
               aria-pressed={active}

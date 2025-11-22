@@ -43,7 +43,7 @@ export default function DriverLayout({
                 className={[
                   'flex items-center justify-center rounded-md text-sm font-medium transition-colors duration-150 select-none min-h-[44px]',
                   active
-                    ? 'bg-toyota-primary text-white ring-1 ring-toyota-primary shadow-inner'
+                    ? 'bg-primary text-white ring-1 ring-primary shadow-inner'
                     : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900',
                 ].join(' ')}
                 aria-current={active ? 'page' : undefined}

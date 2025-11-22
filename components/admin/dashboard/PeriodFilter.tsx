@@ -319,7 +319,7 @@ export function PeriodFilter({
           variant="ghost"
           className={`px-3 py-1 text-sm rounded ${
             currentPreset === 'today' && !customOpen
-              ? 'bg-toyota-primary text-white'
+              ? 'bg-primary/10 text-primary'
               : 'bg-white text-gray-800'
           }`}
           onClick={() => applyPreset('today')}
@@ -330,7 +330,7 @@ export function PeriodFilter({
           variant="ghost"
           className={`px-3 py-1 text-sm rounded ${
             currentPreset === 'yesterday' && !customOpen
-              ? 'bg-toyota-primary text-white'
+              ? 'bg-primary/10 text-primary'
               : 'bg-white text-gray-800'
           }`}
           onClick={() => applyPreset('yesterday')}
@@ -341,7 +341,7 @@ export function PeriodFilter({
           variant="ghost"
           className={`px-3 py-1 text-sm rounded ${
             currentPreset === 'last7' && !customOpen
-              ? 'bg-toyota-primary text-white'
+              ? 'bg-primary/10 text-primary'
               : 'bg-white text-gray-800'
           }`}
           onClick={() => applyPreset('last7')}
@@ -352,7 +352,7 @@ export function PeriodFilter({
           variant="ghost"
           className={`px-3 py-1 text-sm rounded ${
             currentPreset === 'last30' && !customOpen
-              ? 'bg-toyota-primary text-white'
+              ? 'bg-primary/10 text-primary'
               : 'bg-white text-gray-800'
           }`}
           onClick={() => applyPreset('last30')}
@@ -363,7 +363,7 @@ export function PeriodFilter({
           variant="ghost"
           className={`px-3 py-1 text-sm rounded ${
             currentPreset === 'custom' || customOpen
-              ? 'bg-toyota-primary text-white'
+              ? 'bg-primary/10 text-primary'
               : 'bg-white text-gray-800'
           }`}
           onClick={() => setCustomOpen((v) => !v)}
@@ -407,7 +407,7 @@ export function PeriodFilter({
               }}
             />
             <Button
-              className="bg-toyota-primary hover:bg-toyota-primary/90 px-3 py-1 text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 text-sm font-semibold"
               onClick={handleApply}
               disabled={
                 !!errors.from || !!errors.to || !customFrom || !customTo

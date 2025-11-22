@@ -68,7 +68,10 @@ export type FormField = SelectLikeField | CheckboxField | TextualField;
 export type FormSchema = ReadonlyArray<FormField>;
 
 // Normalized payload format
-export type NormalizedFormData = Record<string, string | number | boolean | null>;
+export type NormalizedFormData = Record<
+  string,
+  string | number | boolean | null
+>;
 
 export type FormRendererProps = {
   schema: FormSchema;
@@ -108,7 +111,9 @@ export function FormRenderer(props: FormRendererProps) {
   // Lift state changes
   useEffect(() => {
     // Provide normalized visible payload on change
-    const visible = schema.filter((f) => evaluateDependencies(f.dependsOn, values));
+    const visible = schema.filter((f) =>
+      evaluateDependencies(f.dependsOn, values)
+    );
     onChange?.(buildNormalizedPayload(visible, values));
   }, [values, onChange, schema]);
 
@@ -144,14 +149,22 @@ export function FormRenderer(props: FormRendererProps) {
     // live-validate if already touched
     setErrors((prev) => {
       if (!touched[field.id]) return prev;
-      return { ...prev, [field.id]: validateField(field, coerceValue(field.type, raw)) };
+      return {
+        ...prev,
+        [field.id]: validateField(field, coerceValue(field.type, raw)),
+      };
     });
   };
 
   const markTouched = (id: string) => setTouched((t) => ({ ...t, [id]: true }));
 
   return (
-    <form dir="rtl" className={className ?? ''} data-testid="form-renderer" onSubmit={handleSubmit}>
+    <form
+      dir="rtl"
+      className={className ?? ''}
+      data-testid="form-renderer"
+      onSubmit={handleSubmit}
+    >
       {!visibleSchema?.length ? (
         <div className="text-sm text-gray-600">לא הוגדרה סכימה לטופס זה</div>
       ) : (
@@ -160,7 +173,10 @@ export function FormRenderer(props: FormRendererProps) {
             const id = `fr-${f.id}`;
             const descId = f.description ? `${id}-desc` : undefined;
             const errorId = `${id}-error`;
-            const describedBy = [descId, errors[f.id] ? errorId : undefined].filter(Boolean).join(' ') || undefined;
+            const describedBy =
+              [descId, errors[f.id] ? errorId : undefined]
+                .filter(Boolean)
+                .join(' ') || undefined;
             const value = values[f.id];
             const errorMsg = errors[f.id] ?? null;
             // checkbox
@@ -171,19 +187,28 @@ export function FormRenderer(props: FormRendererProps) {
                   <input
                     id={id}
                     type="checkbox"
-                    className="mt-1 h-5 w-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-toyota-primary focus-visible:ring-offset-2"
+                    className="mt-1 h-5 w-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                     checked={checked}
                     onChange={(e) => setFieldValue(f, e.target.checked)}
                     onBlur={() => {
                       markTouched(f.id);
-                      setErrors((prev) => ({ ...prev, [f.id]: validateField(f, checked) }));
+                      setErrors((prev) => ({
+                        ...prev,
+                        [f.id]: validateField(f, checked),
+                      }));
                     }}
                     aria-describedby={describedBy}
                     aria-invalid={errorMsg ? 'true' : undefined}
                   />
                   <div className="flex-1">
-                    <label htmlFor={id} className="font-medium inline-flex items-center min-h-[44px]">
-                      {f.title} {f.required ? <span className="text-red-600">*</span> : null}
+                    <label
+                      htmlFor={id}
+                      className="font-medium inline-flex items-center min-h-[44px]"
+                    >
+                      {f.title}{' '}
+                      {f.required ? (
+                        <span className="text-red-600">*</span>
+                      ) : null}
                     </label>
                     {f.description ? (
                       <p id={descId} className="text-sm text-gray-600">
@@ -191,7 +216,11 @@ export function FormRenderer(props: FormRendererProps) {
                       </p>
                     ) : null}
                     {errorMsg ? (
-                      <p id={errorId} role="alert" className="text-sm text-red-600">
+                      <p
+                        id={errorId}
+                        role="alert"
+                        className="text-sm text-red-600"
+                      >
                         {errorMsg}
                       </p>
                     ) : null}
@@ -205,7 +234,10 @@ export function FormRenderer(props: FormRendererProps) {
               return (
                 <fieldset key={f.id} className="space-y-1">
                   <legend className="font-medium">
-                    {f.title} {f.required ? <span className="text-red-600">*</span> : null}
+                    {f.title}{' '}
+                    {f.required ? (
+                      <span className="text-red-600">*</span>
+                    ) : null}
                   </legend>
                   {f.description ? (
                     <p id={descId} className="text-sm text-gray-600">
@@ -216,19 +248,26 @@ export function FormRenderer(props: FormRendererProps) {
                     {opts?.map((opt) => {
                       const rid = `${id}-${String(opt.value)}`;
                       return (
-                        <label key={rid} htmlFor={rid} className="flex items-center gap-2 min-h-[44px]">
+                        <label
+                          key={rid}
+                          htmlFor={rid}
+                          className="flex items-center gap-2 min-h-[44px]"
+                        >
                           <input
                             id={rid}
                             name={id}
                             type="radio"
-                            className="h-4 w-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-toyota-primary focus-visible:ring-offset-2"
+                            className="h-4 w-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                             checked={String(value ?? '') === String(opt.value)}
                             onChange={() => setFieldValue(f, opt.value)}
                             onBlur={() => {
                               markTouched(f.id);
                               setErrors((prev) => ({
                                 ...prev,
-                                [f.id]: validateField(f, coerceValue(f.type, value)),
+                                [f.id]: validateField(
+                                  f,
+                                  coerceValue(f.type, value)
+                                ),
                               }));
                             }}
                             aria-invalid={errorMsg ? 'true' : undefined}
@@ -240,7 +279,11 @@ export function FormRenderer(props: FormRendererProps) {
                     })}
                   </div>
                   {errorMsg ? (
-                    <p id={errorId} role="alert" className="text-sm text-red-600">
+                    <p
+                      id={errorId}
+                      role="alert"
+                      className="text-sm text-red-600"
+                    >
                       {errorMsg}
                     </p>
                   ) : null}
@@ -253,11 +296,14 @@ export function FormRenderer(props: FormRendererProps) {
               return (
                 <div key={f.id} className="space-y-1">
                   <label htmlFor={id} className="font-medium">
-                    {f.title} {f.required ? <span className="text-red-600">*</span> : null}
+                    {f.title}{' '}
+                    {f.required ? (
+                      <span className="text-red-600">*</span>
+                    ) : null}
                   </label>
                   <select
                     id={id}
-                    className="w-full rounded-md border border-gray-300 p-2 text-sm min-h-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-toyota-primary focus-visible:ring-offset-2"
+                    className="w-full rounded-md border border-gray-300 p-2 text-sm min-h-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                     aria-describedby={describedBy}
                     value={String(value ?? '')}
                     onChange={(e) => setFieldValue(f, e.target.value)}
@@ -283,7 +329,11 @@ export function FormRenderer(props: FormRendererProps) {
                     </p>
                   ) : null}
                   {errorMsg ? (
-                    <p id={errorId} role="alert" className="text-sm text-red-600">
+                    <p
+                      id={errorId}
+                      role="alert"
+                      className="text-sm text-red-600"
+                    >
                       {errorMsg}
                     </p>
                   ) : null}
@@ -295,11 +345,14 @@ export function FormRenderer(props: FormRendererProps) {
               return (
                 <div key={f.id} className="space-y-1">
                   <label htmlFor={id} className="font-medium">
-                    {f.title} {f.required ? <span className="text-red-600">*</span> : null}
+                    {f.title}{' '}
+                    {f.required ? (
+                      <span className="text-red-600">*</span>
+                    ) : null}
                   </label>
                   <textarea
                     id={id}
-                    className="w-full rounded-md border border-gray-300 p-2 text-sm min-h-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-toyota-primary focus-visible:ring-offset-2"
+                    className="w-full rounded-md border border-gray-300 p-2 text-sm min-h-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                     aria-describedby={describedBy}
                     value={String(value ?? '')}
                     onChange={(e) => setFieldValue(f, e.target.value)}
@@ -319,7 +372,11 @@ export function FormRenderer(props: FormRendererProps) {
                     </p>
                   ) : null}
                   {errorMsg ? (
-                    <p id={errorId} role="alert" className="text-sm text-red-600">
+                    <p
+                      id={errorId}
+                      role="alert"
+                      className="text-sm text-red-600"
+                    >
                       {errorMsg}
                     </p>
                   ) : null}
@@ -331,12 +388,13 @@ export function FormRenderer(props: FormRendererProps) {
             return (
               <div key={f.id} className="space-y-1">
                 <label htmlFor={id} className="font-medium">
-                  {f.title} {f.required ? <span className="text-red-600">*</span> : null}
+                  {f.title}{' '}
+                  {f.required ? <span className="text-red-600">*</span> : null}
                 </label>
                 <input
                   id={id}
                   type={inputType}
-                  className="w-full rounded-md border border-gray-300 p-2 text-sm min-h-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-toyota-primary focus-visible:ring-offset-2"
+                  className="w-full rounded-md border border-gray-300 p-2 text-sm min-h-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                   aria-describedby={describedBy}
                   value={formatValueForInput(f.type, value)}
                   onChange={(e) => setFieldValue(f, e.target.value)}
@@ -366,7 +424,7 @@ export function FormRenderer(props: FormRendererProps) {
             <div>
               <button
                 type="submit"
-                className="rounded-md bg-toyota-primary px-3 py-2 text-sm text-white hover:bg-red-700 min-h-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-toyota-primary focus-visible:ring-offset-2"
+                className="rounded-md bg-primary px-3 py-2 text-sm text-white hover:bg-red-700 min-h-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               >
                 שמור
               </button>
@@ -395,7 +453,10 @@ function isEmptyForType(t: FieldType, v: unknown): boolean {
   return String(v ?? '').trim().length === 0;
 }
 
-function evaluateDependencies(dep: DependencyConfig | undefined, data: NormalizedFormData): boolean {
+function evaluateDependencies(
+  dep: DependencyConfig | undefined,
+  data: NormalizedFormData
+): boolean {
   if (!dep || !dep.rules?.length) return true;
   const evalRule = (r: DependencyRule): boolean => {
     const current = data[r.fieldId];
@@ -405,7 +466,9 @@ function evaluateDependencies(dep: DependencyConfig | undefined, data: Normalize
       case 'notEquals':
         return current !== r.value;
       case 'in':
-        return Array.isArray(r.value) ? (r.value as unknown[]).some((v) => v === current) : false;
+        return Array.isArray(r.value)
+          ? (r.value as unknown[]).some((v) => v === current)
+          : false;
       default:
         return false;
     }
@@ -414,7 +477,10 @@ function evaluateDependencies(dep: DependencyConfig | undefined, data: Normalize
   return dep.when === 'any' ? results.some(Boolean) : results.every(Boolean);
 }
 
-function buildNormalizedPayload(visible: ReadonlyArray<FormField>, raw: NormalizedFormData): NormalizedFormData {
+function buildNormalizedPayload(
+  visible: ReadonlyArray<FormField>,
+  raw: NormalizedFormData
+): NormalizedFormData {
   const out: NormalizedFormData = {};
   for (const f of visible) {
     const value = raw[f.id];
@@ -440,7 +506,7 @@ function buildNormalizedPayload(visible: ReadonlyArray<FormField>, raw: Normaliz
         const s = String(value ?? '');
         const opts = (f as any).options as ReadonlyArray<FormOption>;
         const match = opts?.find((o) => String(o.value) === s);
-        out[f.id] = s === '' ? null : (match ? match.value : s);
+        out[f.id] = s === '' ? null : match ? match.value : s;
         break;
       }
       default: {
@@ -496,7 +562,10 @@ function validateField(field: FormField, rawValue: unknown): string | null {
   return null;
 }
 
-function coerceValue(t: FieldType, v: unknown): string | number | boolean | null {
+function coerceValue(
+  t: FieldType,
+  v: unknown
+): string | number | boolean | null {
   if (v === null || typeof v === 'undefined') return '';
   switch (t) {
     case 'checkbox':
@@ -522,5 +591,3 @@ function formatValueForInput(t: FieldType, v: unknown): string | number {
   }
   return String(v);
 }
-
-

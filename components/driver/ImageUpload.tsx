@@ -68,7 +68,10 @@ export function ImageUpload(props: ImageUploadProps) {
     return true;
   };
 
-  const mergeAndDeduplicate = (prev: ImageUploadFile[], next: ImageUploadFile[]): ImageUploadFile[] => {
+  const mergeAndDeduplicate = (
+    prev: ImageUploadFile[],
+    next: ImageUploadFile[]
+  ): ImageUploadFile[] => {
     const map = new Map<string, ImageUploadFile>();
     for (const it of prev) map.set(it.id, it);
     for (const it of next) map.set(it.id, it);
@@ -84,23 +87,46 @@ export function ImageUpload(props: ImageUploadProps) {
       files.map(async (f) => {
         if (!fileAccepted(f)) {
           const id = `${f.name}-${f.size}-${f.lastModified}`;
-          return { file: f, id, status: 'error', error: 'סוג קובץ לא נתמך', retryCount: 0 } as ImageUploadFile;
+          return {
+            file: f,
+            id,
+            status: 'error',
+            error: 'סוג קובץ לא נתמך',
+            retryCount: 0,
+          } as ImageUploadFile;
         }
         let out = f;
         if (maxSizeBytes && f.size > maxSizeBytes) {
           out = await compressIfNeeded(f, maxSizeBytes);
           if (out.size > maxSizeBytes) {
             const id = `${f.name}-${f.size}-${f.lastModified}`;
-            return { file: f, id, status: 'error', error: 'קובץ גדול מדי', retryCount: 0 } as ImageUploadFile;
+            return {
+              file: f,
+              id,
+              status: 'error',
+              error: 'קובץ גדול מדי',
+              retryCount: 0,
+            } as ImageUploadFile;
           }
         }
         const id = `${out.name}-${out.size}-${out.lastModified}`;
         let previewUrl: string | undefined = undefined;
-        if (typeof window !== 'undefined' && typeof URL !== 'undefined' && URL.createObjectURL) {
+        if (
+          typeof window !== 'undefined' &&
+          typeof URL !== 'undefined' &&
+          URL.createObjectURL
+        ) {
           previewUrl = URL.createObjectURL(out);
           if (previewUrl) createdUrlsRef.current.add(previewUrl);
         }
-        return { file: out, id, previewUrl, status: 'ready', error: null, retryCount: 0 } as ImageUploadFile;
+        return {
+          file: out,
+          id,
+          previewUrl,
+          status: 'ready',
+          error: null,
+          retryCount: 0,
+        } as ImageUploadFile;
       })
     );
     const next = processed.filter(Boolean) as ImageUploadFile[];
@@ -140,20 +166,43 @@ export function ImageUpload(props: ImageUploadProps) {
       for (const it of items) {
         if (it.status === 'uploaded') continue;
         // attempt retries for each item
-        setItems((prev) => prev.map((p) => (p.id === it.id ? { ...p, status: 'uploading', error: null } : p)));
-        const uuid = (globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2));
+        setItems((prev) =>
+          prev.map((p) =>
+            p.id === it.id ? { ...p, status: 'uploading', error: null } : p
+          )
+        );
+        const uuid =
+          globalThis.crypto?.randomUUID?.() ??
+          Math.random().toString(36).slice(2);
         const fileName = `${uuid}-${sanitizeName(it.file.name)}`;
         const path = `${folder}/${fileName}`;
-        const uploaded = await uploadWithRetries(supa, props.bucket, path, it.file, 3);
+        const uploaded = await uploadWithRetries(
+          supa,
+          props.bucket,
+          path,
+          it.file,
+          3
+        );
         if (!uploaded) {
           setItems((prev) =>
             prev.map((p) =>
-              p.id === it.id ? { ...p, status: 'error', error: 'שגיאת העלאה, נסה שוב', retryCount: (p.retryCount ?? 0) + 1 } : p
+              p.id === it.id
+                ? {
+                    ...p,
+                    status: 'error',
+                    error: 'שגיאת העלאה, נסה שוב',
+                    retryCount: (p.retryCount ?? 0) + 1,
+                  }
+                : p
             )
           );
           continue;
         }
-        setItems((prev) => prev.map((p) => (p.id === it.id ? { ...p, status: 'uploaded', error: null } : p)));
+        setItems((prev) =>
+          prev.map((p) =>
+            p.id === it.id ? { ...p, status: 'uploaded', error: null } : p
+          )
+        );
         let signedUrl: string | null | undefined = undefined;
         const expiresIn = props.signedUrlExpiresInSeconds ?? 3600;
         const { data: signed, error: signErr } = await supa.storage
@@ -181,20 +230,42 @@ export function ImageUpload(props: ImageUploadProps) {
     if (!props.bucket || !props.taskId) return;
     const supa = createBrowserClient();
     const folder = `${props.taskId}/${yyyymmdd(new Date())}`;
-    setItems((prev) => prev.map((p) => (p.id === it.id ? { ...p, status: 'uploading', error: null } : p)));
-    const uuid = (globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2));
+    setItems((prev) =>
+      prev.map((p) =>
+        p.id === it.id ? { ...p, status: 'uploading', error: null } : p
+      )
+    );
+    const uuid =
+      globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
     const fileName = `${uuid}-${sanitizeName(it.file.name)}`;
     const path = `${folder}/${fileName}`;
-    const uploaded = await uploadWithRetries(supa, props.bucket, path, it.file, 3);
+    const uploaded = await uploadWithRetries(
+      supa,
+      props.bucket,
+      path,
+      it.file,
+      3
+    );
     if (!uploaded) {
       setItems((prev) =>
         prev.map((p) =>
-          p.id === it.id ? { ...p, status: 'error', error: 'שגיאת העלאה, נסה שוב', retryCount: (p.retryCount ?? 0) + 1 } : p
+          p.id === it.id
+            ? {
+                ...p,
+                status: 'error',
+                error: 'שגיאת העלאה, נסה שוב',
+                retryCount: (p.retryCount ?? 0) + 1,
+              }
+            : p
         )
       );
       return;
     }
-    setItems((prev) => prev.map((p) => (p.id === it.id ? { ...p, status: 'uploaded', error: null } : p)));
+    setItems((prev) =>
+      prev.map((p) =>
+        p.id === it.id ? { ...p, status: 'uploaded', error: null } : p
+      )
+    );
   };
 
   async function uploadWithRetries(
@@ -205,10 +276,12 @@ export function ImageUpload(props: ImageUploadProps) {
     maxAttempts: number
   ): Promise<boolean> {
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      const { error: upErr } = await supa.storage.from(bucket).upload(path, file, {
-        contentType: file.type || 'application/octet-stream',
-        upsert: true,
-      });
+      const { error: upErr } = await supa.storage
+        .from(bucket)
+        .upload(path, file, {
+          contentType: file.type || 'application/octet-stream',
+          upsert: true,
+        });
       if (!upErr) return true;
       // backoff: 200ms * attempt
       await new Promise((r) => setTimeout(r, 200 * attempt));
@@ -244,7 +317,9 @@ export function ImageUpload(props: ImageUploadProps) {
     <div className={className ?? ''} dir="rtl" data-testid="image-upload">
       <div
         className={`rounded-md border-2 border-dashed p-4 text-center text-sm ${
-          isDragging ? 'border-toyota-primary bg-red-50 text-gray-800' : 'border-gray-300 text-gray-600'
+          isDragging
+            ? 'border-primary bg-red-50 text-gray-800'
+            : 'border-gray-300 text-gray-600'
         }`}
         aria-label="אזור העלאת תמונות"
         onDragEnter={onDragEnter}
@@ -259,7 +334,7 @@ export function ImageUpload(props: ImageUploadProps) {
         <button
           type="button"
           onClick={handlePick}
-          className="rounded-md bg-toyota-primary px-3 py-2 text-sm text-white hover:bg-red-700 min-h-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-toyota-primary focus-visible:ring-offset-2"
+          className="rounded-md bg-primary px-3 py-2 text-sm text-white hover:bg-red-700 min-h-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           aria-label={label}
         >
           {label}
@@ -279,7 +354,11 @@ export function ImageUpload(props: ImageUploadProps) {
       {items.length > 0 ? (
         <div className="mt-4 grid grid-cols-3 gap-3" role="list">
           {items.map((it) => (
-            <figure key={it.id} className="rounded-md border p-2 bg-white" role="listitem">
+            <figure
+              key={it.id}
+              className="rounded-md border p-2 bg-white"
+              role="listitem"
+            >
               {it.previewUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -288,12 +367,21 @@ export function ImageUpload(props: ImageUploadProps) {
                   className="h-24 w-full object-cover rounded"
                 />
               ) : (
-                <div className="h-24 w-full rounded bg-gray-100" aria-label={it.file.name} />
+                <div
+                  className="h-24 w-full rounded bg-gray-100"
+                  aria-label={it.file.name}
+                />
               )}
-              <figcaption className="mt-2 text-xs text-gray-700 truncate">{it.file.name}</figcaption>
+              <figcaption className="mt-2 text-xs text-gray-700 truncate">
+                {it.file.name}
+              </figcaption>
               <div className="mt-1 text-[11px]">
-                {it.status === 'uploading' ? <span aria-live="polite">מעלה...</span> : null}
-                {it.status === 'uploaded' ? <span className="text-green-600">הועלה</span> : null}
+                {it.status === 'uploading' ? (
+                  <span aria-live="polite">מעלה...</span>
+                ) : null}
+                {it.status === 'uploaded' ? (
+                  <span className="text-green-600">הועלה</span>
+                ) : null}
                 {it.status === 'error' ? (
                   <span className="text-red-600" role="alert">
                     {it.error}
@@ -302,7 +390,7 @@ export function ImageUpload(props: ImageUploadProps) {
               </div>
               <button
                 type="button"
-                className="mt-2 w-full rounded-md border px-2 py-2 text-xs hover:bg-gray-50 min-h-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-toyota-primary focus-visible:ring-offset-2"
+                className="mt-2 w-full rounded-md border px-2 py-2 text-xs hover:bg-gray-50 min-h-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                 aria-label={`הסר ${it.file.name}`}
                 onClick={() => {
                   setItems((prev) => {
@@ -323,7 +411,7 @@ export function ImageUpload(props: ImageUploadProps) {
               {it.status === 'error' ? (
                 <button
                   type="button"
-                  className="mt-1 w-full rounded-md border px-2 py-2 text-xs hover:bg-gray-50 min-h-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-toyota-primary focus-visible:ring-offset-2"
+                  className="mt-1 w-full rounded-md border px-2 py-2 text-xs hover:bg-gray-50 min-h-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                   aria-label={`נסה שוב ${it.file.name}`}
                   onClick={() => void retrySingle(it)}
                 >
@@ -340,7 +428,7 @@ export function ImageUpload(props: ImageUploadProps) {
             type="button"
             onClick={() => void handleUpload()}
             disabled={uploading || items.length === 0}
-            className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50 min-h-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-toyota-primary focus-visible:ring-offset-2 disabled:opacity-50"
+            className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50 min-h-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50"
             aria-busy={uploading ? 'true' : undefined}
           >
             {uploading ? 'מעלה...' : 'העלה'}
@@ -351,7 +439,10 @@ export function ImageUpload(props: ImageUploadProps) {
   );
 }
 
-async function compressIfNeeded(file: File, maxSizeBytes: number): Promise<File> {
+async function compressIfNeeded(
+  file: File,
+  maxSizeBytes: number
+): Promise<File> {
   try {
     if (typeof window === 'undefined') return file;
     // Load image
@@ -394,7 +485,10 @@ async function compressIfNeeded(file: File, maxSizeBytes: number): Promise<File>
       // no improvement
       return file;
     }
-    const out = new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() });
+    const out = new File([blob], file.name, {
+      type: 'image/jpeg',
+      lastModified: Date.now(),
+    });
     return out;
   } catch {
     return file;
@@ -409,5 +503,3 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     img.src = src;
   });
 }
-
-

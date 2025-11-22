@@ -128,7 +128,7 @@ export function DriverCompletionChart() {
           onClick={() => setSortBy('name')}
           className={`rounded border px-2 py-1 ${
             sortBy === 'name'
-              ? 'border-toyota-primary bg-toyota-primary text-white'
+              ? 'border-primary bg-primary text-white'
               : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
           }`}
         >
@@ -139,7 +139,7 @@ export function DriverCompletionChart() {
           onClick={() => setSortBy('rate')}
           className={`rounded border px-2 py-1 ${
             sortBy === 'rate'
-              ? 'border-toyota-primary bg-toyota-primary text-white'
+              ? 'border-primary bg-primary text-white'
               : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
           }`}
         >

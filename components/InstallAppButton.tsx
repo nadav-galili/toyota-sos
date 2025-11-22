@@ -74,9 +74,15 @@ export function InstallAppButton({ className }: { className?: string }) {
   // iOS Safari: no programmatic prompt
   if (isIOS) {
     return (
-      <div className={`flex items-center gap-2 rounded border border-gray-200 bg-white/90 px-2 py-1 text-xs text-gray-700 shadow ${className ?? ''}`}>
+      <div
+        className={`flex items-center gap-2 rounded border border-gray-200 bg-white/90 px-2 py-1 text-xs text-gray-700 shadow ${
+          className ?? ''
+        }`}
+      >
         <span>להוספה למסך הבית: שתף → הוסף למסך הבית</span>
-        <button onClick={dismiss} className="text-gray-500 hover:text-gray-700">×</button>
+        <button onClick={dismiss} className="text-gray-500 hover:text-gray-700">
+          ×
+        </button>
       </div>
     );
   }
@@ -84,14 +90,21 @@ export function InstallAppButton({ className }: { className?: string }) {
   if (!supportsPrompt) return null;
 
   return (
-    <div className={`flex items-center gap-2 rounded bg-white/90 px-2 py-1 shadow border border-gray-200 ${className ?? ''}`}>
+    <div
+      className={`flex items-center gap-2 rounded bg-white/90 px-2 py-1 shadow border border-gray-200 ${
+        className ?? ''
+      }`}
+    >
       <button
         onClick={install}
-        className="rounded bg-toyota-primary px-3 py-1 text-sm font-semibold text-white hover:bg-toyota-primary/90"
+        className="rounded bg-primary px-3 py-1 text-sm font-semibold text-white hover:bg-primary/90"
       >
         התקן אפליקציה
       </button>
-      <button onClick={dismiss} className="text-xs text-gray-600 hover:text-gray-800">
+      <button
+        onClick={dismiss}
+        className="text-xs text-gray-600 hover:text-gray-800"
+      >
         לא עכשיו
       </button>
     </div>

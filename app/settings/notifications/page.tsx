@@ -6,30 +6,46 @@ import { getDriverSession } from '@/lib/auth';
 
 type EventType = 'assigned' | 'updated' | 'started' | 'completed' | 'blocked';
 
-interface Preference {
-  id: string;
-  event_type: EventType;
-  enabled: boolean;
-}
-
 export default function NotificationSettingsPage() {
-  const [preferences, setPreferences] = useState<Map<EventType, boolean>>(new Map());
+  const [preferences, setPreferences] = useState<Map<EventType, boolean>>(
+    new Map()
+  );
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
 
   const eventTypes: { type: EventType; label: string; desc: string }[] = [
-    { type: 'assigned', label: 'משימה הוקצתה', desc: 'הודעה כשמשימה חדשה מוקצית אליך' },
-    { type: 'updated', label: 'משימה עודכנה', desc: 'הודעה כשמשימה שלך עודכנה' },
-    { type: 'started', label: 'משימה התחילה', desc: 'הודעה כשנהג התחיל משימה (למנהלים בלבד)' },
-    { type: 'completed', label: 'משימה הושלמה', desc: 'הודעה כשמשימה הושלמה (למנהלים בלבד)' },
-    { type: 'blocked', label: 'משימה חסומה', desc: 'הודעה כשמשימה חסומה (למנהלים בלבד)' },
+    {
+      type: 'assigned',
+      label: 'משימה הוקצתה',
+      desc: 'הודעה כשמשימה חדשה מוקצית אליך',
+    },
+    {
+      type: 'updated',
+      label: 'משימה עודכנה',
+      desc: 'הודעה כשמשימה שלך עודכנה',
+    },
+    {
+      type: 'started',
+      label: 'משימה התחילה',
+      desc: 'הודעה כשנהג התחיל משימה (למנהלים בלבד)',
+    },
+    {
+      type: 'completed',
+      label: 'משימה הושלמה',
+      desc: 'הודעה כשמשימה הושלמה (למנהלים בלבד)',
+    },
+    {
+      type: 'blocked',
+      label: 'משימה חסומה',
+      desc: 'הודעה כשמשימה חסומה (למנהלים בלבד)',
+    },
   ];
 
   useEffect(() => {
     const loadPreferences = async () => {
       const supa = createBrowserClient();
       const session = getDriverSession();
-      
+
       if (!session?.userId) {
         setLoading(false);
         return;
@@ -55,7 +71,9 @@ export default function NotificationSettingsPage() {
   }, []);
 
   const handleToggle = (eventType: EventType) => {
-    setPreferences((prev) => new Map(prev).set(eventType, !prev.get(eventType)));
+    setPreferences((prev) =>
+      new Map(prev).set(eventType, !prev.get(eventType))
+    );
     setSaved(false);
   };
 
@@ -66,13 +84,17 @@ export default function NotificationSettingsPage() {
     if (!session?.userId) return;
 
     try {
-      const toUpsert = Array.from(preferences.entries()).map(([eventType, enabled]) => ({
-        user_id: session.userId,
-        event_type: eventType,
-        enabled,
-      }));
+      const toUpsert = Array.from(preferences.entries()).map(
+        ([eventType, enabled]) => ({
+          user_id: session.userId,
+          event_type: eventType,
+          enabled,
+        })
+      );
 
-      const { error } = await supa.from('notification_preferences').upsert(toUpsert, { onConflict: 'user_id,event_type' });
+      const { error } = await supa
+        .from('notification_preferences')
+        .upsert(toUpsert, { onConflict: 'user_id,event_type' });
 
       if (!error) {
         setSaved(true);
@@ -86,21 +108,29 @@ export default function NotificationSettingsPage() {
   if (loading) return <div className="p-4 text-center">טוען...</div>;
 
   return (
-    <main dir="rtl" className="min-h-screen bg-gradient-to-b from-toyota-50 to-white p-4">
+    <main
+      dir="rtl"
+      className="min-h-screen bg-linear-to-b from-gray-50 to-white p-4"
+    >
       <div className="max-w-md mx-auto">
-        <h1 className="text-2xl font-bold mb-2 text-toyota-primary">הגדרות התראות</h1>
-        <p className="text-sm text-gray-600 mb-6">בחר אילו התראות ברצונך לקבל</p>
+        <h1 className="text-2xl font-bold mb-2 text-primary">הגדרות התראות</h1>
+        <p className="text-sm text-gray-600 mb-6">
+          בחר אילו התראות ברצונך לקבל
+        </p>
 
         <div className="space-y-4 mb-6">
           {eventTypes.map(({ type, label, desc }) => (
-            <div key={type} className="border rounded-lg p-4 bg-white shadow-sm">
+            <div
+              key={type}
+              className="border rounded-lg p-4 bg-white shadow-sm"
+            >
               <div className="flex items-center gap-3 mb-1">
                 <input
                   type="checkbox"
                   id={type}
                   checked={preferences.get(type) ?? true}
                   onChange={() => handleToggle(type)}
-                  className="w-5 h-5 accent-toyota-primary"
+                  className="w-5 h-5 accent-primary"
                 />
                 <label htmlFor={type} className="font-medium cursor-pointer">
                   {label}
@@ -113,7 +143,7 @@ export default function NotificationSettingsPage() {
 
         <button
           onClick={handleSave}
-          className="w-full bg-toyota-primary text-white font-semibold py-3 rounded-lg hover:bg-toyota-600 transition-colors min-h-[44px]"
+          className="w-full bg-primary/10 text-primary font-semibold py-3 rounded-lg hover:bg-primary/20 transition-colors min-h-[44px]"
         >
           שמור הגדרות
         </button>
@@ -136,4 +166,3 @@ export default function NotificationSettingsPage() {
     </main>
   );
 }
-

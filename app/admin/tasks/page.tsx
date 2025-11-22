@@ -137,7 +137,7 @@ export default async function AdminTasksPage() {
     <main dir="rtl" className="min-h-screen bg-gray-50 p-8 mx-auto">
       <NavBar items={navItems} className="z-40" />
       <div className="max-w-full mt-4 sm:mt-8 space-y-4">
-        <h1 className="text-3xl font-bold text-toyota-primary underline">
+        <h1 className="text-3xl font-bold text-primary underline">
           לוח משימות
         </h1>
 

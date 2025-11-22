@@ -116,7 +116,7 @@ export function DriverEditDialog({
           <AlertDialogFooter>
             <Button
               type="submit"
-              className="bg-toyota-primary hover:bg-toyota-primary/90"
+              className="bg-primary hover:bg-primary/90"
               disabled={submitting}
             >
               {mode === 'create'
