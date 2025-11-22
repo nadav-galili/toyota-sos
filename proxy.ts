@@ -14,7 +14,7 @@ const AUTH_REQUIRED_ROUTES = Object.keys(PROTECTED_ROUTES);
 // Public routes (no auth required)
 const PUBLIC_ROUTES = ['/auth/login', '/auth/signup', '/'];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Allow public routes
@@ -65,11 +65,11 @@ export function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
-// Define which routes trigger middleware
+// Define which routes trigger proxy
 export const config = {
   matcher: [
     // Protected routes
-    // Keep matchers for future enforcement, but middleware currently allows all
+    // Keep matchers for future enforcement, but proxy currently allows all
     '/driver/:path*',
     '/admin/:path*',
     '/manager/:path*',
@@ -78,3 +78,4 @@ export const config = {
     '/((?!_next/static|_next/image|favicon.ico|api).*)',
   ],
 };
+

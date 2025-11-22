@@ -327,7 +327,7 @@ export function DashboardKPIs() {
     <div className="space-y-4">
       <div className="flex items-center gap-3">
         <button
-          className="rounded border border-gray-300 bg-white px-3 py-1 text-sm font-semibold text-toyota-primary hover:bg-gray-50"
+          className="rounded border border-gray-300 bg-white px-3 py-1 text-sm font-semibold text-primary hover:bg-gray-50"
           onClick={exportAllCsv}
         >
           ייצוא CSV כולל
@@ -341,12 +341,12 @@ export function DashboardKPIs() {
           error={error}
           actionArea={
             <div className="flex items-center gap-2">
-              <button
-                className="text-xs text-toyota-primary hover:underline"
+              {/* <button
+                className="text-xs text-primary hover:underline"
                 onClick={exportCreatedCompleted}
               >
                 CSV
-              </button>
+              </button> */}
               <button
                 className="text-xs text-gray-600 hover:underline"
                 onClick={() => openDrilldown('created', 'משימות שנוצרו')}
@@ -363,12 +363,12 @@ export function DashboardKPIs() {
           error={error}
           actionArea={
             <div className="flex items-center gap-2">
-              <button
-                className="text-xs text-toyota-primary hover:underline"
+              {/* <button
+                className="text-xs text-primary hover:underline"
                 onClick={exportCreatedCompleted}
               >
                 CSV
-              </button>
+              </button> */}
               <button
                 className="text-xs text-gray-600 hover:underline"
                 onClick={() => openDrilldown('completed', 'משימות שהושלמו')}
@@ -385,12 +385,12 @@ export function DashboardKPIs() {
           error={error}
           actionArea={
             <div className="flex items-center gap-2">
-              <button
-                className="text-xs text-toyota-primary hover:underline"
+              {/* <button
+                className="text-xs text-primary hover:underline"
                 onClick={exportOverdueByDriver}
               >
                 CSV
-              </button>
+              </button> */}
               <button
                 className="text-xs text-gray-600 hover:underline"
                 onClick={() => openDrilldown('overdue', 'משימות באיחור')}
@@ -406,17 +406,17 @@ export function DashboardKPIs() {
           loading={loading}
           error={error}
           secondary="אחוז משימות שהושלמו עד היעד"
-          actionArea={
-            <button
-              className="text-xs text-toyota-primary hover:underline"
-              onClick={exportOnTimeVsLate}
-            >
-              CSV
-            </button>
-          }
+          // actionArea={
+          //   <button
+          //     className="text-xs text-primary hover:underline"
+          //     onClick={exportOnTimeVsLate}
+          //   >
+          //     CSV
+          //   </button>
+          // }
         />
         {/* Placeholders for the rest; will be expanded in 8.3 */}
-        <KpiCard
+        {/* <KpiCard
           title="זמן הקצאה→התחלה (ממוצע)"
           value="—"
           loading={loading}
@@ -429,45 +429,45 @@ export function DashboardKPIs() {
           loading={loading}
           error={error}
           actionArea={<button className="text-xs text-gray-400">CSV</button>}
-        />
+        /> */}
         <KpiCard
           title="ניצולת נהגים"
           value={`${summary?.driverUtilizationPct ?? 0}%`}
           loading={loading}
           error={error}
           secondary="אחוז נהגים עם משימות פעילות"
-          actionArea={
-            <button
-              className="text-xs text-toyota-primary hover:underline"
-              onClick={() => {
-                if (!summary) return;
-                const rows = [
-                  {
-                    metric: 'driverUtilizationPct',
-                    value: summary.driverUtilizationPct,
-                  },
-                ];
-                const csv = toCsv(rows, ['metric', 'value']);
-                downloadCsv(
-                  makeCsvFilename(
-                    'dashboard_driver_utilization',
-                    range.timezone
-                  ),
-                  csv
-                );
-              }}
-            >
-              CSV
-            </button>
-          }
+          // actionArea={
+          //   <button
+          //     className="text-xs text-primary hover:underline"
+          //     onClick={() => {
+          //       if (!summary) return;
+          //       const rows = [
+          //         {
+          //           metric: 'driverUtilizationPct',
+          //           value: summary.driverUtilizationPct,
+          //         },
+          //       ];
+          //       const csv = toCsv(rows, ['metric', 'value']);
+          //       downloadCsv(
+          //         makeCsvFilename(
+          //           'dashboard_driver_utilization',
+          //           range.timezone
+          //         ),
+          //         csv
+          //       );
+          //     }}
+          //   >
+          //     CSV
+          //   </button>
+          // }
         />
-        <KpiCard
+        {/* <KpiCard
           title="ביטולים/השמות מחדש"
           value="—"
           loading={loading}
           error={error}
           actionArea={<button className="text-xs text-gray-400">CSV</button>}
-        />
+        /> */}
         <KpiCard
           title="הפרות SLA"
           value={summary?.slaViolations ?? 0}
@@ -476,12 +476,12 @@ export function DashboardKPIs() {
           secondary="משימות שהושלמו אחרי היעד"
           actionArea={
             <div className="flex items-center gap-2">
-              <button
-                className="text-xs text-toyota-primary hover:underline"
+              {/* <button
+                className="text-xs text-primary hover:underline"
                 onClick={exportSlaViolations}
               >
                 CSV
-              </button>
+              </button> */}
               <button
                 className="text-xs text-gray-600 hover:underline"
                 onClick={() => openDrilldown('late', 'הפרות SLA')}

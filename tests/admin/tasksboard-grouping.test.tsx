@@ -1,7 +1,14 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { TasksBoard, Task, Driver, TaskAssignee, Client, Vehicle } from '@/components/admin/TasksBoard';
+import {
+  TasksBoard,
+  Task,
+  Driver,
+  TaskAssignee,
+  Client,
+  Vehicle,
+} from '@/components/admin/TasksBoard';
 
 describe('TasksBoard Column Grouping Selector (7.1.5)', () => {
   const mockTasks: Task[] = [
@@ -59,8 +66,18 @@ describe('TasksBoard Column Grouping Selector (7.1.5)', () => {
   ];
 
   const mockDrivers: Driver[] = [
-    { id: 'driver-1', name: 'דוד כהן', email: 'driver1@example.com', role: 'driver' },
-    { id: 'driver-2', name: 'שרה לוי', email: 'driver2@example.com', role: 'driver' },
+    {
+      id: 'driver-1',
+      name: 'דוד כהן',
+      email: 'driver1@example.com',
+      role: 'driver',
+    },
+    {
+      id: 'driver-2',
+      name: 'שרה לוי',
+      email: 'driver2@example.com',
+      role: 'driver',
+    },
   ];
 
   const mockTaskAssignees: TaskAssignee[] = [
@@ -88,13 +105,33 @@ describe('TasksBoard Column Grouping Selector (7.1.5)', () => {
   ];
 
   const mockClients: Client[] = [
-    { id: 'client-1', name: 'אחי אבו קנו', phone: '050-1234567', email: 'client1@example.com' },
-    { id: 'client-2', name: 'רוני גם אני', phone: '050-7654321', email: 'client2@example.com' },
+    {
+      id: 'client-1',
+      name: 'אחי אבו קנו',
+      phone: '050-1234567',
+      email: 'client1@example.com',
+    },
+    {
+      id: 'client-2',
+      name: 'רוני גם אני',
+      phone: '050-7654321',
+      email: 'client2@example.com',
+    },
   ];
 
   const mockVehicles: Vehicle[] = [
-    { id: 'vehicle-1', license_plate: '123-456', model: 'Toyota Camry', vin: 'VIN123456' },
-    { id: 'vehicle-2', license_plate: '789-012', model: 'Honda Civic', vin: 'VIN789012' },
+    {
+      id: 'vehicle-1',
+      license_plate: '123-456',
+      model: 'Toyota Camry',
+      vin: 'VIN123456',
+    },
+    {
+      id: 'vehicle-2',
+      license_plate: '789-012',
+      model: 'Honda Civic',
+      vin: 'VIN789012',
+    },
   ];
 
   test('renders grouping toggle with status and driver options', () => {
@@ -276,7 +313,9 @@ describe('TasksBoard Column Grouping Selector (7.1.5)', () => {
 
     // Count cards after toggle
     await waitFor(() => {
-      const cardsAfterToggle = container.querySelectorAll('[data-draggable-id]');
+      const cardsAfterToggle = container.querySelectorAll(
+        '[data-draggable-id]'
+      );
       expect(cardsAfterToggle.length).toBe(cardCount);
     });
 
@@ -308,7 +347,7 @@ describe('TasksBoard Column Grouping Selector (7.1.5)', () => {
 
     // Status button should have active styling (bg-white)
     expect(statusButton).toHaveClass('bg-white');
-    expect(statusButton).toHaveClass('text-toyota-primary');
+    expect(statusButton).toHaveClass('text-primary');
 
     // Driver button should have inactive styling
     expect(driverButton).toHaveClass('text-gray-700');
@@ -319,7 +358,7 @@ describe('TasksBoard Column Grouping Selector (7.1.5)', () => {
     // Styles should flip
     await waitFor(() => {
       expect(driverButton).toHaveClass('bg-white');
-      expect(driverButton).toHaveClass('text-toyota-primary');
+      expect(driverButton).toHaveClass('text-primary');
       expect(statusButton).toHaveClass('text-gray-700');
     });
   });
@@ -376,4 +415,3 @@ describe('TasksBoard Column Grouping Selector (7.1.5)', () => {
     expect(driverButton).toHaveAttribute('aria-pressed', 'true');
   });
 });
-

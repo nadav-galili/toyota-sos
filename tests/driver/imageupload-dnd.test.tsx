@@ -17,7 +17,7 @@ describe('ImageUpload drag-and-drop (5.4.2)', () => {
 
     // drag enter/over highlights
     fireEvent.dragEnter(dropzone, { dataTransfer: { files: [] } });
-    expect(dropzone.className).toMatch(/border-toyota-primary/);
+    expect(dropzone.className).toMatch(/border-primary/);
     fireEvent.dragOver(dropzone, { dataTransfer: { files: [] } });
     expect(dropzone.className).toMatch(/bg-red-50/);
 
@@ -40,5 +40,3 @@ describe('ImageUpload drag-and-drop (5.4.2)', () => {
     expect(second).toHaveLength(2);
   });
 });
-
-

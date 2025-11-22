@@ -84,9 +84,7 @@ function LoginContent() {
       <div className="w-full max-w-md space-y-8">
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-toyota-primary">
-            Toyota S.O.S
-          </h1>
+          <h1 className="text-3xl font-bold text-primary">Toyota S.O.S</h1>
           <p className="mt-2 text-gray-600">מערכת ניהול משימות שדה</p>
         </div>
 
@@ -100,7 +98,7 @@ function LoginContent() {
             }}
             className={`flex-1 py-2 px-3 rounded text-sm font-medium transition-colors ${
               loginType === 'driver'
-                ? 'bg-toyota-primary text-black'
+                ? 'bg-primary text-black'
                 : 'text-gray-700 hover:bg-gray-200'
             }`}
           >
@@ -114,7 +112,7 @@ function LoginContent() {
             }}
             className={`flex-1 py-2 px-3 rounded text-sm font-medium transition-colors ${
               loginType === 'admin'
-                ? 'bg-toyota-primary text-black'
+                ? 'bg-primary text-black'
                 : 'text-gray-700 hover:bg-gray-200'
             }`}
           >
@@ -155,7 +153,7 @@ function LoginContent() {
             <Button
               type="submit"
               disabled={!employeeId || loading}
-              className="w-full bg-toyota-primary hover:bg-red-700 text-white"
+              className="w-full bg-primary hover:bg-red-700 text-white"
             >
               {loading ? 'הכניסה...' : 'כניסה'}
             </Button>
@@ -194,7 +192,7 @@ function LoginContent() {
             <Button
               type="submit"
               disabled={!username || !password || loading}
-              className="w-full bg-toyota-primary hover:bg-red-700 text-white"
+              className="w-full bg-primary hover:bg-red-700 text-white"
             >
               {loading ? 'הכניסה...' : 'כניסה'}
             </Button>

@@ -31,7 +31,7 @@ export function KanbanColumn({
       ref={setNodeRef}
       className={`flex h-full min-h-0 min-w-[320px] shrink-0 flex-col rounded-lg border-2 transition-all ${
         isOver
-          ? 'border-toyota-primary/50 bg-toyota-50/30 shadow-md'
+          ? 'border-primary/50 bg-toyota-50/30 shadow-md'
           : 'border-gray-200 bg-gray-50'
       }`}
       role="region"

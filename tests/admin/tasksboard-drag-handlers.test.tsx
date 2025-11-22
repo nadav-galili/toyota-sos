@@ -1,7 +1,14 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { TasksBoard, Task, Driver, TaskAssignee, Client, Vehicle } from '@/components/admin/TasksBoard';
+import {
+  TasksBoard,
+  Task,
+  Driver,
+  TaskAssignee,
+  Client,
+  Vehicle,
+} from '@/components/admin/TasksBoard';
 
 describe('TasksBoard Drag Handlers and Optimistic Preview (7.1.4)', () => {
   const mockTasks: Task[] = [
@@ -42,8 +49,18 @@ describe('TasksBoard Drag Handlers and Optimistic Preview (7.1.4)', () => {
   ];
 
   const mockDrivers: Driver[] = [
-    { id: 'driver-1', name: 'דוד כהן', email: 'driver1@example.com', role: 'driver' },
-    { id: 'driver-2', name: 'שרה לוי', email: 'driver2@example.com', role: 'driver' },
+    {
+      id: 'driver-1',
+      name: 'דוד כהן',
+      email: 'driver1@example.com',
+      role: 'driver',
+    },
+    {
+      id: 'driver-2',
+      name: 'שרה לוי',
+      email: 'driver2@example.com',
+      role: 'driver',
+    },
   ];
 
   const mockTaskAssignees: TaskAssignee[] = [
@@ -64,13 +81,33 @@ describe('TasksBoard Drag Handlers and Optimistic Preview (7.1.4)', () => {
   ];
 
   const mockClients: Client[] = [
-    { id: 'client-1', name: 'אחי אבו קנו', phone: '050-1234567', email: 'client1@example.com' },
-    { id: 'client-2', name: 'רוני גם אני', phone: '050-7654321', email: 'client2@example.com' },
+    {
+      id: 'client-1',
+      name: 'אחי אבו קנו',
+      phone: '050-1234567',
+      email: 'client1@example.com',
+    },
+    {
+      id: 'client-2',
+      name: 'רוני גם אני',
+      phone: '050-7654321',
+      email: 'client2@example.com',
+    },
   ];
 
   const mockVehicles: Vehicle[] = [
-    { id: 'vehicle-1', license_plate: '123-456', model: 'Toyota Camry', vin: 'VIN123456' },
-    { id: 'vehicle-2', license_plate: '789-012', model: 'Honda Civic', vin: 'VIN789012' },
+    {
+      id: 'vehicle-1',
+      license_plate: '123-456',
+      model: 'Toyota Camry',
+      vin: 'VIN123456',
+    },
+    {
+      id: 'vehicle-2',
+      license_plate: '789-012',
+      model: 'Honda Civic',
+      vin: 'VIN789012',
+    },
   ];
 
   test('renders board with columns and cards', () => {
@@ -84,7 +121,9 @@ describe('TasksBoard Drag Handlers and Optimistic Preview (7.1.4)', () => {
       />
     );
 
-    expect(screen.getByRole('main', { name: /לוח משימות/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('main', { name: /לוח משימות/i })
+    ).toBeInTheDocument();
     expect(screen.getByText('משימה 1')).toBeInTheDocument();
     expect(screen.getByText('משימה 2')).toBeInTheDocument();
   });
@@ -160,11 +199,11 @@ describe('TasksBoard Drag Handlers and Optimistic Preview (7.1.4)', () => {
     );
 
     const dropZones = container.querySelectorAll('[data-drop-target]');
-    
+
     // Initial state: should have default border and background
     dropZones.forEach((zone) => {
       const classList = zone.className;
-      expect(classList).toMatch(/border-gray-200|border-toyota-primary/);
+      expect(classList).toMatch(/border-gray-200|border-primary/);
       expect(classList).toMatch(/bg-gray-50|bg-toyota-50/);
     });
   });
@@ -302,4 +341,3 @@ describe('TasksBoard Drag Handlers and Optimistic Preview (7.1.4)', () => {
     });
   });
 });
-

@@ -35,7 +35,7 @@ export default function AdminDashboardPage() {
       <div className="">
         <Button
           variant="outline"
-          className="text-sm fixed top-4 left-4 z-50 border-toyota-primary bg-toyota-primary text-white"
+          className="text-sm fixed top-4 left-4 z-50 border-primary bg-primary/10 text-primary"
           onClick={handleSignOut}
           disabled={signingOut}
         >
@@ -44,7 +44,7 @@ export default function AdminDashboardPage() {
       </div>
       <PeriodProvider>
         <div className="mx-auto mt-20 max-w-7xl space-y-4 sm:mt-24">
-          <h1 className="text-4xl font-bold text-red-500 underline">
+          <h1 className="text-4xl font-bold text-primary underline">
             לוח מחוונים
           </h1>
           <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">

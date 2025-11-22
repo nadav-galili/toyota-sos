@@ -36,7 +36,11 @@ export function TaskDetails({ taskId }: { taskId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [task, setTask] = useState<TaskDetailsData | null>(null);
   const signatureRequired = useFeatureFlag(FLAG_SIGNATURE_REQUIRED);
-  const [uploadedSignature, setUploadedSignature] = useState<{ path: string; signedUrl?: string | null; bytes: number } | null>(null);
+  const [uploadedSignature, setUploadedSignature] = useState<{
+    path: string;
+    signedUrl?: string | null;
+    bytes: number;
+  } | null>(null);
   const [isCompleting, setIsCompleting] = useState(false);
   const [completeError, setCompleteError] = useState<string | null>(null);
 
@@ -81,7 +85,11 @@ export function TaskDetails({ taskId }: { taskId: string }) {
     const panelId = `${id}-panel`;
     const headingId = `${id}-heading`;
     return (
-      <section className="rounded-md border border-gray-200 bg-white" role="region" aria-labelledby={headingId}>
+      <section
+        className="rounded-md border border-gray-200 bg-white"
+        role="region"
+        aria-labelledby={headingId}
+      >
         <button
           id={headingId}
           type="button"
@@ -91,9 +99,15 @@ export function TaskDetails({ taskId }: { taskId: string }) {
           onClick={() => setOpen((s) => ({ ...s, [id]: !s[id] }))}
         >
           <span>{title}</span>
-          <span className="text-sm text-gray-500">{expanded ? 'סגור' : 'פתח'}</span>
+          <span className="text-sm text-gray-500">
+            {expanded ? 'סגור' : 'פתח'}
+          </span>
         </button>
-        {expanded ? <div id={panelId} className="px-4 pb-4">{children}</div> : null}
+        {expanded ? (
+          <div id={panelId} className="px-4 pb-4">
+            {children}
+          </div>
+        ) : null}
       </section>
     );
   };
@@ -127,7 +141,10 @@ export function TaskDetails({ taskId }: { taskId: string }) {
                   const supa = createBrowserClient();
                   const { data, error } = (await supa.rpc('get_task_details', {
                     task_id: taskId,
-                  })) as { data: TaskDetailsData[] | null; error: unknown | null };
+                  })) as {
+                    data: TaskDetailsData[] | null;
+                    error: unknown | null;
+                  };
                   if (error) throw error as Error;
                   setTask(data && data[0] ? data[0] : null);
                 } catch {
@@ -151,12 +168,16 @@ export function TaskDetails({ taskId }: { taskId: string }) {
 
   const timeWindow =
     task.estimated_start && task.estimated_end
-      ? `${dayjs(task.estimated_start).format('DD/MM/YYYY HH:mm')} – ${dayjs(task.estimated_end).format('DD/MM/YYYY HH:mm')}`
+      ? `${dayjs(task.estimated_start).format('DD/MM/YYYY HH:mm')} – ${dayjs(
+          task.estimated_end
+        ).format('DD/MM/YYYY HH:mm')}`
       : task.estimated_end
       ? `עד ${dayjs(task.estimated_end).format('DD/MM/YYYY HH:mm')}`
       : 'ללא זמן יעד';
 
-  const wazeHref = task.address ? `waze://?navigate=yes&q=${encodeURIComponent(task.address)}` : undefined;
+  const wazeHref = task.address
+    ? `waze://?navigate=yes&q=${encodeURIComponent(task.address)}`
+    : undefined;
 
   return (
     <div className="space-y-4">
@@ -167,13 +188,18 @@ export function TaskDetails({ taskId }: { taskId: string }) {
             {task.type ?? '—'} • {task.priority ?? '—'} • {task.status ?? '—'}
           </p>
           <p className="text-xs text-gray-500">
-            עודכן לאחרונה: {task.updated_at ? dayjs(task.updated_at).format('DD/MM/YYYY HH:mm') : '—'}
+            עודכן לאחרונה:{' '}
+            {task.updated_at
+              ? dayjs(task.updated_at).format('DD/MM/YYYY HH:mm')
+              : '—'}
           </p>
         </div>
       </Section>
 
       <Section id="details" title="פרטים">
-        <p className="text-sm text-gray-800 whitespace-pre-wrap">{task.details ?? '—'}</p>
+        <p className="text-sm text-gray-800 whitespace-pre-wrap">
+          {task.details ?? '—'}
+        </p>
       </Section>
 
       <Section id="client" title="לקוח">
@@ -182,7 +208,8 @@ export function TaskDetails({ taskId }: { taskId: string }) {
 
       <Section id="vehicle" title="רכב">
         <div className="text-sm text-gray-800">
-          {task.vehicle_plate ?? '—'} {task.vehicle_model ? `• ${task.vehicle_model}` : ''}
+          {task.vehicle_plate ?? '—'}{' '}
+          {task.vehicle_model ? `• ${task.vehicle_model}` : ''}
         </div>
       </Section>
 
@@ -192,7 +219,7 @@ export function TaskDetails({ taskId }: { taskId: string }) {
           {wazeHref ? (
             <a
               href={wazeHref}
-              className="inline-flex items-center justify-center rounded-md bg-toyota-primary px-3 py-2 text-sm text-white hover:bg-red-700"
+              className="inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-sm text-white hover:bg-red-700"
             >
               פתיחה ב‑Waze
             </a>
@@ -210,7 +237,9 @@ export function TaskDetails({ taskId }: { taskId: string }) {
           <div className="space-y-3">
             {signatureRequired ? (
               <>
-                <p className="text-sm text-gray-700">נדרש להשלים חתימה לפני סימון המשימה כהושלמה.</p>
+                <p className="text-sm text-gray-700">
+                  נדרש להשלים חתימה לפני סימון המשימה כהושלמה.
+                </p>
                 <SignaturePad
                   width={340}
                   height={160}
@@ -226,12 +255,16 @@ export function TaskDetails({ taskId }: { taskId: string }) {
               </>
             ) : null}
             {completeError ? (
-              <div className="rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700">{completeError}</div>
+              <div className="rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700">
+                {completeError}
+              </div>
             ) : null}
             <button
               type="button"
-              className="rounded-md bg-toyota-primary px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
-              disabled={isCompleting || (signatureRequired && !uploadedSignature)}
+              className="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              disabled={
+                isCompleting || (signatureRequired && !uploadedSignature)
+              }
               onClick={async () => {
                 setIsCompleting(true);
                 setCompleteError(null);
@@ -242,9 +275,13 @@ export function TaskDetails({ taskId }: { taskId: string }) {
                     .update({ status: 'completed' })
                     .eq('id', task.id);
                   if (upErr) {
-                    throw new Error((upErr as any)?.message || 'עדכון סטטוס נכשל');
+                    throw new Error(
+                      (upErr as any)?.message || 'עדכון סטטוס נכשל'
+                    );
                   }
-                  setTask((prev) => (prev ? { ...prev, status: 'completed' } : prev));
+                  setTask((prev) =>
+                    prev ? { ...prev, status: 'completed' } : prev
+                  );
                 } catch (e: any) {
                   setCompleteError(e?.message || 'שגיאה בסיום המשימה');
                 } finally {
@@ -260,5 +297,3 @@ export function TaskDetails({ taskId }: { taskId: string }) {
     </div>
   );
 }
-
-

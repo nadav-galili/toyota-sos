@@ -836,7 +836,7 @@ export function TasksBoard({
                 flex items-center gap-2
                 ${
                   groupBy === 'status'
-                    ? 'bg-white text-toyota-primary shadow-sm'
+                    ? 'bg-white text-primary shadow-sm'
                     : 'text-gray-700 hover:text-gray-900'
                 }`}
               aria-pressed={groupBy === 'status'}
@@ -848,7 +848,7 @@ export function TasksBoard({
               onClick={() => persistGroupBy('driver')}
               className={`px-4 py-2 text-sm font-medium rounded transition-colors flex items-center gap-2 ${
                 groupBy === 'driver'
-                  ? 'bg-white text-toyota-primary shadow-sm'
+                  ? 'bg-white text-primary shadow-sm'
                   : 'text-gray-700 hover:text-gray-900'
               }`}
               aria-pressed={groupBy === 'driver'}
@@ -860,7 +860,7 @@ export function TasksBoard({
 
           <button
             onClick={openCreateDialog}
-            className="rounded bg-toyota-primary px-3 py-2 text-sm font-semibold text-white hover:bg-toyota-primary/90 flex items-center gap-2"
+            className="rounded bg-primary px-3 py-2 text-sm font-semibold text-white hover:bg-primary/90 flex items-center gap-2"
           >
             <PlusIcon className="w-4 h-4" />
             משימה חדשה
@@ -1171,7 +1171,7 @@ export function TasksBoard({
       {/* Drag overlay - renders the dragged task during drag */}
       <DragOverlay>
         {draggedTask && (
-          <div className="rounded-lg border-2 border-toyota-primary bg-white p-3 shadow-xl opacity-95 w-80">
+          <div className="rounded-lg border-2 border-primary bg-white p-3 shadow-xl opacity-95 w-80">
             <div className="mb-2 flex items-start justify-between gap-2">
               <h4 className="flex-1 line-clamp-2 font-semibold text-gray-900 text-sm">
                 {draggedTask.title}

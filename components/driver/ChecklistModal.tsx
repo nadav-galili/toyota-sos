@@ -1,6 +1,12 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { createBrowserClient } from '@/lib/auth';
 
 export type ChecklistField =
@@ -88,7 +94,9 @@ export function ChecklistModal(props: ChecklistModalProps) {
   const getFocusable = useCallback((): HTMLElement[] => {
     const root = panelRef.current;
     if (!root) return [];
-    return Array.from(root.querySelectorAll<HTMLElement>(focusableSelectors.join(','))).filter(
+    return Array.from(
+      root.querySelectorAll<HTMLElement>(focusableSelectors.join(','))
+    ).filter(
       (el) => !el.hasAttribute('disabled') && !el.getAttribute('aria-hidden')
     );
   }, [focusableSelectors]);
@@ -185,9 +193,14 @@ export function ChecklistModal(props: ChecklistModalProps) {
     return e;
   };
 
-  const getGeoPosition = async (): Promise<{ lat: number; lng: number; accuracy?: number } | null> => {
+  const getGeoPosition = async (): Promise<{
+    lat: number;
+    lng: number;
+    accuracy?: number;
+  } | null> => {
     try {
-      if (typeof window === 'undefined' || !('geolocation' in navigator)) return null;
+      if (typeof window === 'undefined' || !('geolocation' in navigator))
+        return null;
       const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
         const onSuccess = (p: GeolocationPosition) => resolve(p);
         const onError = (err: GeolocationPositionError) => reject(err);
@@ -214,7 +227,9 @@ export function ChecklistModal(props: ChecklistModalProps) {
     const firstInvalid = schema.find((f) => e[f.id]);
     if (firstInvalid) {
       // Focus first invalid field
-      const el = panelRef.current?.querySelector<HTMLElement>(`#field-${firstInvalid.id}`);
+      const el = panelRef.current?.querySelector<HTMLElement>(
+        `#field-${firstInvalid.id}`
+      );
       el?.focus();
       return;
     }
@@ -283,7 +298,7 @@ export function ChecklistModal(props: ChecklistModalProps) {
           {canDismiss ? (
             <button
               type="button"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-md text-sm text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-toyota-primary"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-md text-sm text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
               onClick={() => onOpenChange(false)}
               aria-label="סגור"
             >
@@ -307,15 +322,22 @@ export function ChecklistModal(props: ChecklistModalProps) {
                       <input
                         id={baseId}
                         type="checkbox"
-                        className="mt-1 h-5 w-5 focus:outline-none focus:ring-2 focus:ring-toyota-primary"
-                        aria-describedby={[descId, errId].filter(Boolean).join(' ') || undefined}
+                        className="mt-1 h-5 w-5 focus:outline-none focus:ring-2 focus:ring-primary"
+                        aria-describedby={
+                          [descId, errId].filter(Boolean).join(' ') || undefined
+                        }
                         aria-invalid={err ? 'true' : undefined}
                         checked={val}
-                        onChange={(e) => handleChange(field.id, e.target.checked)}
+                        onChange={(e) =>
+                          handleChange(field.id, e.target.checked)
+                        }
                       />
                       <div className="flex-1">
                         <label htmlFor={baseId} className="font-medium">
-                          {field.title} {field.required ? <span className="text-red-600">*</span> : null}
+                          {field.title}{' '}
+                          {field.required ? (
+                            <span className="text-red-600">*</span>
+                          ) : null}
                         </label>
                         {field.description ? (
                           <p id={descId} className="text-sm text-gray-600">
@@ -323,7 +345,11 @@ export function ChecklistModal(props: ChecklistModalProps) {
                           </p>
                         ) : null}
                         {err ? (
-                          <p id={errId} role="alert" className="text-sm text-red-600">
+                          <p
+                            id={errId}
+                            role="alert"
+                            className="text-sm text-red-600"
+                          >
                             {err}
                           </p>
                         ) : null}
@@ -338,12 +364,17 @@ export function ChecklistModal(props: ChecklistModalProps) {
                   return (
                     <div key={field.id} className="space-y-1">
                       <label htmlFor={baseId} className="font-medium">
-                        {field.title} {field.required ? <span className="text-red-600">*</span> : null}
+                        {field.title}{' '}
+                        {field.required ? (
+                          <span className="text-red-600">*</span>
+                        ) : null}
                       </label>
                       <textarea
                         id={baseId}
-                        className="w-full rounded-md border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-toyota-primary min-h-[44px]"
-                        aria-describedby={[descId, errId].filter(Boolean).join(' ') || undefined}
+                        className="w-full rounded-md border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
+                        aria-describedby={
+                          [descId, errId].filter(Boolean).join(' ') || undefined
+                        }
                         aria-invalid={err ? 'true' : undefined}
                         value={val}
                         onChange={(e) => handleChange(field.id, e.target.value)}
@@ -355,7 +386,11 @@ export function ChecklistModal(props: ChecklistModalProps) {
                         </p>
                       ) : null}
                       {err ? (
-                        <p id={errId} role="alert" className="text-sm text-red-600">
+                        <p
+                          id={errId}
+                          role="alert"
+                          className="text-sm text-red-600"
+                        >
                           {err}
                         </p>
                       ) : null}
@@ -369,13 +404,18 @@ export function ChecklistModal(props: ChecklistModalProps) {
                 return (
                   <div key={field.id} className="space-y-1">
                     <label htmlFor={baseId} className="font-medium">
-                      {field.title} {field.required ? <span className="text-red-600">*</span> : null}
+                      {field.title}{' '}
+                      {field.required ? (
+                        <span className="text-red-600">*</span>
+                      ) : null}
                     </label>
                     <input
                       id={baseId}
                       type="text"
-                      className="w-full rounded-md border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-toyota-primary min-h-[44px]"
-                      aria-describedby={[descId, errId].filter(Boolean).join(' ') || undefined}
+                      className="w-full rounded-md border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
+                      aria-describedby={
+                        [descId, errId].filter(Boolean).join(' ') || undefined
+                      }
                       aria-invalid={err ? 'true' : undefined}
                       value={val}
                       onChange={(e) => handleChange(field.id, e.target.value)}
@@ -386,7 +426,11 @@ export function ChecklistModal(props: ChecklistModalProps) {
                       </p>
                     ) : null}
                     {err ? (
-                      <p id={errId} role="alert" className="text-sm text-red-600">
+                      <p
+                        id={errId}
+                        role="alert"
+                        className="text-sm text-red-600"
+                      >
                         {err}
                       </p>
                     ) : null}
@@ -403,7 +447,7 @@ export function ChecklistModal(props: ChecklistModalProps) {
           {canDismiss ? (
             <button
               type="button"
-              className="rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-toyota-primary min-h-[44px]"
+              className="rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
               onClick={() => onOpenChange(false)}
             >
               ביטול
@@ -413,7 +457,7 @@ export function ChecklistModal(props: ChecklistModalProps) {
           )}
           <button
             type="button"
-            className="rounded-md bg-toyota-primary px-3 py-2 text-sm text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-toyota-primary min-h-[44px]"
+            className="rounded-md bg-primary px-3 py-2 text-sm text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
             onClick={handleSubmit}
             disabled={persisting}
           >
@@ -421,7 +465,10 @@ export function ChecklistModal(props: ChecklistModalProps) {
           </button>
         </div>
         {persistError ? (
-          <div role="alert" className="px-4 py-2 text-sm text-red-700 bg-red-50 border-t border-red-200">
+          <div
+            role="alert"
+            className="px-4 py-2 text-sm text-red-700 bg-red-50 border-t border-red-200"
+          >
             {persistError}
           </div>
         ) : null}
@@ -429,5 +476,3 @@ export function ChecklistModal(props: ChecklistModalProps) {
     </div>
   );
 }
-
-

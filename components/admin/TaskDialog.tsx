@@ -508,7 +508,7 @@ export function TaskDialog(props: TaskDialogProps) {
         aria-modal="true"
       >
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-toyota-primary">
+          <h2 className="text-lg font-bold text-primary">
             {mode === 'create' ? 'יצירת משימה' : 'עריכת משימה'}
           </h2>
           <button
@@ -752,7 +752,7 @@ export function TaskDialog(props: TaskDialogProps) {
                   </button>
                   <button
                     type="button"
-                    className="rounded bg-toyota-primary px-2 py-1 text-xs font-semibold text-white"
+                    className="rounded bg-primary px-2 py-1 text-xs font-semibold text-white"
                     onClick={createClient}
                   >
                     צור
@@ -843,7 +843,7 @@ export function TaskDialog(props: TaskDialogProps) {
                   </button>
                   <button
                     type="button"
-                    className="rounded bg-toyota-primary px-2 py-1 text-xs font-semibold text-white"
+                    className="rounded bg-primary px-2 py-1 text-xs font-semibold text-white"
                     onClick={createVehicle}
                   >
                     צור
@@ -938,7 +938,7 @@ export function TaskDialog(props: TaskDialogProps) {
             </button>
             <button
               type="submit"
-              className="rounded bg-toyota-primary px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              className="rounded bg-primary px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
               disabled={submitting}
             >
               {mode === 'create' ? 'צור משימה' : 'שמור שינויים'}

@@ -55,7 +55,7 @@ export function TaskCard({
       ref={setNodeRef}
       id={task.id}
       className={`relative cursor-grab active:cursor-grabbing select-none rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-all hover:shadow-md hover:border-gray-300 ${
-        isActive ? 'opacity-50 ring-2 ring-toyota-primary' : ''
+        isActive ? 'opacity-50 ring-2 ring-primary' : ''
       } ${isDragging ? 'opacity-50' : ''}`}
       aria-label={`משימה: ${task.title}`}
       data-draggable-id={task.id}
