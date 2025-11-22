@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { createBrowserClient } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
 import { trackNotificationOpened } from '@/lib/events';
+import { PermissionPrompt } from './PermissionPrompt';
 
 type NotificationRow = {
   id: string;
@@ -119,6 +120,9 @@ export function NotificationsList({ pageSize = 20 }: { pageSize?: number }) {
 
   return (
     <div dir="rtl" className="w-full max-w-2xl">
+      <div className="mb-4">
+        <PermissionPrompt />
+      </div>
       <div className="mb-3 flex items-center gap-2">
         <button
           type="button"

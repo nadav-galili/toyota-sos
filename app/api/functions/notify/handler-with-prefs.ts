@@ -45,6 +45,25 @@ export async function notifyWithPreferences(body: NotifyBody): Promise<NotifyRes
   const filteredRecipients = body.recipients.filter((r) => prefMap.get(r.user_id) ?? true);
   const filtered = body.recipients.length - filteredRecipients.length;
 
+  // Fetch subscriptions for filtered recipients
+  const filteredUserIds = filteredRecipients.map((r) => r.user_id);
+  const { data: subscriptions } = await admin
+    .from('push_subscriptions')
+    .select('*')
+    .in('user_id', filteredUserIds);
+
+  const subMap = new Map<string, PushSubscriptionLike[]>();
+  if (subscriptions) {
+    subscriptions.forEach((sub: any) => {
+      const existing = subMap.get(sub.user_id) || [];
+      existing.push({
+        endpoint: sub.endpoint,
+        keys: sub.keys,
+      });
+      subMap.set(sub.user_id, existing);
+    });
+  }
+
   const payload = {
     title: body.payload?.title ?? 'עדכון משימה',
     body: body.payload?.body ?? '',
@@ -60,14 +79,24 @@ export async function notifyWithPreferences(body: NotifyBody): Promise<NotifyRes
   let sent = 0;
   await Promise.all(
     filteredRecipients.map(async (r) => {
-      if (r.subscription?.endpoint) {
-        try {
-          await sendWebPush(r.subscription, payload);
-          sent++;
-        } catch {
-          // ignore individual push errors
-        }
+      // Use fetched subscriptions + any manually provided subscription
+      const userSubs = subMap.get(r.user_id) || [];
+      if (r.subscription) {
+        userSubs.push(r.subscription);
       }
+
+      await Promise.all(
+        userSubs.map(async (sub) => {
+          if (sub?.endpoint) {
+            try {
+              await sendWebPush(sub, payload);
+              sent++;
+            } catch {
+              // ignore individual push errors
+            }
+          }
+        })
+      );
     })
   );
 
