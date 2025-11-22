@@ -56,7 +56,7 @@ export interface DriverSession {
 export interface AdminSession {
   userId: string;
   username: string;
-  role: 'admin' | 'viewer';
+  role: 'admin' | 'manager' | 'viewer';
   email?: string;
 }
 
