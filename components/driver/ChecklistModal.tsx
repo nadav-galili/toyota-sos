@@ -6,6 +6,7 @@ import React, {
   useMemo,
   useRef,
   useState,
+  startTransition,
 } from 'react';
 import { createBrowserClient } from '@/lib/auth';
 
@@ -101,17 +102,25 @@ export function ChecklistModal(props: ChecklistModalProps) {
     );
   }, [focusableSelectors]);
 
+  // Compute initial values based on schema
+  const initialValues = useMemo(() => {
+    const initial: Record<string, unknown> = {};
+    for (const f of schema) {
+      if (f.type === 'boolean') initial[f.id] = false;
+      else initial[f.id] = '';
+    }
+    return initial;
+  }, [schema]);
+
   useEffect(() => {
     if (open) {
-      // initialize values from schema
-      const initial: Record<string, unknown> = {};
-      for (const f of schema) {
-        if (f.type === 'boolean') initial[f.id] = initial[f.id] ?? false;
-        else initial[f.id] = initial[f.id] ?? '';
-      }
-      setValues(initial);
-      setErrors({});
-      setAttempted(false);
+      // Initialize values from schema (using computed initial values)
+      // Wrap state updates in startTransition to avoid cascading renders
+      startTransition(() => {
+        setValues(initialValues);
+        setErrors({});
+        setAttempted(false);
+      });
 
       previouslyFocusedEl.current = document.activeElement as HTMLElement;
       // Move focus to first focusable in the panel after paint
@@ -127,7 +136,7 @@ export function ChecklistModal(props: ChecklistModalProps) {
       // restore focus when closing
       previouslyFocusedEl.current?.focus?.();
     }
-  }, [open, getFocusable]);
+  }, [open, getFocusable, initialValues]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -241,13 +250,16 @@ export function ChecklistModal(props: ChecklistModalProps) {
         setPersisting(true);
         setPersistError(null);
         const supa = createBrowserClient();
-        const row: Record<string, unknown> = {
-          task_id: taskId,
-          form_data: payload,
-        };
-        if (driverId) row.driver_id = driverId;
-        if (gps) row.gps_location = gps;
-        const { error } = await supa.from('task_forms').insert([row] as any);
+
+        // Use the RPC function to submit, passing driverId explicitly if available
+        // This handles cases where auth.uid() is null (localStorage session)
+        const { error } = await supa.rpc('submit_task_form', {
+          p_task_id: taskId,
+          p_form_data: payload,
+          p_gps_location: gps || null,
+          p_driver_id: driverId || undefined,
+        });
+
         if (error) {
           setPersistError(error.message || 'שמירה נכשלה');
           setPersisting(false);
@@ -268,7 +280,7 @@ export function ChecklistModal(props: ChecklistModalProps) {
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40"
+      className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/40"
       onClick={(e) => {
         if (e.target === overlayRef.current && canDismiss) onOpenChange(false);
       }}
@@ -281,11 +293,11 @@ export function ChecklistModal(props: ChecklistModalProps) {
         aria-labelledby="checklist-title"
         aria-describedby={description ? 'checklist-desc' : undefined}
         tabIndex={-1}
-        className="w-full sm:max-w-lg sm:rounded-lg sm:shadow-lg bg-white outline-none focus:outline-none max-h-[90vh] sm:max-h-[80vh] overflow-hidden sm:mx-0 mx-0 rounded-t-xl"
+        className="w-full sm:max-w-lg sm:rounded-lg sm:shadow-lg bg-white outline-none focus:outline-none max-h-[85vh] sm:max-h-[80vh] flex flex-col overflow-hidden sm:mx-0 mx-4 mb-4 sm:mb-0 rounded-xl shadow-2xl"
         onKeyDown={handleKeyDown}
       >
-        <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-          <div className="space-y-1">
+        <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between shrink-0">
+          <div className="space-y-1 flex-1 min-w-0 pr-2">
             <h2 id="checklist-title" className="text-lg font-semibold">
               {title}
             </h2>
@@ -298,7 +310,7 @@ export function ChecklistModal(props: ChecklistModalProps) {
           {canDismiss ? (
             <button
               type="button"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-md text-sm text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-md text-sm text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary shrink-0"
               onClick={() => onOpenChange(false)}
               aria-label="סגור"
             >
@@ -307,7 +319,7 @@ export function ChecklistModal(props: ChecklistModalProps) {
           ) : null}
         </div>
 
-        <div className="p-4 overflow-y-auto">
+        <div className="p-4 overflow-y-auto flex-1 min-h-0 overscroll-contain">
           {schema && schema.length > 0 ? (
             <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
               {schema.map((field) => {
@@ -443,21 +455,21 @@ export function ChecklistModal(props: ChecklistModalProps) {
           )}
         </div>
 
-        <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+        <div className="px-4 py-4 border-t border-gray-200 flex items-center justify-between gap-3 shrink-0 bg-white">
           {canDismiss ? (
             <button
               type="button"
-              className="rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
+              className="rounded-md px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary min-h-[48px] flex-1 sm:flex-initial touch-manipulation"
               onClick={() => onOpenChange(false)}
             >
               ביטול
             </button>
           ) : (
-            <span />
+            <span className="flex-1 sm:hidden" />
           )}
           <button
             type="button"
-            className="rounded-md bg-primary px-3 py-2 text-sm text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
+            className="rounded-md bg-primary px-4 py-3 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-primary min-h-[48px] flex-1 sm:flex-initial disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
             onClick={handleSubmit}
             disabled={persisting}
           >

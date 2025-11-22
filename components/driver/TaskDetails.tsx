@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { createBrowserClient } from '@/lib/auth';
+import { createBrowserClient, getDriverSession } from '@/lib/auth';
 import dayjs from '@/lib/dayjs';
 import { useFeatureFlag } from '@/lib/useFeatureFlag';
 import { FLAG_SIGNATURE_REQUIRED } from '@/lib/flagKeys';
@@ -270,10 +270,15 @@ export function TaskDetails({ taskId }: { taskId: string }) {
                 setCompleteError(null);
                 try {
                   const supa = createBrowserClient();
-                  const { error: upErr } = await supa
-                    .from('tasks')
-                    .update({ status: 'completed' })
-                    .eq('id', task.id);
+                  const driverSession = getDriverSession();
+                  const driverId = driverSession?.userId || null;
+
+                  const { error: upErr } = await supa.rpc('update_task_status', {
+                    p_task_id: task.id,
+                    p_status: 'completed',
+                    p_driver_id: driverId || undefined,
+                  });
+
                   if (upErr) {
                     throw new Error(
                       (upErr as any)?.message || 'עדכון סטטוס נכשל'

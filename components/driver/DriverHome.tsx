@@ -372,10 +372,14 @@ export function DriverHome() {
                       }
                     }
 
-                    const { error: upErr } = await client
-                      .from('tasks')
-                      .update({ status: next })
-                      .eq('id', task.id);
+                    const { error: upErr } = await client.rpc(
+                      'update_task_status',
+                      {
+                        p_task_id: task.id,
+                        p_status: next,
+                        p_driver_id: driverId || undefined,
+                      }
+                    );
                     if (upErr) {
                       return;
                     }
@@ -433,10 +437,11 @@ export function DriverHome() {
           forceCompletion
           onSubmit={async () => {
             if (!client || !checklistState) return;
-            const { error: upErr } = await client
-              .from('tasks')
-              .update({ status: checklistState.nextStatus })
-              .eq('id', checklistState.task.id);
+            const { error: upErr } = await client.rpc('update_task_status', {
+              p_task_id: checklistState.task.id,
+              p_status: checklistState.nextStatus,
+              p_driver_id: driverId || undefined,
+            });
             if (upErr) {
               // Let ChecklistModal show persistence errors for the form itself;
               // here we simply avoid updating local state on failure.
