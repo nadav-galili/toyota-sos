@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
           recipients,
           payload: {
             title: 'משימה חדשה',
-            body: `הוקצתה לך משימה חדשה: ${created.title || 'ללא כותרת'}`,
+            body: `הוקצתה לך משימה חדשה: ${created.type || created.title || 'ללא כותרת'}`,
             taskId: created.id,
             url: `/driver/tasks/${created.id}`,
           },

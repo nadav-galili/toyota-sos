@@ -89,7 +89,7 @@ export async function PATCH(
           recipients,
           payload: {
             title: 'עדכון משימה',
-            body: `עודכנו פרטי משימה: ${data.title || 'ללא כותרת'}`,
+            body: `עודכנו פרטי משימה: ${data.type || data.title || 'ללא כותרת'}`,
             taskId: taskId,
             url: `/driver/tasks/${taskId}`,
             changes: Object.keys(updatePayload),

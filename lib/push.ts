@@ -5,6 +5,8 @@
 //  - Validate base64url format
 //  - Convert base64url string to Uint8Array for PushManager.subscribe
 
+import { getDriverSession } from '@/lib/auth';
+
 export function getVapidPublicKey(): string {
   // Next.js exposes public env vars via process.env at build-time
   // Ensure this variable is set in .env.local or deployment env
@@ -89,11 +91,18 @@ export async function subscribeToPush(options?: {
     if (options?.persistEndpoint) {
       await options.persistEndpoint(sub);
     } else {
+      const driverSession = getDriverSession();
+      const userId = driverSession?.userId;
+      const subscriptionJson = sub.toJSON();
+      
       await fetch('/api/notifications/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sub),
-      }).catch(() => {});
+        body: JSON.stringify({
+          ...subscriptionJson,
+          user_id: userId,
+        }),
+      }).catch((err) => console.error('Failed to subscribe:', err));
     }
     return { ok: true, endpoint: sub.endpoint };
   } catch (err: any) {

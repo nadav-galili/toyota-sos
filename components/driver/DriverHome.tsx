@@ -103,6 +103,9 @@ export function DriverHome() {
     estimated_start: string | null;
     estimated_end: string | null;
     address: string | null;
+    client_name: string | null;
+    vehicle_license_plate: string | null;
+    vehicle_model: string | null;
     updated_at: string;
   };
 
@@ -158,8 +161,13 @@ export function DriverHome() {
         estimatedStart: t.estimated_start,
         estimatedEnd: t.estimated_end,
         address: t.address,
-        clientName: null,
-        vehicle: null,
+        clientName: t.client_name,
+        vehicle: t.vehicle_license_plate
+          ? {
+              licensePlate: t.vehicle_license_plate,
+              model: t.vehicle_model,
+            }
+          : null,
       }));
       setRemoteTasks((prev) => (reset ? mapped : mergeById(prev, mapped)));
       setHasMore((mapped?.length ?? 0) === 10);
@@ -372,10 +380,14 @@ export function DriverHome() {
                       }
                     }
 
-                    const { error: upErr } = await client
-                      .from('tasks')
-                      .update({ status: next })
-                      .eq('id', task.id);
+                    const { error: upErr } = await client.rpc(
+                      'update_task_status',
+                      {
+                        p_task_id: task.id,
+                        p_status: next,
+                        p_driver_id: driverId || undefined,
+                      }
+                    );
                     if (upErr) {
                       return;
                     }
@@ -433,10 +445,11 @@ export function DriverHome() {
           forceCompletion
           onSubmit={async () => {
             if (!client || !checklistState) return;
-            const { error: upErr } = await client
-              .from('tasks')
-              .update({ status: checklistState.nextStatus })
-              .eq('id', checklistState.task.id);
+            const { error: upErr } = await client.rpc('update_task_status', {
+              p_task_id: checklistState.task.id,
+              p_status: checklistState.nextStatus,
+              p_driver_id: driverId || undefined,
+            });
             if (upErr) {
               // Let ChecklistModal show persistence errors for the form itself;
               // here we simply avoid updating local state on failure.
