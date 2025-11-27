@@ -9,7 +9,9 @@ import type { ChecklistSchema } from '@/components/driver/ChecklistModal';
  *   Hebrew labels used in the admin UI.
  */
 
-export function getStartChecklistForTaskType(taskType: string | null | undefined): ChecklistSchema | null {
+export function getStartChecklistForTaskType(
+  taskType: string | null | undefined
+): ChecklistSchema | null {
   // The DB stores the Hebrew label for task types (e.g. "ביצוע טסט")
   if (taskType === 'ביצוע טסט') {
     // "ביצוע טסט" start checklist
@@ -38,5 +40,15 @@ export function getStartChecklistForTaskType(taskType: string | null | undefined
   return null;
 }
 
-
-
+/**
+ * Determines which special completion flow (if any) is required for a task type
+ * when moving to 'completed' status.
+ */
+export function getCompletionFlowForTaskType(
+  taskType: string | null | undefined
+): 'replacement_car_delivery' | null {
+  if (taskType === 'הסעת רכב חלופי') {
+    return 'replacement_car_delivery';
+  }
+  return null;
+}
