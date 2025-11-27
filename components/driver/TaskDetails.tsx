@@ -273,11 +273,14 @@ export function TaskDetails({ taskId }: { taskId: string }) {
                   const driverSession = getDriverSession();
                   const driverId = driverSession?.userId || null;
 
-                  const { error: upErr } = await supa.rpc('update_task_status', {
-                    p_task_id: task.id,
-                    p_status: 'completed',
-                    p_driver_id: driverId || undefined,
-                  });
+                  const { error: upErr } = await supa.rpc(
+                    'update_task_status',
+                    {
+                      p_task_id: task.id,
+                      p_status: 'completed',
+                      p_driver_id: driverId || undefined,
+                    }
+                  );
 
                   if (upErr) {
                     const msg =
