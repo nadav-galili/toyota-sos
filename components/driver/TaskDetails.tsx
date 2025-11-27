@@ -61,7 +61,7 @@ export function TaskDetails({ taskId }: { taskId: string }) {
         if (mounted) {
           setTask(data && data[0] ? data[0] : null);
         }
-      } catch (e) {
+      } catch {
         if (mounted) setError('טעינת המשימה נכשלה. נסה שוב.');
       } finally {
         if (mounted) setLoading(false);
@@ -280,15 +280,17 @@ export function TaskDetails({ taskId }: { taskId: string }) {
                   });
 
                   if (upErr) {
-                    throw new Error(
-                      (upErr as any)?.message || 'עדכון סטטוס נכשל'
-                    );
+                    const msg =
+                      (upErr as { message?: string })?.message ||
+                      'עדכון סטטוס נכשל';
+                    throw new Error(msg);
                   }
                   setTask((prev) =>
                     prev ? { ...prev, status: 'completed' } : prev
                   );
-                } catch (e: any) {
-                  setCompleteError(e?.message || 'שגיאה בסיום המשימה');
+                } catch (e: unknown) {
+                  const err = e as Error;
+                  setCompleteError(err?.message || 'שגיאה בסיום המשימה');
                 } finally {
                   setIsCompleting(false);
                 }

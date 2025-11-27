@@ -76,7 +76,7 @@ export const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(
 
       const pad = new SignaturePadLib(canvas, {
         minWidth: lineWidth, // SignaturePad uses minWidth/maxWidth logic
-        maxWidth: lineWidth, 
+        maxWidth: lineWidth,
         penColor: lineColor,
         backgroundColor: backgroundColor,
       });
@@ -88,10 +88,10 @@ export const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(
         canvas.width = canvas.offsetWidth * ratio;
         canvas.height = canvas.offsetHeight * ratio;
         canvas.getContext('2d')?.scale(ratio, ratio);
-        
-        // This clears the canvas, so we might lose data on resize. 
+
+        // This clears the canvas, so we might lose data on resize.
         // For now, clear is acceptable behavior on resize or we could store data and restore.
-        pad.clear(); 
+        pad.clear();
         setHasSignature(false);
         onChange?.(false);
       };
@@ -114,12 +114,12 @@ export const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(
 
     // Helpers
     const getBlob = async (): Promise<Blob | null> => {
-        const pad = padRef.current;
-        if (!pad || pad.isEmpty()) return null;
-        
-        const dataURL = pad.toDataURL(); // defaults to png
-        const res = await fetch(dataURL);
-        return await res.blob();
+      const pad = padRef.current;
+      if (!pad || pad.isEmpty()) return null;
+
+      const dataURL = pad.toDataURL(); // defaults to png
+      const res = await fetch(dataURL);
+      return await res.blob();
     };
 
     useImperativeHandle(ref, () => ({
@@ -134,19 +134,19 @@ export const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(
       exportSignature: async () => {
         const pad = padRef.current;
         if (!pad || pad.isEmpty()) return null;
-        
+
         const dataURL = pad.toDataURL();
         const blob = await getBlob();
         if (!blob) return null;
-        
+
         return {
           blob,
           dataURL,
           width: canvasRef.current?.width || 0,
           height: canvasRef.current?.height || 0,
-          bytes: blob.size
+          bytes: blob.size,
         };
-      }
+      },
     }));
 
     const yyyymmdd = (d: Date) => {
@@ -157,47 +157,53 @@ export const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(
     };
 
     const handleUpload = async () => {
-        if (!uploadBucket || !taskId || !hasSignature) return;
-        
-        const blob = await getBlob();
-        if (!blob) return;
+      if (!uploadBucket || !taskId || !hasSignature) return;
 
-        const supa = createBrowserClient();
-        const folder = `${taskId}/${yyyymmdd(new Date())}`;
-        const uuid = globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
-        const path = `${folder}/${uuid}-signature.png`;
-        
-        const { error: upErr } = await supa.storage
-            .from(uploadBucket)
-            .upload(path, blob, {
-                contentType: 'image/png',
-                upsert: true,
-            });
-            
-        if (upErr) {
-            console.error('Upload failed', upErr);
-            return;
-        }
+      const blob = await getBlob();
+      if (!blob) return;
 
-        const expiresIn = signedUrlExpiresInSeconds ?? 3600;
-        const { data: signed } = await supa.storage
-            .from(uploadBucket)
-            .createSignedUrl(path, expiresIn);
-            
-        onUploaded?.({
-            path,
-            signedUrl: signed?.signedUrl ?? null,
-            bytes: blob.size,
+      const supa = createBrowserClient();
+      const folder = `${taskId}/${yyyymmdd(new Date())}`;
+      const uuid =
+        globalThis.crypto?.randomUUID?.() ??
+        Math.random().toString(36).slice(2);
+      const path = `${folder}/${uuid}-signature.png`;
+
+      const { error: upErr } = await supa.storage
+        .from(uploadBucket)
+        .upload(path, blob, {
+          contentType: 'image/png',
+          upsert: true,
         });
 
-        try {
-             trackSignatureCaptured({
-                task_id: taskId,
-                method: 'upload',
-                bytes: blob.size,
-                storage_path: `${uploadBucket}/${path}`
-             });
-        } catch {}
+      if (upErr) {
+        console.error('Upload failed', upErr);
+        return;
+      }
+
+      const expiresIn = signedUrlExpiresInSeconds ?? 3600;
+      const { data: signed } = await supa.storage
+        .from(uploadBucket)
+        .createSignedUrl(path, expiresIn);
+
+      onUploaded?.({
+        path,
+        signedUrl: signed?.signedUrl ?? null,
+        bytes: blob.size,
+      });
+
+      try {
+        const width = canvasRef.current?.width || 0;
+        const height = canvasRef.current?.height || 0;
+        trackSignatureCaptured({
+          task_id: taskId,
+          method: 'upload',
+          bytes: blob.size,
+          storage_path: `${uploadBucket}/${path}`,
+          width,
+          height,
+        });
+      } catch {}
     };
 
     return (
@@ -228,32 +234,30 @@ export const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(
             {/* Undo not easily supported by signature_pad basic usage without history array, 
                 skipping undo for now or I can implement it later if strictly required. 
                 I'll remove Undo button to simplify as "clean" replacement. */}
-            
+
             {onExport && (
-                <button
+              <button
                 type="button"
                 className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50"
                 onClick={async () => {
-                   const res = await (ref as any)?.current?.exportSignature(); 
-                   // Accessing internal ref might be tricky inside component.
-                   // I'll re-implement export logic here locally
-                    const pad = padRef.current;
-                    if (!pad || pad.isEmpty()) return;
-                    const blob = await getBlob();
-                    if(blob) {
-                         onExport({
-                            blob,
-                            dataURL: pad.toDataURL(),
-                            width: canvasRef.current?.width || 0,
-                            height: canvasRef.current?.height || 0,
-                            bytes: blob.size
-                         });
-                    }
+                  // Re-implement export logic here locally as accessing ref.current internally is tricky
+                  const pad = padRef.current;
+                  if (!pad || pad.isEmpty()) return;
+                  const blob = await getBlob();
+                  if (blob) {
+                    onExport({
+                      blob,
+                      dataURL: pad.toDataURL(),
+                      width: canvasRef.current?.width || 0,
+                      height: canvasRef.current?.height || 0,
+                      bytes: blob.size,
+                    });
+                  }
                 }}
                 disabled={!hasSignature}
-                >
+              >
                 ייצא
-                </button>
+              </button>
             )}
 
             {uploadBucket && taskId && (
