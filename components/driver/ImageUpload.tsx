@@ -24,6 +24,7 @@ export type ImageUploadProps = {
   taskId?: string; // used for path convention
   pathPrefix?: string; // override default path (default is taskId/yyyymmdd)
   signedUrlExpiresInSeconds?: number; // default 3600
+  capture?: 'user' | 'environment'; // camera capture mode
 };
 
 export type UploadedImageMeta = {
@@ -48,6 +49,7 @@ export function ImageUpload(props: ImageUploadProps) {
     onChange,
     className,
     label = 'בחר תמונות',
+    capture,
   } = props;
 
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -352,6 +354,7 @@ export function ImageUpload(props: ImageUploadProps) {
           type="file"
           accept={accept}
           multiple={multiple}
+          capture={capture}
           className="sr-only"
           onChange={(e) => void handleFiles(e.currentTarget.files)}
           aria-hidden="true"
