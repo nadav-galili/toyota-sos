@@ -9,6 +9,20 @@ export function PermissionPrompt() {
   >('idle');
   const [message, setMessage] = React.useState<string>('');
 
+  // Check actual browser permission on mount
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      const permission = Notification.permission;
+      if (permission === 'granted') {
+        setStatus('granted');
+        setMessage('התראות מופעלות');
+      } else if (permission === 'denied') {
+        setStatus('denied');
+        setMessage('התראות חסומות בהגדרות הדפדפן');
+      }
+    }
+  }, []);
+
   const onEnable = async () => {
     try {
       setStatus('requesting');
@@ -36,6 +50,10 @@ export function PermissionPrompt() {
       setMessage('ארעה שגיאה בהפעלת התראות');
     }
   };
+
+  if (status === 'granted') {
+    return null;
+  }
 
   return (
     <div dir="rtl" className="rounded-md border p-3 bg-white">
