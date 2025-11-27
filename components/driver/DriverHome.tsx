@@ -45,8 +45,11 @@ export function DriverHome() {
   const search = useSearchParams();
   const { client } = useAuth();
   const urlTab =
-    (search.get('tab') as 'today' | 'all' | 'overdue' | null) ?? 'today';
-  const [tabState, setTabState] = useState<'today' | 'all' | 'overdue'>(urlTab);
+    (search.get('tab') as 'today' | 'all' | 'overdue' | 'forms' | null) ??
+    'today';
+  const [tabState, setTabState] = useState<
+    'today' | 'all' | 'overdue' | 'forms'
+  >(urlTab);
 
   // Pull-to-refresh state
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -55,7 +58,7 @@ export function DriverHome() {
   const isPullingRef = useRef(false);
   const PULL_THRESHOLD_PX = 64;
 
-  const setTab = (next: 'today' | 'all' | 'overdue') => {
+  const setTab = (next: 'today' | 'all' | 'overdue' | 'forms') => {
     const params = new URLSearchParams(search.toString());
     params.set('tab', next);
     router.replace(`${pathname}?${params.toString()}`);
@@ -309,12 +312,13 @@ export function DriverHome() {
         ) : null}
       </div>
       {/* Tabs */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         {(
           [
             { key: 'today', label: 'היום' },
             { key: 'all', label: 'הכל' },
             { key: 'overdue', label: 'איחורים' },
+            { key: 'forms', label: 'טפסים' },
           ] as const
         ).map((t) => {
           type TabKey = typeof t.key;

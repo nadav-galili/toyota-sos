@@ -9,8 +9,6 @@ import {
   logout,
   loginAsDriver,
   loginAsAdmin,
-  DriverSession,
-  AdminSession,
   AuthSession,
 } from '@/lib/auth';
 
@@ -20,8 +18,13 @@ interface AuthContextType {
   error: string | null;
   client: SupabaseClient;
   role: 'driver' | 'admin' | 'manager' | 'viewer' | null;
-  loginDriver: (employeeId: string) => Promise<{ success: boolean; error?: string }>;
-  loginAdmin: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  loginDriver: (
+    employeeId: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  loginAdmin: (
+    username: string,
+    password: string
+  ) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
 }
 
@@ -31,17 +34,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<AuthSession>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [role, setRole] = useState<'driver' | 'admin' | 'manager' | 'viewer' | null>(null);
+  const [role, setRole] = useState<
+    'driver' | 'admin' | 'manager' | 'viewer' | null
+  >(null);
   const [client, setClient] = useState<SupabaseClient | null>(null);
 
-  const writeRoleCookie = (newRole: 'driver' | 'admin' | 'manager' | 'viewer' | null) => {
+  const writeRoleCookie = (
+    newRole: 'driver' | 'admin' | 'manager' | 'viewer' | null
+  ) => {
     try {
       if (!newRole) {
         // clear cookie
         document.cookie = `toyota_role=; path=/; max-age=0`;
       } else {
         // 7 days
-        document.cookie = `toyota_role=${newRole}; path=/; max-age=${7 * 24 * 60 * 60}`;
+        document.cookie = `toyota_role=${newRole}; path=/; max-age=${
+          7 * 24 * 60 * 60
+        }`;
       }
     } catch {
       // ignore
@@ -53,11 +62,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const initializeAuth = async () => {
       try {
         setLoading(true);
-        
+
         // Create client first
         const supabaseClient = createBrowserClient();
         setClient(supabaseClient);
-        
+
         const currentSession = await getCurrentSession(supabaseClient);
         const currentRole = await getCurrentRole(supabaseClient);
 
@@ -82,19 +91,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!client) return;
 
-    const { data: authListener } = client.auth.onAuthStateChange(async (event, supabaseSession) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        const currentRole = await getCurrentRole(client);
-        const currentSession = await getCurrentSession(client);
-        setSession(currentSession);
-        setRole(currentRole);
-        writeRoleCookie(currentRole);
-      } else if (event === 'SIGNED_OUT') {
-        setSession(null);
-        setRole(null);
-        writeRoleCookie(null);
+    const { data: authListener } = client.auth.onAuthStateChange(
+      async (event, supabaseSession) => {
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          const currentRole = await getCurrentRole(client);
+          const currentSession = await getCurrentSession(client);
+          setSession(currentSession);
+          setRole(currentRole);
+          writeRoleCookie(currentRole);
+        } else if (event === 'SIGNED_OUT') {
+          setSession(null);
+          setRole(null);
+          writeRoleCookie(null);
+        }
       }
-    });
+    );
 
     return () => {
       authListener?.subscription.unsubscribe();
@@ -194,4 +205,3 @@ export function useAuth() {
   }
   return context;
 }
-
