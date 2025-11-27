@@ -12,8 +12,16 @@ jest.mock('@/lib/useFeatureFlag', () => ({
 
 // Mock SignaturePad to a simple button that triggers onUploaded
 jest.mock('@/components/driver/SignaturePad', () => ({
-  SignaturePad: ({ onUploaded }: { onUploaded: (meta: any) => void }) => (
-    <button onClick={() => onUploaded({ path: 'signatures/t1/20250101/mock.png', bytes: 123 })}>
+  SignaturePad: ({
+    onUploaded,
+  }: {
+    onUploaded: (meta: { path: string; bytes: number }) => void;
+  }) => (
+    <button
+      onClick={() =>
+        onUploaded({ path: 'signatures/t1/20250101/mock.png', bytes: 123 })
+      }
+    >
       Mock Sign
     </button>
   ),
@@ -23,7 +31,7 @@ jest.mock('@/components/driver/SignaturePad', () => ({
 const updateMock = jest.fn().mockReturnValue({ error: null });
 const eqMock = jest.fn().mockImplementation(() => ({ error: null }));
 const fromMock = jest.fn().mockImplementation(() => ({
-  update: (obj: any) => {
+  update: (obj: object) => {
     updateMock(obj);
     return { eq: eqMock };
   },
@@ -55,6 +63,11 @@ jest.mock('@/lib/auth', () => {
       rpc: rpcMock,
       from: fromMock,
     }),
+    getDriverSession: jest.fn().mockReturnValue({
+      employeeId: '123',
+      userId: 'u1',
+      role: 'driver',
+    }),
   };
 });
 
@@ -74,24 +87,32 @@ describe('TaskDetails signature-required completion', () => {
     // Expand the completion section
     fireEvent.click(screen.getByRole('button', { name: /סיום משימה/i }));
 
-    let completeBtn = await screen.findByRole('button', { name: 'סמן כהושלם' }) as HTMLButtonElement;
+    let completeBtn = (await screen.findByRole('button', {
+      name: 'סמן כהושלם',
+    })) as HTMLButtonElement;
     expect(completeBtn).toBeDisabled();
 
     // Click our mocked "Sign" button to simulate upload
     fireEvent.click(screen.getByText('Mock Sign'));
 
     // Now completion should be enabled (re-query after state update)
-    completeBtn = await screen.findByRole('button', { name: 'סמן כהושלם' }) as HTMLButtonElement;
+    completeBtn = (await screen.findByRole('button', {
+      name: 'סמן כהושלם',
+    })) as HTMLButtonElement;
     await waitFor(() => expect(completeBtn.disabled).toBe(false));
 
     fireEvent.click(completeBtn);
 
     await waitFor(() => {
-      // ensure update called to mark completed
-      expect(updateMock).toHaveBeenCalledWith({ status: 'completed' });
-      expect(eqMock).toHaveBeenCalledWith('id', 't1');
+      // ensure update called to mark completed via RPC
+      expect(rpcMock).toHaveBeenCalledWith(
+        'update_task_status',
+        expect.objectContaining({
+          p_task_id: 't1',
+          p_status: 'completed',
+          p_driver_id: 'u1',
+        })
+      );
     });
   });
 });
-
-

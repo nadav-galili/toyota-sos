@@ -22,6 +22,7 @@ export type ImageUploadProps = {
   label?: string; // accessible label for the picker button
   bucket?: string; // Supabase storage bucket
   taskId?: string; // used for path convention
+  pathPrefix?: string; // override default path (default is taskId/yyyymmdd)
   signedUrlExpiresInSeconds?: number; // default 3600
 };
 
@@ -155,13 +156,20 @@ export function ImageUpload(props: ImageUploadProps) {
     return `${y}${m}${day}`;
   };
 
+  const getUploadPath = () => {
+    if (props.pathPrefix) {
+      return props.pathPrefix.replace(/\/$/, ''); // remove trailing slash
+    }
+    return `${props.taskId}/${yyyymmdd(new Date())}`;
+  };
+
   const handleUpload = async () => {
     if (!props.bucket || !props.taskId) return;
     if (items.length === 0) return;
     setUploading(true);
     try {
       const supa = createBrowserClient();
-      const folder = `${props.taskId}/${yyyymmdd(new Date())}`;
+      const folder = getUploadPath();
       const metas: UploadedImageMeta[] = [];
       for (const it of items) {
         if (it.status === 'uploaded') continue;
@@ -229,7 +237,7 @@ export function ImageUpload(props: ImageUploadProps) {
   const retrySingle = async (it: ImageUploadFile) => {
     if (!props.bucket || !props.taskId) return;
     const supa = createBrowserClient();
-    const folder = `${props.taskId}/${yyyymmdd(new Date())}`;
+    const folder = getUploadPath();
     setItems((prev) =>
       prev.map((p) =>
         p.id === it.id ? { ...p, status: 'uploading', error: null } : p

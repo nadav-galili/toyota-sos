@@ -415,6 +415,16 @@ export function TaskDialog(props: TaskDialogProps) {
         }
       }
 
+      // Validation for "Replacement Car Delivery" - must have client and vehicle
+      if (type === 'הסעת רכב חלופי') {
+        if (!finalClientId) {
+          throw new Error('חובה לבחור לקוח עבור משימת הסעת רכב חלופי');
+        }
+        if (!finalVehicleId) {
+          throw new Error('חובה לבחור רכב עבור משימת הסעת רכב חלופי');
+        }
+      }
+
       if (mode === 'create') {
         const estimatedStartDatetime = dayjs(estimatedDate)
           .set('hour', parseInt(estimatedStartTime.split(':')[0]))

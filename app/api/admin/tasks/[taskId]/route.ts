@@ -91,6 +91,7 @@ export async function PATCH(
             title: 'עדכון משימה',
             body: `עודכנו פרטי משימה: ${data.type || data.title || 'ללא כותרת'}`,
             taskId: taskId,
+            taskType: data.type,
             url: `/driver/tasks/${taskId}`,
             changes: Object.keys(updatePayload),
           },

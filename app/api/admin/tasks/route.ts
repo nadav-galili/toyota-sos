@@ -111,6 +111,7 @@ export async function POST(request: NextRequest) {
             title: 'משימה חדשה',
             body: `הוקצתה לך משימה חדשה: ${created.type || created.title || 'ללא כותרת'}`,
             taskId: created.id,
+            taskType: created.type,
             url: `/driver/tasks/${created.id}`,
           },
         });

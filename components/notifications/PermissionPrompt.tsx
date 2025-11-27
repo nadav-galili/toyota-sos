@@ -9,6 +9,20 @@ export function PermissionPrompt() {
   >('idle');
   const [message, setMessage] = React.useState<string>('');
 
+  // Check actual browser permission on mount
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      const permission = Notification.permission;
+      if (permission === 'granted') {
+        setStatus('granted');
+        setMessage('התראות מופעלות');
+      } else if (permission === 'denied') {
+        setStatus('denied');
+        setMessage('התראות חסומות בהגדרות הדפדפן');
+      }
+    }
+  }, []);
+
   const onEnable = async () => {
     try {
       setStatus('requesting');
@@ -37,6 +51,10 @@ export function PermissionPrompt() {
     }
   };
 
+  if (status === 'granted') {
+    return null;
+  }
+
   return (
     <div dir="rtl" className="rounded-md border p-3 bg-white">
       <h3 className="text-sm font-medium">התראות</h3>
@@ -47,7 +65,7 @@ export function PermissionPrompt() {
         <button
           type="button"
           onClick={onEnable}
-          disabled={status === 'requesting' || status === 'granted'}
+          disabled={status === 'requesting'}
           className="rounded-md bg-primary px-3 py-2 text-sm text-white hover:bg-red-700 disabled:opacity-50 min-h-[44px]"
           aria-busy={status === 'requesting' ? 'true' : undefined}
         >

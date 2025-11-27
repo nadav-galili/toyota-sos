@@ -238,7 +238,10 @@ export function TasksBoard({
 
   const clientMap = useMemo(() => buildClientMap(clientsState), [clientsState]);
 
-  const vehicleMap = useMemo(() => buildVehicleMap(vehiclesState), [vehiclesState]);
+  const vehicleMap = useMemo(
+    () => buildVehicleMap(vehiclesState),
+    [vehiclesState]
+  );
 
   // Compute filtered + sorted tasks snapshot
   const filteredSortedTasks = useMemo(() => {
@@ -1183,9 +1186,9 @@ export function TasksBoard({
         {draggedTask && (
           <div className="rounded-lg border-2 border-primary bg-white p-3 shadow-xl opacity-95 w-80">
             <div className="mb-2 flex items-start justify-between gap-2">
-              <h4 className="flex-1 line-clamp-2 font-semibold text-gray-900 text-sm">
+              {/* <h4 className="flex-1 line-clamp-2 font-semibold text-gray-900 text-sm">
                 {draggedTask.title}
-              </h4>
+              </h4> */}
               <span
                 className={`shrink-0 inline-block rounded-full px-1.5 py-0.5 text-xs font-bold text-white ${priorityColor(
                   draggedTask.priority

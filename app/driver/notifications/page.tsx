@@ -7,7 +7,7 @@ export default function DriverNotificationsPage() {
   return (
     <main className="min-h-[60vh] p-4">
       <div className="mb-4">
-        <h2 className="text-xl font-bold">התראות</h2>
+        <h2 className="text-xl font-bold text-primary underline">התראות</h2>
       </div>
       <NotificationsList />
     </main>

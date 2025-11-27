@@ -9,7 +9,11 @@ import { TaskSkeleton } from '@/components/driver/TaskSkeleton';
 import { getDriverSession } from '@/lib/auth';
 import { useAuth } from '@/components/AuthProvider';
 import { ChecklistModal } from '@/components/driver/ChecklistModal';
-import { getStartChecklistForTaskType } from '@/components/driver/checklists';
+import {
+  getStartChecklistForTaskType,
+  getCompletionFlowForTaskType,
+} from '@/components/driver/checklists';
+import { ReplacementCarDeliveryForm } from '@/components/driver/ReplacementCarDeliveryForm';
 
 export type DriverTask = TaskCardProps;
 
@@ -45,8 +49,11 @@ export function DriverHome() {
   const search = useSearchParams();
   const { client } = useAuth();
   const urlTab =
-    (search.get('tab') as 'today' | 'all' | 'overdue' | null) ?? 'today';
-  const [tabState, setTabState] = useState<'today' | 'all' | 'overdue'>(urlTab);
+    (search.get('tab') as 'today' | 'all' | 'overdue' | 'forms' | null) ??
+    'today';
+  const [tabState, setTabState] = useState<
+    'today' | 'all' | 'overdue' | 'forms'
+  >(urlTab);
 
   // Pull-to-refresh state
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -55,7 +62,7 @@ export function DriverHome() {
   const isPullingRef = useRef(false);
   const PULL_THRESHOLD_PX = 64;
 
-  const setTab = (next: 'today' | 'all' | 'overdue') => {
+  const setTab = (next: 'today' | 'all' | 'overdue' | 'forms') => {
     const params = new URLSearchParams(search.toString());
     params.set('tab', next);
     router.replace(`${pathname}?${params.toString()}`);
@@ -80,6 +87,12 @@ export function DriverHome() {
 
   // Checklist flow state: when a status change requires a start checklist
   const [checklistState, setChecklistState] = useState<{
+    task: DriverTask;
+    nextStatus: DriverTask['status'];
+  } | null>(null);
+
+  // Completion form state
+  const [completionFormState, setCompletionFormState] = useState<{
     task: DriverTask;
     nextStatus: DriverTask['status'];
   } | null>(null);
@@ -309,12 +322,13 @@ export function DriverHome() {
         ) : null}
       </div>
       {/* Tabs */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         {(
           [
             { key: 'today', label: 'היום' },
             { key: 'all', label: 'הכל' },
             { key: 'overdue', label: 'איחורים' },
+            { key: 'forms', label: 'טפסים' },
           ] as const
         ).map((t) => {
           type TabKey = typeof t.key;
@@ -376,6 +390,16 @@ export function DriverHome() {
                       const schema = getStartChecklistForTaskType(task.type);
                       if (schema && schema.length > 0) {
                         setChecklistState({ task, nextStatus: next });
+                        return;
+                      }
+                    }
+
+                    // If moving into "הושלמה" and this task type has a completion flow,
+                    // open the completion form instead of immediately updating status.
+                    if (next === 'הושלמה') {
+                      const completionFlow = getCompletionFlowForTaskType(task.type);
+                      if (completionFlow === 'replacement_car_delivery') {
+                        setCompletionFormState({ task, nextStatus: next });
                         return;
                       }
                     }
@@ -459,6 +483,37 @@ export function DriverHome() {
               prev.map((t) =>
                 t.id === checklistState.task.id
                   ? { ...t, status: checklistState.nextStatus }
+                  : t
+              )
+            );
+          }}
+        />
+      ) : null}
+
+      {/* Completion form for Replacement Car Delivery */}
+      {completionFormState ? (
+        <ReplacementCarDeliveryForm
+          open={!!completionFormState}
+          onOpenChange={(open) => {
+            if (!open) {
+              setCompletionFormState(null);
+            }
+          }}
+          task={completionFormState.task}
+          onSubmit={async () => {
+            if (!client || !completionFormState) return;
+            const { error: upErr } = await client.rpc('update_task_status', {
+              p_task_id: completionFormState.task.id,
+              p_status: completionFormState.nextStatus,
+              p_driver_id: driverId || undefined,
+            });
+            if (upErr) {
+              throw upErr;
+            }
+            setRemoteTasks((prev) =>
+              prev.map((t) =>
+                t.id === completionFormState.task.id
+                  ? { ...t, status: completionFormState.nextStatus }
                   : t
               )
             );

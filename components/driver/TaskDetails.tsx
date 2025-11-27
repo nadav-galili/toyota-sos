@@ -1,11 +1,19 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { createBrowserClient, getDriverSession } from '@/lib/auth';
+import { createBrowserClient } from '@/lib/auth';
 import dayjs from '@/lib/dayjs';
 import { useFeatureFlag } from '@/lib/useFeatureFlag';
 import { FLAG_SIGNATURE_REQUIRED } from '@/lib/flagKeys';
 import { SignaturePad } from '@/components/driver/SignaturePad';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+} from '@/components/ui/card';
 
 type TaskDetailsData = {
   id: string;
@@ -24,14 +32,6 @@ type TaskDetailsData = {
 };
 
 export function TaskDetails({ taskId }: { taskId: string }) {
-  const [open, setOpen] = useState<Record<string, boolean>>({
-    header: true,
-    details: true,
-    client: true,
-    vehicle: true,
-    address: true,
-    time: true,
-  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [task, setTask] = useState<TaskDetailsData | null>(null);
@@ -41,8 +41,6 @@ export function TaskDetails({ taskId }: { taskId: string }) {
     signedUrl?: string | null;
     bytes: number;
   } | null>(null);
-  const [isCompleting, setIsCompleting] = useState(false);
-  const [completeError, setCompleteError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -51,7 +49,6 @@ export function TaskDetails({ taskId }: { taskId: string }) {
       setError(null);
       try {
         const supa = createBrowserClient();
-        // Attempt RPC if available; otherwise you can swap to direct selects later
         const { data, error } = (await supa.rpc('get_task_details', {
           task_id: taskId,
         })) as { data: TaskDetailsData[] | null; error: unknown | null };
@@ -61,7 +58,7 @@ export function TaskDetails({ taskId }: { taskId: string }) {
         if (mounted) {
           setTask(data && data[0] ? data[0] : null);
         }
-      } catch (e) {
+      } catch {
         if (mounted) setError('טעינת המשימה נכשלה. נסה שוב.');
       } finally {
         if (mounted) setLoading(false);
@@ -71,46 +68,6 @@ export function TaskDetails({ taskId }: { taskId: string }) {
       mounted = false;
     };
   }, [taskId]);
-
-  const Section = ({
-    id,
-    title,
-    children,
-  }: {
-    id: string;
-    title: string;
-    children: React.ReactNode;
-  }) => {
-    const expanded = !!open[id];
-    const panelId = `${id}-panel`;
-    const headingId = `${id}-heading`;
-    return (
-      <section
-        className="rounded-md border border-gray-200 bg-white"
-        role="region"
-        aria-labelledby={headingId}
-      >
-        <button
-          id={headingId}
-          type="button"
-          className="w-full text-right px-4 py-3 font-medium flex items-center justify-between"
-          aria-controls={panelId}
-          aria-expanded={expanded}
-          onClick={() => setOpen((s) => ({ ...s, [id]: !s[id] }))}
-        >
-          <span>{title}</span>
-          <span className="text-sm text-gray-500">
-            {expanded ? 'סגור' : 'פתח'}
-          </span>
-        </button>
-        {expanded ? (
-          <div id={panelId} className="px-4 pb-4">
-            {children}
-          </div>
-        ) : null}
-      </section>
-    );
-  };
 
   if (loading) {
     return (
@@ -131,28 +88,8 @@ export function TaskDetails({ taskId }: { taskId: string }) {
             type="button"
             className="rounded-md bg-red-600 px-3 py-1 text-white text-sm"
             onClick={() => {
-              // simple retry
-              setLoading(true);
-              setError(null);
-              // trigger effect by changing taskId state – or just re-run effect body:
-              // easiest is to temporarily toggle and back; we choose to re-run the fetch inline:
-              (async () => {
-                try {
-                  const supa = createBrowserClient();
-                  const { data, error } = (await supa.rpc('get_task_details', {
-                    task_id: taskId,
-                  })) as {
-                    data: TaskDetailsData[] | null;
-                    error: unknown | null;
-                  };
-                  if (error) throw error as Error;
-                  setTask(data && data[0] ? data[0] : null);
-                } catch {
-                  setError('טעינת המשימה נכשלה. נסה שוב.');
-                } finally {
-                  setLoading(false);
-                }
-              })();
+              // simple retry by reloading logic (simplified for now)
+              window.location.reload();
             }}
           >
             נסה שוב
@@ -180,125 +117,87 @@ export function TaskDetails({ taskId }: { taskId: string }) {
     : undefined;
 
   return (
-    <div className="space-y-4">
-      <Section id="header" title="כותרת">
-        <div className="space-y-1">
-          <h1 className="text-xl font-semibold">{task.title}</h1>
-          <p className="text-sm text-gray-600">
+    <div className="space-y-4 max-w-md mx-auto">
+      <Card>
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-xl">{task.title}</CardTitle>
+          <CardDescription>
             {task.type ?? '—'} • {task.priority ?? '—'} • {task.status ?? '—'}
-          </p>
-          <p className="text-xs text-gray-500">
-            עודכן לאחרונה:{' '}
+          </CardDescription>
+          <p className="text-xs text-gray-400">
+            עודכן:{' '}
             {task.updated_at
               ? dayjs(task.updated_at).format('DD/MM/YYYY HH:mm')
               : '—'}
           </p>
-        </div>
-      </Section>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm">
+          {/* Details Block */}
+          {task.details && (
+            <div className="bg-gray-50 p-3 rounded-md whitespace-pre-wrap text-gray-700">
+              {task.details}
+            </div>
+          )}
 
-      <Section id="details" title="פרטים">
-        <p className="text-sm text-gray-800 whitespace-pre-wrap">
-          {task.details ?? '—'}
-        </p>
-      </Section>
-
-      <Section id="client" title="לקוח">
-        <div className="text-sm text-gray-800">{task.client_name ?? '—'}</div>
-      </Section>
-
-      <Section id="vehicle" title="רכב">
-        <div className="text-sm text-gray-800">
-          {task.vehicle_plate ?? '—'}{' '}
-          {task.vehicle_model ? `• ${task.vehicle_model}` : ''}
-        </div>
-      </Section>
-
-      <Section id="address" title="כתובת">
-        <div className="space-y-2">
-          <div className="text-sm text-gray-800">{task.address ?? '—'}</div>
-          {wazeHref ? (
-            <a
-              href={wazeHref}
-              className="inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-sm text-white hover:bg-red-700"
-            >
-              פתיחה ב‑Waze
-            </a>
-          ) : null}
-        </div>
-      </Section>
-
-      <Section id="time" title="חלון זמן">
-        <div className="text-sm text-gray-800">{timeWindow}</div>
-      </Section>
-
-      {/* Signature requirement + Complete action */}
-      {task.status !== 'completed' ? (
-        <Section id="complete" title="סיום משימה">
-          <div className="space-y-3">
-            {signatureRequired ? (
-              <>
-                <p className="text-sm text-gray-700">
-                  נדרש להשלים חתימה לפני סימון המשימה כהושלמה.
-                </p>
-                <SignaturePad
-                  width={340}
-                  height={160}
-                  uploadBucket="signatures"
-                  taskId={task.id}
-                  onUploaded={(meta) => setUploadedSignature(meta)}
-                />
-                {uploadedSignature ? (
-                  <div className="text-xs text-gray-500">
-                    נשמר: {uploadedSignature.path} ({uploadedSignature.bytes}b)
-                  </div>
-                ) : null}
-              </>
-            ) : null}
-            {completeError ? (
-              <div className="rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700">
-                {completeError}
+          {/* Info Grid */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <div className="text-xs text-gray-500 mb-1">לקוח</div>
+              <div className="font-medium">{task.client_name ?? '—'}</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 mb-1">רכב</div>
+              <div className="font-medium">
+                {task.vehicle_plate ?? '—'}
+                {task.vehicle_model && (
+                  <span className="block text-xs font-normal text-gray-600">
+                    {task.vehicle_model}
+                  </span>
+                )}
               </div>
-            ) : null}
-            <button
-              type="button"
-              className="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
-              disabled={
-                isCompleting || (signatureRequired && !uploadedSignature)
-              }
-              onClick={async () => {
-                setIsCompleting(true);
-                setCompleteError(null);
-                try {
-                  const supa = createBrowserClient();
-                  const driverSession = getDriverSession();
-                  const driverId = driverSession?.userId || null;
-
-                  const { error: upErr } = await supa.rpc('update_task_status', {
-                    p_task_id: task.id,
-                    p_status: 'completed',
-                    p_driver_id: driverId || undefined,
-                  });
-
-                  if (upErr) {
-                    throw new Error(
-                      (upErr as any)?.message || 'עדכון סטטוס נכשל'
-                    );
-                  }
-                  setTask((prev) =>
-                    prev ? { ...prev, status: 'completed' } : prev
-                  );
-                } catch (e: any) {
-                  setCompleteError(e?.message || 'שגיאה בסיום המשימה');
-                } finally {
-                  setIsCompleting(false);
-                }
-              }}
-            >
-              סמן כהושלם
-            </button>
+            </div>
+            <div className="col-span-2">
+              <div className="text-xs text-gray-500 mb-1">חלון זמן</div>
+              <div className="font-medium">{timeWindow}</div>
+            </div>
+            <div className="col-span-2">
+              <div className="text-xs text-gray-500 mb-1">כתובת</div>
+              <div className="font-medium">{task.address ?? '—'}</div>
+              {wazeHref && (
+                <a
+                  href={wazeHref}
+                  className="inline-flex mt-2 items-center justify-center rounded-md bg-blue-500 px-4 py-2 text-sm text-white hover:bg-blue-600 w-full"
+                >
+                  ניווט עם Waze
+                </a>
+              )}
+            </div>
           </div>
-        </Section>
-      ) : null}
+        </CardContent>
+
+        {/* Actions Footer */}
+        {task.status !== 'completed' && (
+          <CardFooter className="flex flex-col gap-4 pt-2 border-t bg-gray-50/50 rounded-b-xl">
+            {signatureRequired && (
+              <div className="w-full space-y-2">
+                <p className="text-sm text-gray-700 font-medium">חתימה נדרשת</p>
+                <div className="border rounded-md bg-white overflow-hidden">
+                  <SignaturePad
+                    width={300}
+                    height={160}
+                    uploadBucket="signatures"
+                    taskId={task.id}
+                    onUploaded={(meta) => setUploadedSignature(meta)}
+                  />
+                </div>
+                {uploadedSignature && (
+                  <p className="text-xs text-green-600">✓ נחתם והועלה בהצלחה</p>
+                )}
+              </div>
+            )}
+          </CardFooter>
+        )}
+      </Card>
     </div>
   );
 }

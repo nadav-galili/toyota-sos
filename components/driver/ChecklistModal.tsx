@@ -268,8 +268,9 @@ export function ChecklistModal(props: ChecklistModalProps) {
         setPersisting(false);
         onSubmit(payload);
         onOpenChange(false);
-      } catch (err: any) {
-        setPersistError(err?.message || 'שמירה נכשלה');
+      } catch (err: unknown) {
+        const error = err as Error;
+        setPersistError(error.message || 'שמירה נכשלה');
         setPersisting(false);
       }
     } else {
@@ -280,7 +281,7 @@ export function ChecklistModal(props: ChecklistModalProps) {
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/40"
+      className="fixed inset-0 z-9999 flex items-end sm:items-center justify-center bg-black/40"
       onClick={(e) => {
         if (e.target === overlayRef.current && canDismiss) onOpenChange(false);
       }}
