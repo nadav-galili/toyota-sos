@@ -1,6 +1,7 @@
 import { NavBar } from '@/components/ui/tubelight-navbar';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { DriverCredentialsManager } from '@/components/admin/DriverCredentialsManager';
+import { DriverRow } from '@/utils/admin/drivers/types';
 
 export default async function AdminDriversPage() {
   const admin = getSupabaseAdmin();
@@ -25,7 +26,7 @@ export default async function AdminDriversPage() {
       .order('created_at', { ascending: false });
 
     if (!error && data) {
-      initialDrivers = data as any;
+      initialDrivers = data as DriverRow[];
     }
   } catch {
     // best-effort; UI will refetch via API if needed

@@ -25,7 +25,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { Calendar, PlusIcon } from 'lucide-react';
+import { Calendar, PlusIcon, SaveIcon, XIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -976,7 +976,7 @@ export function TaskDialog(props: TaskDialogProps) {
           </div>
 
           <div className="col-span-1 md:col-span-2 mt-2 flex items-center justify-end gap-2">
-            {pdfEnabled && (
+            {/* {pdfEnabled && (
               <button
                 type="button"
                 className="rounded border border-gray-300 px-3 py-2 text-sm"
@@ -1008,20 +1008,22 @@ export function TaskDialog(props: TaskDialogProps) {
               >
                 ייצוא PDF
               </button>
-            )}
+            )} */}
             <button
               type="button"
-              className="rounded border border-gray-300 px-3 py-2 text-sm"
+              className="rounded flex items-center justify-center gap-2 border border-gray-300 px-3 py-2 text-sm"
               onClick={() => onOpenChange(false)}
               disabled={submitting}
             >
+              <XIcon className="w-4 h-4 mr-2" />
               ביטול
             </button>
             <button
               type="submit"
-              className="rounded bg-primary px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              className="rounded flex items-center justify-center gap-2 bg-primary px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
               disabled={submitting}
             >
+              <SaveIcon className="w-4 h-4 mr-2" />
               {mode === 'create' ? 'צור משימה' : 'שמור שינויים'}
             </button>
           </div>

@@ -14,6 +14,7 @@ import {
   getCompletionFlowForTaskType,
 } from '@/components/driver/checklists';
 import { ReplacementCarDeliveryForm } from '@/components/driver/ReplacementCarDeliveryForm';
+import { TestCompletionPopup } from '@/components/driver/TestCompletionPopup';
 
 export type DriverTask = TaskCardProps;
 
@@ -93,6 +94,12 @@ export function DriverHome() {
 
   // Completion form state
   const [completionFormState, setCompletionFormState] = useState<{
+    task: DriverTask;
+    nextStatus: DriverTask['status'];
+  } | null>(null);
+
+  // Test completion popup state
+  const [testCompletionState, setTestCompletionState] = useState<{
     task: DriverTask;
     nextStatus: DriverTask['status'];
   } | null>(null);
@@ -402,6 +409,10 @@ export function DriverHome() {
                         setCompletionFormState({ task, nextStatus: next });
                         return;
                       }
+                      if (completionFlow === 'test_completion') {
+                        setTestCompletionState({ task, nextStatus: next });
+                        return;
+                      }
                     }
 
                     const { error: upErr } = await client.rpc(
@@ -514,6 +525,58 @@ export function DriverHome() {
               prev.map((t) =>
                 t.id === completionFormState.task.id
                   ? { ...t, status: completionFormState.nextStatus }
+                  : t
+              )
+            );
+          }}
+        />
+      ) : null}
+
+      {/* Completion popup for Test Execution */}
+      {testCompletionState ? (
+        <TestCompletionPopup
+          open={!!testCompletionState}
+          onOpenChange={(open) => {
+            if (!open) {
+              setTestCompletionState(null);
+            }
+          }}
+          task={testCompletionState.task}
+          onSkip={async () => {
+            if (!client || !testCompletionState) return;
+            const { error: upErr } = await client.rpc('update_task_status', {
+              p_task_id: testCompletionState.task.id,
+              p_status: testCompletionState.nextStatus,
+              p_driver_id: driverId || undefined,
+            });
+            if (upErr) {
+              console.error(upErr);
+              return;
+            }
+            setRemoteTasks((prev) =>
+              prev.map((t) =>
+                t.id === testCompletionState.task.id
+                  ? { ...t, status: testCompletionState.nextStatus }
+                  : t
+              )
+            );
+          }}
+          onSubmit={async (data) => {
+            if (!client || !testCompletionState) return;
+            const { error: upErr } = await client.rpc('update_task_status', {
+              p_task_id: testCompletionState.task.id,
+              p_status: testCompletionState.nextStatus,
+              p_driver_id: driverId || undefined,
+              p_details: data.details,
+              p_advisor_name: data.advisorName,
+            });
+            if (upErr) {
+              throw upErr;
+            }
+            setRemoteTasks((prev) =>
+              prev.map((t) =>
+                t.id === testCompletionState.task.id
+                  ? { ...t, status: testCompletionState.nextStatus }
                   : t
               )
             );
