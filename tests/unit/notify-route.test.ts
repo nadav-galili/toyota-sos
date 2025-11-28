@@ -1,19 +1,35 @@
-import { notify } from '@/app/api/functions/notify/handler';
+import { notify } from '@/lib/notify';
+import webpush from 'web-push';
 
+// Mock web-push library
+jest.mock('web-push', () => ({
+  setVapidDetails: jest.fn(),
+  sendNotification: jest.fn().mockResolvedValue({}),
+}));
+
+// Mock Supabase
 jest.mock('@/lib/supabaseAdmin', () => {
   return {
     getSupabaseAdmin: () => ({
-      from: () => ({
-        insert: async (_rows: any[]) => ({ error: null }),
-      }),
+      from: (table: string) => {
+        if (table === 'push_subscriptions') {
+          return {
+            select: () => ({
+              in: () => ({ data: [] }), // Mock empty subscriptions from DB
+            }),
+          };
+        }
+        if (table === 'notifications') {
+          return {
+            insert: async (_rows: any[]) => ({ error: null }),
+          };
+        }
+        return {
+          select: () => ({ in: () => ({ data: [] }) }),
+          insert: async () => ({ error: null }),
+        };
+      },
     }),
-  };
-});
-
-const sendWebPushMock = jest.fn();
-jest.mock('@/lib/notify', () => {
-  return {
-    sendWebPush: (...args: any[]) => sendWebPushMock(...args),
   };
 });
 
@@ -34,11 +50,14 @@ describe('POST /api/functions/notify (6.4)', () => {
         },
       ],
     });
+    
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.inserted).toBe(1);
     }
-    expect(sendWebPushMock).toHaveBeenCalledTimes(1);
+    
+    // Check if webpush.sendNotification was called
+    expect(webpush.sendNotification).toHaveBeenCalledTimes(1);
   });
 
   test('rejects invalid request', async () => {
@@ -46,5 +65,3 @@ describe('POST /api/functions/notify (6.4)', () => {
     expect(result.ok).toBe(false);
   });
 });
-
-

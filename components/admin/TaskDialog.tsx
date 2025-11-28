@@ -152,7 +152,6 @@ export function TaskDialog(props: TaskDialogProps) {
   const [showAddVehicle, setShowAddVehicle] = useState(false);
   const [newVehiclePlate, setNewVehiclePlate] = useState('');
   const [newVehicleModel, setNewVehicleModel] = useState('');
-  const [newVehicleVin, setNewVehicleVin] = useState('');
   const [advisorName, setAdvisorName] = useState(task?.advisor_name ?? '');
 
   useEffect(() => {
@@ -346,7 +345,6 @@ export function TaskDialog(props: TaskDialogProps) {
         body: JSON.stringify({
           license_plate,
           model: newVehicleModel || null,
-          vin: newVehicleVin || null,
         }),
       });
       if (!res.ok) throw new Error(await res.text());
@@ -361,7 +359,6 @@ export function TaskDialog(props: TaskDialogProps) {
       setShowAddVehicle(false);
       setNewVehiclePlate('');
       setNewVehicleModel('');
-      setNewVehicleVin('');
     } catch (err: unknown) {
       const error = err as Error;
       setError(error.message || 'יצירת רכב נכשלה');
@@ -877,9 +874,6 @@ export function TaskDialog(props: TaskDialogProps) {
                           {v.license_plate}
                           {v.model ? ` · ${v.model}` : ''}
                         </span>
-                        {v.vin && (
-                          <span className="text-xs text-gray-500">{v.vin}</span>
-                        )}
                       </button>
                     ))}
                   </div>
@@ -907,12 +901,6 @@ export function TaskDialog(props: TaskDialogProps) {
                   placeholder="דגם"
                   value={newVehicleModel}
                   onChange={(e) => setNewVehicleModel(e.target.value)}
-                />
-                <input
-                  className="rounded border border-gray-300 p-2 col-span-1"
-                  placeholder="VIN"
-                  value={newVehicleVin}
-                  onChange={(e) => setNewVehicleVin(e.target.value)}
                 />
                 <div className="col-span-3 flex justify-end gap-2">
                   <button

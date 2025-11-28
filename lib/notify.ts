@@ -1,6 +1,7 @@
 'use server';
 
 import webpush from 'web-push';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 // Thin wrapper to send Web Push notifications.
 // In a real deployment, use the `web-push` library with your VAPID keys.
@@ -63,4 +64,99 @@ export async function sendWebPush(
     }
     // Don't throw, just log, so we don't break the main flow
   }
+}
+
+export type NotifyBody = {
+  type: string;
+  task_id?: string;
+  payload?: Record<string, unknown>;
+  recipients: Array<{
+    user_id: string;
+    subscription?: PushSubscriptionLike;
+  }>;
+};
+
+export type NotifyResult =
+  | { ok: true; sent: number; inserted: number }
+  | { ok: false; error: string; detail?: string };
+
+export async function notify(body: NotifyBody): Promise<NotifyResult> {
+  if (!body || !Array.isArray(body.recipients) || !body.type) {
+    return { ok: false, error: 'invalid-request' };
+  }
+
+  const admin = getSupabaseAdmin();
+  
+  // No preferences check - send to all recipients
+
+  // Fetch subscriptions for all recipients
+  const userIds = body.recipients.map((r) => r.user_id);
+  const { data: subscriptions } = await admin
+    .from('push_subscriptions')
+    .select('*')
+    .in('user_id', userIds);
+
+  const subMap = new Map<string, PushSubscriptionLike[]>();
+  if (subscriptions) {
+    subscriptions.forEach((sub: any) => {
+      const existing = subMap.get(sub.user_id) || [];
+      existing.push({
+        endpoint: sub.endpoint,
+        keys: sub.keys,
+      });
+      subMap.set(sub.user_id, existing);
+    });
+  }
+
+  const payload = {
+    title: body.payload?.title ?? 'עדכון משימה',
+    body: body.payload?.body ?? '',
+    tag: body.task_id ? `task-${body.task_id}` : undefined,
+    data: {
+      url: body.payload?.url ?? (body.task_id ? `/driver/tasks/${body.task_id}` : '/'),
+      taskId: body.task_id,
+      ...(body.payload || {}),
+    },
+  };
+
+  // Send push to all recipients
+  let sent = 0;
+  await Promise.all(
+    body.recipients.map(async (r) => {
+      // Use fetched subscriptions + any manually provided subscription
+      const userSubs = subMap.get(r.user_id) || [];
+      if (r.subscription) {
+        userSubs.push(r.subscription);
+      }
+
+      await Promise.all(
+        userSubs.map(async (sub) => {
+          if (sub?.endpoint) {
+            try {
+              await sendWebPush(sub, payload);
+              sent++;
+            } catch {
+              // ignore individual push errors
+            }
+          }
+        })
+      );
+    })
+  );
+
+  // Insert in-app notifications for all recipients
+  const insertRows = body.recipients.map((r) => ({
+    user_id: r.user_id,
+    type: body.type,
+    task_id: body.task_id ?? null,
+    payload: body.payload ?? {},
+    read: false,
+  }));
+
+  const { error: insertErr } = await admin.from('notifications').insert(insertRows);
+  if (insertErr) {
+    return { ok: false, error: 'insert-failed', detail: String(insertErr.message || insertErr) };
+  }
+
+  return { ok: true, sent, inserted: insertRows.length };
 }

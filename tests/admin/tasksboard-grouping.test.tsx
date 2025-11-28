@@ -124,13 +124,11 @@ describe('TasksBoard Column Grouping Selector (7.1.5)', () => {
       id: 'vehicle-1',
       license_plate: '123-456',
       model: 'Toyota Camry',
-      vin: 'VIN123456',
     },
     {
       id: 'vehicle-2',
       license_plate: '789-012',
       model: 'Honda Civic',
-      vin: 'VIN789012',
     },
   ];
 

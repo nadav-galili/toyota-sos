@@ -11,11 +11,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { license_plate, model, vin } = body || {};
+    const { license_plate, model } = body || {};
     if (!license_plate) return NextResponse.json({ error: 'Missing license_plate' }, { status: 400 });
 
     const admin = getSupabaseAdmin();
-    const { data, error } = await admin.from('vehicles').insert({ license_plate, model, vin }).select('*').single();
+    const { data, error } = await admin.from('vehicles').insert({ license_plate, model }).select('*').single();
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ ok: true, data }, { status: 200 });
   } catch (err: any) {

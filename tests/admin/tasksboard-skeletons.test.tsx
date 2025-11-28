@@ -42,7 +42,7 @@ describe('TasksBoard Loading Skeletons and Empty States (7.1.6)', () => {
   ];
 
   const mockVehicles: Vehicle[] = [
-    { id: 'vehicle-1', license_plate: '123-456', model: 'Toyota Camry', vin: 'VIN123456' },
+    { id: 'vehicle-1', license_plate: '123-456', model: 'Toyota Camry' },
   ];
 
   test('renders board with data without loading state', () => {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { cookies } from 'next/headers';
-import { notifyWithPreferences } from '../../../functions/notify/handler-with-prefs';
+import { notify } from '@/lib/notify';
 
 /**
  * PATCH /api/admin/tasks/[taskId]
@@ -84,7 +84,7 @@ export async function PATCH(
           subscription: undefined,
         }));
 
-        await notifyWithPreferences({
+        await notify({
           type: 'updated',
           task_id: taskId,
           recipients,
