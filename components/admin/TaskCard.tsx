@@ -135,6 +135,12 @@ export function TaskCard({
       </div>
 
       {/* Time window */}
+
+      <div className="mb-2 text-xs text-gray-500">
+        {task.estimated_start
+          ? dayjs(task.estimated_start).format('DD/MM/YYYY')
+          : 'ללא זמן יעד'}
+      </div>
       <div className="mb-2 text-xs text-gray-500">
         {formatDate(task.estimated_start)} - {formatDate(task.estimated_end)}
       </div>
