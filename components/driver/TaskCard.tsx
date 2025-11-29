@@ -3,6 +3,7 @@
 import dayjs from '@/lib/dayjs';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { cn } from '@/lib/utils';
+import { MapPinIcon } from 'lucide-react';
 
 export type TaskCardProps = {
   id: string;
@@ -113,8 +114,8 @@ export function TaskCard(props: TaskCardProps) {
               [
                 'בהמתנה',
                 'בעבודה',
-                'חסומה',
                 'הושלמה',
+                'חסומה',
               ] as TaskCardProps['status'][]
             ).map((value) => (
               <ToggleGroupItem
@@ -153,6 +154,7 @@ export function TaskCard(props: TaskCardProps) {
             href={wazeHref}
             className="inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-sm text-white hover:bg-red-700"
           >
+            <MapPinIcon className="w-4 h-4 mr-2" />
             פתיחה ב-Waze
           </a>
         ) : null}

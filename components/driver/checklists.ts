@@ -49,6 +49,58 @@ export function getStartChecklistForTaskType(
     ];
   }
 
+  if (taskType === 'איסוף רכב/שינוע') {
+    return [
+      {
+        id: 'transport_form',
+        type: 'boolean',
+        title: 'האם יש טופס שינוע מהמערכת?',
+        required: true,
+      },
+      {
+        id: 'signed_quote',
+        type: 'boolean',
+        title: 'האם יש הצעת מחיר חתומה ע״י הלקוח?',
+        required: true,
+      },
+      {
+        id: 'vehicle_insurance',
+        type: 'boolean',
+        title: 'האם יש ביטוח לרכב?',
+        required: true,
+      },
+      {
+        id: 'vehicle_photo_nesher',
+        type: 'boolean',
+        title: 'האם יש צילום רכב בנשר?',
+        required: true,
+      },
+    ];
+  }
+
+  if (taskType === 'החזרת רכב/שינוע') {
+    return [
+      {
+        id: 'mobility_approval',
+        type: 'boolean',
+        title: 'אישור תקינות - לרכבי מוביליטי',
+        required: true,
+      },
+      {
+        id: 'invoice',
+        type: 'boolean',
+        title: 'האם יש חשבונית?',
+        required: true,
+      },
+      {
+        id: 'postcard_gift',
+        type: 'boolean',
+        title: 'האם יש גלויה ומתנה?',
+        required: true,
+      },
+    ];
+  }
+
   return null;
 }
 

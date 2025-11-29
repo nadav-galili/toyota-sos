@@ -16,7 +16,6 @@ import type { Client, Vehicle } from '@/types/entity';
 import { trackFormSubmitted } from '@/lib/events';
 import { useFeatureFlag } from '@/lib/useFeatureFlag';
 import { FLAG_MULTI_DRIVER, FLAG_PDF_GENERATION } from '@/lib/flagKeys';
-import { downloadBlob, generateTaskPdfLikeBlob } from '@/utils/pdf';
 import { toastSuccess, toastError } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import {
@@ -79,7 +78,8 @@ interface TaskDialogProps {
 }
 
 const types: TaskType[] = [
-  'איסוף/הורדת רכב',
+  'איסוף רכב/שינוע',
+  'החזרת רכב/שינוע',
   'הסעת רכב חלופי',
   'הסעת לקוח הביתה',
   'הסעת לקוח למוסך',
@@ -110,7 +110,6 @@ export function TaskDialog(props: TaskDialogProps) {
 
   // Feature flags
   const multiDriverEnabled = useFeatureFlag(FLAG_MULTI_DRIVER);
-  const pdfEnabled = useFeatureFlag(FLAG_PDF_GENERATION);
 
   // Form state
   const [clientsLocal, setClientsLocal] = useState<Client[]>(clients);
@@ -175,7 +174,7 @@ export function TaskDialog(props: TaskDialogProps) {
       setEstimatedEndTime(
         task?.estimated_end
           ? dayjs(task.estimated_end).format('HH:mm')
-          : '17:00'
+          : '10:00'
       );
       setAddress(task?.address ?? '');
       setAddressQuery(task?.address ?? '');
@@ -434,6 +433,26 @@ export function TaskDialog(props: TaskDialogProps) {
         }
         if (!advisorName.trim()) {
           throw new Error('חובה להזין שם יועץ עבור משימת הסעת לקוח הביתה');
+        }
+      }
+
+      // Validation for "Return Vehicle / Transport" (החזרת רכב/שינוע)
+      if (type === 'החזרת רכב/שינוע') {
+        if (!finalVehicleId) {
+          throw new Error('חובה לבחור רכב עבור משימת החזרת רכב/שינוע');
+        }
+        if (!finalClientId) {
+          throw new Error('חובה לבחור לקוח עבור משימת החזרת רכב/שינוע');
+        }
+        // Check if client has phone
+        const selectedClient = clientsLocal.find((c) => c.id === finalClientId);
+        if (!selectedClient?.phone) {
+          throw new Error(
+            'ללקוח הנבחר אין מספר טלפון (חובה עבור משימת החזרת רכב/שינוע)'
+          );
+        }
+        if (!addressQuery.trim()) {
+          throw new Error('חובה להזין כתובת עבור משימת החזרת רכב/שינוע');
         }
       }
 

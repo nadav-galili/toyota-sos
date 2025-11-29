@@ -16,6 +16,31 @@ import {
 import { ReplacementCarDeliveryForm } from '@/components/driver/ReplacementCarDeliveryForm';
 import { TestCompletionPopup } from '@/components/driver/TestCompletionPopup';
 
+function getChecklistInfo(type: string) {
+  switch (type) {
+    case 'ביצוע טסט':
+      return {
+        title: 'צ׳ק-ליסט לפני יציאה לטסט',
+        description: 'לפני תחילת ביצוע טסט, אשר שאספת את כל המסמכים הנדרשים.',
+      };
+    case 'איסוף רכב/שינוע':
+      return {
+        title: 'צ׳ק-ליסט איסוף רכב',
+        description: 'אנא וודא שביצעת את כל הפעולות הנדרשות לפני האיסוף.',
+      };
+    case 'החזרת רכב/שינוע':
+      return {
+        title: 'צ׳ק-ליסט החזרת רכב',
+        description: 'אנא וודא שביצעת את כל הפעולות הנדרשות לפני ההחזרה.',
+      };
+    default:
+      return {
+        title: 'צ׳ק-ליסט',
+        description: 'אנא מלא את הפרטים הבאים.',
+      };
+  }
+}
+
 export type DriverTask = TaskCardProps;
 
 function intersectsToday(
@@ -404,7 +429,9 @@ export function DriverHome() {
                     // If moving into "הושלמה" and this task type has a completion flow,
                     // open the completion form instead of immediately updating status.
                     if (next === 'הושלמה') {
-                      const completionFlow = getCompletionFlowForTaskType(task.type);
+                      const completionFlow = getCompletionFlowForTaskType(
+                        task.type
+                      );
                       if (completionFlow === 'replacement_car_delivery') {
                         setCompletionFormState({ task, nextStatus: next });
                         return;
@@ -472,12 +499,10 @@ export function DriverHome() {
             }
           }}
           schema={getStartChecklistForTaskType(checklistState.task.type) ?? []}
-          title="צ׳ק-ליסט לפני יציאה לטסט"
-          description="לפני תחילת ביצוע טסט, אשר שאספת את כל המסמכים הנדרשים."
+          {...getChecklistInfo(checklistState.task.type)}
           persist
           taskId={checklistState.task.id}
           driverId={driverId || undefined}
-          forceCompletion
           onSubmit={async () => {
             if (!client || !checklistState) return;
             const { error: upErr } = await client.rpc('update_task_status', {
