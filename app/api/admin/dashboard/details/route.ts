@@ -28,26 +28,34 @@ export async function GET(request: NextRequest) {
       .select('id,title,status,priority,created_at,updated_at,estimated_end,task_assignees!left(driver_id,profiles!task_assignees_driver_id_fkey(name))')
       .order('created_at', { ascending: false });
 
-    if (metric === 'created') {
+    if (metric === 'scheduled') {
+      q = q.gte('estimated_start', from).lte('estimated_start', to);
+    } else if (metric === 'created') {
+      // Legacy/Alternative: strictly created_at
       q = q.gte('created_at', from).lte('created_at', to);
     } else if (metric === 'completed') {
-      q = q.eq('status', 'הושלמה').gte('updated_at', from).lte('updated_at', to);
+      q = q.eq('status', 'הושלמה').gte('estimated_start', from).lte('estimated_start', to);
     } else if (metric === 'overdue') {
+      // Legacy: Currently overdue (not completed)
       q = q.neq('status', 'הושלמה').gte('estimated_end', from).lte('estimated_end', to);
     } else if (metric === 'on_time') {
-      // completed and completed (updated_at) <= estimated_end within range
+      // Completed On Time (based on scheduled window)
       q = q
         .eq('status', 'הושלמה')
-        .gte('updated_at', from)
-        .lte('updated_at', to)
-        .or(`estimated_end.gte.${from},estimated_end.lte.${to}`);
+        .gte('estimated_start', from)
+        .lte('estimated_start', to);
     } else if (metric === 'late') {
-      // completed but updated_at > estimated_end within range
+      // Completed Late (based on scheduled window)
       q = q
         .eq('status', 'הושלמה')
-        .gte('updated_at', from)
-        .lte('updated_at', to);
-      // will filter client-side for lateness to avoid complex SQL
+        .gte('estimated_start', from)
+        .lte('estimated_start', to);
+    } else if (metric === 'pending') {
+      q = q.eq('status', 'בהמתנה').gte('estimated_start', from).lte('estimated_start', to);
+    } else if (metric === 'in_progress') {
+      q = q.eq('status', 'בעבודה').gte('estimated_start', from).lte('estimated_start', to);
+    } else if (metric === 'cancelled') {
+      q = q.in('status', ['בוטלה', 'חסומה']).gte('estimated_start', from).lte('estimated_start', to);
     } else {
       return NextResponse.json({ ok: false, error: 'Unknown metric' }, { status: 400 });
     }
@@ -75,6 +83,8 @@ export async function GET(request: NextRequest) {
     let final = rows;
     if (metric === 'late') {
       final = rows.filter((r) => r.estimated_end && r.updated_at && new Date(r.updated_at) > new Date(r.estimated_end));
+    } else if (metric === 'on_time') {
+      final = rows.filter((r) => r.estimated_end && r.updated_at && new Date(r.updated_at) <= new Date(r.estimated_end));
     }
     return NextResponse.json({ ok: true, rows: final }, { status: 200 });
   } catch (e: any) {

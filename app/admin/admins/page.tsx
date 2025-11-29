@@ -1,36 +1,26 @@
 import { NavBar } from '@/components/ui/tubelight-navbar';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { DriverCredentialsManager } from '@/components/admin/DriverCredentialsManager';
-import { DriverRow } from '@/utils/admin/drivers/types';
+import { AdminCredentialsManager } from '@/components/admin/AdminCredentialsManager';
+import { AdminRow } from '@/utils/admin/admins/types';
 
-export default async function AdminDriversPage() {
+export default async function AdminAdminsPage() {
   const admin = getSupabaseAdmin();
 
-  let initialDrivers:
-    | Array<{
-        id: string;
-        name: string | null;
-        email: string | null;
-        employee_id: string | null;
-        role: 'driver' | 'admin' | 'manager' | 'viewer';
-        created_at: string;
-        updated_at: string;
-      }>
-    | [] = [];
+  let initialAdmins: AdminRow[] | [] = [];
 
   try {
     const { data, error } = await admin
       .from('profiles')
       .select('id, name, email, employee_id, role, created_at, updated_at')
-      .eq('role', 'driver')
+      .in('role', ['admin', 'manager', 'viewer'])
       .order('created_at', { ascending: false });
 
     if (!error && data) {
-      initialDrivers = data as DriverRow[];
+      initialAdmins = data as AdminRow[];
     }
   } catch {
     // best-effort; UI will refetch via API if needed
-    initialDrivers = [];
+    initialAdmins = [];
   }
 
   const navItems = [
@@ -45,10 +35,11 @@ export default async function AdminDriversPage() {
       <NavBar items={navItems} className="z-40" />
       <div className="max-w-full mt-4 sm:mt-8 space-y-4">
         <h1 className="text-3xl font-bold text-primary underline">
-          ניהול נהגים
+          ניהול מנהלים
         </h1>
-        <DriverCredentialsManager initialDrivers={initialDrivers} />
+        <AdminCredentialsManager initialAdmins={initialAdmins} />
       </div>
     </main>
   );
 }
+

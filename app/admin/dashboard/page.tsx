@@ -11,6 +11,7 @@ export default function AdminDashboardPage() {
     { name: 'דשבורד', url: '/admin/dashboard', icon: 'LayoutDashboard' },
     { name: 'משימות', url: '/admin/tasks', icon: 'ClipboardList' },
     { name: 'נהגים', url: '/admin/drivers', icon: 'Users' },
+    { name: 'מנהלים', url: '/admin/admins', icon: 'ShieldCheck' },
   ];
 
   return (

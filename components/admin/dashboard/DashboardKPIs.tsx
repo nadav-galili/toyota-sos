@@ -176,10 +176,10 @@ export function DashboardKPIs() {
     const bom = '\uFEFF';
     // Summary section
     const summaryRows = [
-      { metric: 'tasksCreated', value: data.summary.tasksCreated },
-      { metric: 'tasksCompleted', value: data.summary.tasksCompleted },
-      { metric: 'overdueCount', value: data.summary.overdueCount },
-      { metric: 'onTimeRatePct', value: data.summary.onTimeRatePct },
+      { metric: 'scheduledTasks', value: data.summary.scheduledTasks },
+      { metric: 'completedTasks', value: data.summary.completedTasks },
+      { metric: 'completedLate', value: data.summary.completedLate },
+      { metric: 'completedOnTime', value: data.summary.completedOnTime },
       { metric: 'slaViolations', value: data.summary.slaViolations },
       {
         metric: 'driverUtilizationPct',
@@ -259,7 +259,14 @@ export function DashboardKPIs() {
 
   const openDrilldown = React.useCallback(
     async (
-      metric: 'created' | 'completed' | 'overdue' | 'on_time' | 'late',
+      metric:
+        | 'scheduled'
+        | 'completed'
+        | 'late'
+        | 'on_time'
+        | 'pending'
+        | 'in_progress'
+        | 'cancelled',
       title: string
     ) => {
       setDdOpen(true);
@@ -323,6 +330,17 @@ export function DashboardKPIs() {
     );
   }, [summary, range.timezone]);
 
+  // Helper for percentage
+  const getPct = (num: number | undefined, total: number | undefined) => {
+    if (!num || !total || total === 0) return 0;
+    return Math.round((num / total) * 100);
+  };
+
+  const scheduled = summary?.scheduledTasks ?? 0;
+  const completed = summary?.completedTasks ?? 0;
+  const late = summary?.completedLate ?? 0;
+  const onTime = summary?.completedOnTime ?? 0;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
@@ -333,163 +351,155 @@ export function DashboardKPIs() {
           ייצוא CSV כולל
         </button>
       </div>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <KpiCard
-          title="משימות שנוצרו"
-          value={summary?.tasksCreated ?? 0}
+          title="משימות מתוכננות"
+          value={scheduled}
+          percentage={scheduled > 0 ? 100 : 0}
           loading={loading}
           error={error}
           actionArea={
             <div className="flex items-center gap-2">
-              {/* <button
-                className="text-xs text-primary hover:underline"
-                onClick={exportCreatedCompleted}
-              >
-                CSV
-              </button> */}
               <button
                 className="text-xs text-gray-600 hover:underline"
-                onClick={() => openDrilldown('created', 'משימות שנוצרו')}
+                onClick={() => openDrilldown('scheduled', 'משימות מתוכננות')}
               >
                 פרטים
               </button>
             </div>
           }
         />
+        
+        <div className="flex flex-col gap-2">
+          <KpiCard
+            title="משימות שהושלמו"
+            value={completed}
+            percentage={getPct(completed, scheduled)}
+            loading={loading}
+            error={error}
+            actionArea={
+              <div className="flex items-center gap-2">
+                <button
+                  className="text-xs text-gray-600 hover:underline"
+                  onClick={() => openDrilldown('completed', 'משימות שהושלמו')}
+                >
+                  פרטים
+                </button>
+              </div>
+            }
+          />
+          
+          {/* Completion Breakdown Sub-section */}
+          <div className="grid grid-cols-2 gap-2 pr-2">
+            <KpiCard
+              title="הושלמו באיחור"
+              value={late}
+              percentage={getPct(late, completed)}
+              percentageLabel="מסך שהושלמו"
+              variant="secondary"
+              loading={loading}
+              error={error}
+              actionArea={
+                <div className="flex items-center gap-2">
+                  <button
+                    className="text-xs text-gray-600 hover:underline"
+                    onClick={() => openDrilldown('late', 'הושלמו באיחור')}
+                  >
+                    פרטים
+                  </button>
+                </div>
+              }
+            />
+            <KpiCard
+              title="הושלמו בזמן"
+              value={onTime}
+              percentage={getPct(onTime, completed)}
+              percentageLabel="מסך שהושלמו"
+              variant="secondary"
+              loading={loading}
+              error={error}
+              actionArea={
+                <div className="flex items-center gap-2">
+                  <button
+                    className="text-xs text-gray-600 hover:underline"
+                    onClick={() => openDrilldown('on_time', 'הושלמו בזמן')}
+                  >
+                    פרטים
+                  </button>
+                </div>
+              }
+            />
+          </div>
+        </div>
+
+        {/* Row 2 */}
+        <div className="grid grid-cols-2 gap-4 md:col-span-2 lg:col-span-2">
+            <KpiCard
+              title="ממתינות"
+              value={summary?.pendingTasks ?? 0}
+              percentage={getPct(summary?.pendingTasks ?? 0, scheduled)}
+              loading={loading}
+              error={error}
+              actionArea={
+                <div className="flex items-center gap-2">
+                  <button
+                    className="text-xs text-gray-600 hover:underline"
+                    onClick={() =>
+                      openDrilldown('pending', 'ממתינות')
+                    }
+                  >
+                    פרטים
+                  </button>
+                </div>
+              }
+            />
+            <KpiCard
+              title="בעבודה"
+              value={summary?.inProgressTasks ?? 0}
+              percentage={getPct(summary?.inProgressTasks ?? 0, scheduled)}
+              loading={loading}
+              error={error}
+              actionArea={
+                <div className="flex items-center gap-2">
+                  <button
+                    className="text-xs text-gray-600 hover:underline"
+                    onClick={() =>
+                      openDrilldown('in_progress', 'בעבודה')
+                    }
+                  >
+                    פרטים
+                  </button>
+                </div>
+              }
+            />
+        </div>
+
         <KpiCard
-          title="משימות שהושלמו"
-          value={summary?.tasksCompleted ?? 0}
+          title="בוטלו/חסומות"
+          value={summary?.cancelledTasks ?? 0}
+          percentage={getPct(summary?.cancelledTasks ?? 0, scheduled)}
           loading={loading}
           error={error}
           actionArea={
             <div className="flex items-center gap-2">
-              {/* <button
-                className="text-xs text-primary hover:underline"
-                onClick={exportCreatedCompleted}
-              >
-                CSV
-              </button> */}
               <button
                 className="text-xs text-gray-600 hover:underline"
-                onClick={() => openDrilldown('completed', 'משימות שהושלמו')}
+                onClick={() =>
+                  openDrilldown('cancelled', 'בוטלו/חסומות')
+                }
               >
                 פרטים
               </button>
             </div>
           }
         />
-        <KpiCard
-          title="באיחור"
-          value={summary?.overdueCount ?? 0}
-          loading={loading}
-          error={error}
-          actionArea={
-            <div className="flex items-center gap-2">
-              {/* <button
-                className="text-xs text-primary hover:underline"
-                onClick={exportOverdueByDriver}
-              >
-                CSV
-              </button> */}
-              <button
-                className="text-xs text-gray-600 hover:underline"
-                onClick={() => openDrilldown('overdue', 'משימות באיחור')}
-              >
-                פרטים
-              </button>
-            </div>
-          }
-        />
-        <KpiCard
-          title="השלמה בזמן"
-          value={`${summary?.onTimeRatePct ?? 0}%`}
-          loading={loading}
-          error={error}
-          secondary="אחוז משימות שהושלמו עד היעד"
-          // actionArea={
-          //   <button
-          //     className="text-xs text-primary hover:underline"
-          //     onClick={exportOnTimeVsLate}
-          //   >
-          //     CSV
-          //   </button>
-          // }
-        />
-        {/* Placeholders for the rest; will be expanded in 8.3 */}
-        {/* <KpiCard
-          title="זמן הקצאה→התחלה (ממוצע)"
-          value="—"
-          loading={loading}
-          error={error}
-          actionArea={<button className="text-xs text-gray-400">CSV</button>}
-        />
-        <KpiCard
-          title="זמן התחלה→סיום (ממוצע)"
-          value="—"
-          loading={loading}
-          error={error}
-          actionArea={<button className="text-xs text-gray-400">CSV</button>}
-        /> */}
+
         <KpiCard
           title="ניצולת נהגים"
           value={`${summary?.driverUtilizationPct ?? 0}%`}
           loading={loading}
           error={error}
           secondary="אחוז נהגים עם משימות פעילות"
-          // actionArea={
-          //   <button
-          //     className="text-xs text-primary hover:underline"
-          //     onClick={() => {
-          //       if (!summary) return;
-          //       const rows = [
-          //         {
-          //           metric: 'driverUtilizationPct',
-          //           value: summary.driverUtilizationPct,
-          //         },
-          //       ];
-          //       const csv = toCsv(rows, ['metric', 'value']);
-          //       downloadCsv(
-          //         makeCsvFilename(
-          //           'dashboard_driver_utilization',
-          //           range.timezone
-          //         ),
-          //         csv
-          //       );
-          //     }}
-          //   >
-          //     CSV
-          //   </button>
-          // }
-        />
-        {/* <KpiCard
-          title="ביטולים/השמות מחדש"
-          value="—"
-          loading={loading}
-          error={error}
-          actionArea={<button className="text-xs text-gray-400">CSV</button>}
-        /> */}
-        <KpiCard
-          title="הפרות SLA"
-          value={summary?.slaViolations ?? 0}
-          loading={loading}
-          error={error}
-          secondary="משימות שהושלמו אחרי היעד"
-          actionArea={
-            <div className="flex items-center gap-2">
-              {/* <button
-                className="text-xs text-primary hover:underline"
-                onClick={exportSlaViolations}
-              >
-                CSV
-              </button> */}
-              <button
-                className="text-xs text-gray-600 hover:underline"
-                onClick={() => openDrilldown('late', 'הפרות SLA')}
-              >
-                פרטים
-              </button>
-            </div>
-          }
         />
       </div>
       <DrilldownModal
