@@ -198,12 +198,12 @@ export function TaskCard({
  */
 export function statusLabel(status: TaskStatus): string {
   const labels: Record<TaskStatus, string> = {
-    בהמתנה: 'בהמתנה',
-    בעבודה: 'בעבודה',
+    בהמתנה: 'ממתינה לביצוע',
+    בעבודה: 'בביצוע',
     חסומה: 'חסומה',
-    הושלמה: 'הושלמה',
+    הושלמה: 'בוצעה',
   };
-  return labels[status];
+  return labels[status] || status;
 }
 
 export function statusColor(status: TaskStatus): string {
@@ -213,7 +213,7 @@ export function statusColor(status: TaskStatus): string {
     חסומה: 'bg-red-100 text-red-800',
     הושלמה: 'bg-green-100 text-green-800',
   };
-  return colors[status];
+  return colors[status] || 'bg-gray-100 text-gray-800';
 }
 
 export function priorityLabel(priority: TaskPriority): string {

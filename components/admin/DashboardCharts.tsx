@@ -68,17 +68,16 @@ export function DashboardCharts() {
         {/* Chart 2 - Driver Task Completion Comparison (Bar Chart) */}
         <div className="rounded-xl border-2 border-primary bg-white p-4 shadow-md transition-all duration-200 hover:border-primary/50 hover:shadow-lg">
           <h2 className="text-sm font-semibold text-gray-900">
-            השוואת השלמת משימות לפי נהג
+            ביצוע משימות לפי נהגים
           </h2>
           <p className="mt-1 text-xs text-gray-500">
-            אחוז השלמת משימות לכל נהג, כולל אפשרות למיון לפי ביצועים.
+            השלמת משימות מול סך הכל משימות שהוקצו לנהג.
           </p>
           <DriverCompletionChart />
           <ChartLegend
             items={[
-              { label: 'מעל 80%', color: '#16a34a' },
-              { label: '60%-80%', color: '#eab308' },
-              { label: 'מתחת ל-60%', color: '#ef4444' },
+              { label: 'הושלמו', color: '#16a34a' },
+              { label: 'לא הושלמו', color: '#9ca3af' },
             ]}
           />
         </div>
@@ -86,7 +85,7 @@ export function DashboardCharts() {
         {/* Chart 3 - Driver Task Duration  Analysis */}
         <div className="rounded-xl border-2 border-primary bg-white p-4 shadow-md transition-all duration-200 hover:border-primary/50 hover:shadow-lg">
           <h2 className="text-sm font-semibold text-gray-900">
-            ניתוח זמני טיפול במשימות לפי נהג
+            ממוצע זמן טיפול במשימה לנהג{' '}
           </h2>
           <p className="mt-1 text-xs text-gray-500">
             משך משימה ממוצע בדקות לכל נהג, עם אפשרות לפירוק לפי סוג משימה.

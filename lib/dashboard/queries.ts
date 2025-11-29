@@ -231,7 +231,7 @@ export async function getPendingTasksCount(
   const key = makeKey('pendingCount', range);
   const cached = getCached<number>(key);
   if (cached !== null) return cached;
-  
+
   const supa = getClient(client);
   const { count, error } = await supa
     .from('tasks')
@@ -239,7 +239,7 @@ export async function getPendingTasksCount(
     .eq('status', 'בהמתנה')
     .gte('estimated_start', range.start)
     .lt('estimated_start', range.end);
-    
+
   const value = error ? 0 : count || 0;
   const ttl = isRecentRange(range) ? THIRTY_SECONDS_MS : FIVE_MINUTES_MS;
   setCached(key, value, ttl);
@@ -254,7 +254,7 @@ export async function getInProgressTasksCount(
   const key = makeKey('inProgressCount', range);
   const cached = getCached<number>(key);
   if (cached !== null) return cached;
-  
+
   const supa = getClient(client);
   const { count, error } = await supa
     .from('tasks')
@@ -262,7 +262,7 @@ export async function getInProgressTasksCount(
     .eq('status', 'בעבודה')
     .gte('estimated_start', range.start)
     .lt('estimated_start', range.end);
-    
+
   const value = error ? 0 : count || 0;
   const ttl = isRecentRange(range) ? THIRTY_SECONDS_MS : FIVE_MINUTES_MS;
   setCached(key, value, ttl);
@@ -277,7 +277,7 @@ export async function getCancelledTasksCount(
   const key = makeKey('cancelledCount', range);
   const cached = getCached<number>(key);
   if (cached !== null) return cached;
-  
+
   const supa = getClient(client);
   const { count, error } = await supa
     .from('tasks')
@@ -285,14 +285,14 @@ export async function getCancelledTasksCount(
     .eq('status', 'חסומה')
     .gte('estimated_start', range.start)
     .lt('estimated_start', range.end);
-    
+
   const value = error ? 0 : count || 0;
   const ttl = isRecentRange(range) ? THIRTY_SECONDS_MS : FIVE_MINUTES_MS;
   setCached(key, value, ttl);
   return value;
 }
 
-// Keeping original getSlaViolations logic for now as it might be used by charts or legacy, 
+// Keeping original getSlaViolations logic for now as it might be used by charts or legacy,
 // but dashboard summary uses the new fields.
 // Note: This function considers tasks COMPLETED in the range (updated_at), not SCHEDULED.
 export async function getSlaViolations(

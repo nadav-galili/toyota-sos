@@ -174,5 +174,3 @@ export function getColumnTasks(params: {
 
   return filteredSortedTasks.filter((t) => t.status === columnId);
 }
-
-

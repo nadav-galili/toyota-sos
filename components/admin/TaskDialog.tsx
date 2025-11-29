@@ -90,6 +90,13 @@ const types: TaskType[] = [
 const priorities: TaskPriority[] = ['נמוכה', 'בינונית', 'גבוהה'];
 const statuses: TaskStatus[] = ['בהמתנה', 'בעבודה', 'חסומה', 'הושלמה'];
 
+const statusLabels: Record<TaskStatus, string> = {
+  בהמתנה: 'ממתינה לביצוע',
+  בעבודה: 'בביצוע',
+  חסומה: 'חסומה',
+  הושלמה: 'בוצעה',
+};
+
 export function TaskDialog(props: TaskDialogProps) {
   const {
     open,
@@ -119,7 +126,9 @@ export function TaskDialog(props: TaskDialogProps) {
   const [priority, setPriority] = useState<TaskPriority>(
     task?.priority ?? 'בינונית'
   );
-  const [status, setStatus] = useState<TaskStatus>(task?.status ?? 'בהמתנה');
+  const [status, setStatus] = useState<TaskStatus>(
+    task?.status ?? 'ממתינה לביצוע'
+  );
   const [details, setDetails] = useState(task?.details ?? '');
   const [estimatedDate, setEstimatedDate] = useState<Date>(
     task?.estimated_start ? new Date(task.estimated_start) : new Date()
@@ -653,7 +662,10 @@ export function TaskDialog(props: TaskDialogProps) {
             </span>
             <RtlSelectDropdown
               value={status}
-              options={statuses.map((s) => ({ value: s, label: s }))}
+              options={statuses.map((s) => ({
+                value: s,
+                label: statusLabels[s] || s,
+              }))}
               onChange={(value) => setStatus(value as TaskStatus)}
             />
           </label>

@@ -9,7 +9,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Cell,
 } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { usePeriod } from '@/components/admin/dashboard/PeriodContext';
@@ -19,28 +18,50 @@ interface DriverCompletionPoint {
   driverName: string;
   completionRate: number;
   completed: number;
+  incomplete: number;
   total: number;
-  color: string;
 }
 
-type DriverSortBy = 'name' | 'rate';
+type DriverSortBy = 'name' | 'rate' | 'total';
 
 const driverCompletionConfig = {
-  completionRate: { label: 'אחוז השלמה', color: '#16a34a' },
+  completed: { label: 'הושלמו', color: '#16a34a' },
+  incomplete: { label: 'לא הושלמו', color: '#9ca3af' }, // gray-400
 } as const;
 
-function colorForRate(rate: number) {
-  if (rate > 80) return '#16a34a'; // green
-  if (rate >= 60) return '#eab308'; // yellow-500
-  return '#ef4444'; // red
-}
+const DriverNameTick = ({
+  x,
+  y,
+  payload,
+}: {
+  x: number;
+  y: number;
+  payload: { value: string };
+}) => {
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text
+        x={-10}
+        y={-10}
+        dy={12} // ⬅️ move label down; tweak 10→12/14 as needed
+        textAnchor="end" // to keep the -35° angle aligned
+        fontSize={10}
+        fill="var(--primary)"
+        className="text-xs font-bold"
+        style={{ transform: 'rotate(-35deg)' }}
+      >
+        {payload.value}
+      </text>
+    </g>
+  );
+};
 
 function useDriverCompletion() {
   const { range } = usePeriod();
   const [raw, setRaw] = React.useState<DriverCompletionPoint[] | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [sortBy, setSortBy] = React.useState<DriverSortBy>('rate');
+  const [sortBy, setSortBy] = React.useState<DriverSortBy>('total');
 
   React.useEffect(() => {
     let cancelled = false;
@@ -60,14 +81,24 @@ function useDriverCompletion() {
         const json = await resp.json();
         if (!json?.ok) throw new Error(json?.error || 'failed');
         const pts: DriverCompletionPoint[] = (json.drivers || []).map(
-          (d: DriverCompletionPoint) => ({
-            driverId: d.driverId,
-            driverName: d.driverName || '—',
-            completionRate: d.completionRate ?? 0,
-            completed: d.completed ?? 0,
-            total: d.total ?? 0,
-            color: colorForRate(d.completionRate ?? 0),
-          })
+          (d: {
+            driverId: string;
+            driverName: string;
+            completionRate: number;
+            completed: number;
+            total: number;
+          }) => {
+            const completed = d.completed ?? 0;
+            const total = d.total ?? 0;
+            return {
+              driverId: d.driverId,
+              driverName: d.driverName || '—',
+              completionRate: d.completionRate ?? 0,
+              completed,
+              incomplete: Math.max(0, total - completed),
+              total,
+            };
+          }
         );
         if (!cancelled) setRaw(pts);
       } catch (e: unknown) {
@@ -88,8 +119,10 @@ function useDriverCompletion() {
     const copy = [...raw];
     if (sortBy === 'name') {
       copy.sort((a, b) => a.driverName.localeCompare(b.driverName, 'he-IL'));
-    } else {
+    } else if (sortBy === 'rate') {
       copy.sort((a, b) => b.completionRate - a.completionRate);
+    } else {
+      copy.sort((a, b) => b.total - a.total);
     }
     return copy;
   }, [raw, sortBy]);
@@ -132,7 +165,7 @@ export function DriverCompletionChart() {
               : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
           }`}
         >
-          מיון לפי שם
+          שם
         </button>
         <button
           type="button"
@@ -143,7 +176,18 @@ export function DriverCompletionChart() {
               : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
           }`}
         >
-          מיון לפי אחוז השלמה
+          % השלמה
+        </button>
+        <button
+          type="button"
+          onClick={() => setSortBy('total')}
+          className={`rounded border px-2 py-1 ${
+            sortBy === 'total'
+              ? 'border-primary bg-primary text-white'
+              : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          סה״כ
         </button>
       </div>
       <div className="flex-1">
@@ -160,19 +204,19 @@ export function DriverCompletionChart() {
               <XAxis
                 dataKey="driverName"
                 tickLine={false}
-                axisLine={false}
+                axisLine={true}
                 interval={0}
                 angle={-35}
                 textAnchor="end"
-                height={40}
-                tick={{ fontSize: 10, fill: '#6b7280' }}
+                height={10}
+                tick={<DriverNameTick x={0} y={0} payload={{ value: '' }} />}
               />
               <YAxis
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
                 tick={{ fontSize: 10, fill: '#6b7280' }}
-                domain={[0, 100]}
+                allowDecimals={false}
               />
               <Tooltip
                 cursor={{ fill: 'rgba(148, 163, 184, 0.15)' }}
@@ -180,29 +224,19 @@ export function DriverCompletionChart() {
                 content={<ChartTooltipContent />}
               />
               <Bar
-                dataKey="completionRate"
-                name={driverCompletionConfig.completionRate.label}
+                dataKey="completed"
+                stackId="a"
+                name={driverCompletionConfig.completed.label}
+                fill={driverCompletionConfig.completed.color}
+                radius={[0, 0, 0, 0]}
+              />
+              <Bar
+                dataKey="incomplete"
+                stackId="a"
+                name={driverCompletionConfig.incomplete.label}
+                fill={driverCompletionConfig.incomplete.color}
                 radius={[4, 4, 0, 0]}
-                label={({ x, y, width, value }) => {
-                  if (typeof value !== 'number') return null;
-                  const cx = Number(x ?? 0) + Number(width ?? 0) / 2;
-                  const cy = Number(y ?? 0) - 6;
-                  return (
-                    <text
-                      x={cx}
-                      y={cy}
-                      textAnchor="middle"
-                      className="fill-gray-700 text-[10px]"
-                    >
-                      {`${value}%`}
-                    </text>
-                  );
-                }}
-              >
-                {data.map((entry) => (
-                  <Cell key={entry.driverId} fill={entry.color} />
-                ))}
-              </Bar>
+              />
             </BarChart>
           </ResponsiveContainer>
         </ChartContainer>
