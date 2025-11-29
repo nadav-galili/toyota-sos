@@ -313,7 +313,7 @@ export function StatusByTypeChart() {
         )}
       </div>
       {!selectedDrillDown && typeDistributionData.length > 0 && (
-        <div className="mt-1 text-center text-[10px] text-gray-400">
+        <div className="mt-1 text-center text-[10px] text-primary">
           לחץ על פלח לפירוט סטטוסים
         </div>
       )}
