@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 'use client';
 
 import React from 'react';
@@ -33,7 +32,11 @@ function makeRange(
   }
   if (kind === 'yesterday') {
     const y = now.subtract(1, 'day');
-    return { start: y.startOf('day').toISOString(), end: y.endOf('day').toISOString(), timezone: 'UTC' };
+    return {
+      start: y.startOf('day').toISOString(),
+      end: y.endOf('day').toISOString(),
+      timezone: 'UTC',
+    };
   }
   const days = kind === 'last7' ? 7 : 30;
   const startDate = now.subtract(days, 'day').startOf('day');
@@ -69,16 +72,6 @@ const dateRangeSchema = z
     message: 'תאריך התחלה חייב להיות לפני או שווה לתאריך הסיום',
     path: ['from'],
   })
-  .refine(
-    (data) => {
-      const now = dayjs().endOf('day');
-      return dayjs(data.to).isBefore(now) || dayjs(data.to).isSame(now, 'day');
-    },
-    {
-      message: 'תאריך סיום לא יכול להיות בעתיד',
-      path: ['to'],
-    }
-  )
   .refine(
     (data) => {
       const diffDays = dayjs(data.to).diff(dayjs(data.from), 'day');
@@ -123,9 +116,9 @@ function validateDateRange(
   return null;
 }
 
-function sameCalendarDay(a: Date, b: Date): boolean {
-  return dayjs(a).isSame(dayjs(b), 'day');
-}
+// function sameCalendarDay(a: Date, b: Date): boolean {
+//   return dayjs(a).isSame(dayjs(b), 'day');
+// }
 
 function inferPreset(
   range: PeriodRange
@@ -194,7 +187,7 @@ function DatePickerInput({
             />
           </PopoverTrigger>
           <PopoverContent
-            className="w-auto p-0 bg-white z-[100]"
+            className="w-auto p-0 bg-white z-100"
             align="end"
             side="bottom"
             sideOffset={8}
@@ -373,7 +366,7 @@ export function PeriodFilter({
               disabled={(date) => {
                 const toDate = parseDateInput(customTo);
                 const dateDayjs = dayjs(date);
-                return toDate ? dateDayjs.isAfter(dayjs(toDate), 'day') : dateDayjs.isAfter(dayjs(), 'day');
+                return toDate ? dateDayjs.isAfter(dayjs(toDate), 'day') : false;
               }}
             />
             <DatePickerInput
@@ -389,7 +382,9 @@ export function PeriodFilter({
               disabled={(date) => {
                 const fromDate = parseDateInput(customFrom);
                 const dateDayjs = dayjs(date);
-                return fromDate ? dateDayjs.isBefore(dayjs(fromDate), 'day') : dateDayjs.isAfter(dayjs(), 'day');
+                return fromDate
+                  ? dateDayjs.isBefore(dayjs(fromDate), 'day')
+                  : false;
               }}
             />
             <Button

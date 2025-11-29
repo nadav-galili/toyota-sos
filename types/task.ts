@@ -5,7 +5,8 @@
 export type TaskStatus = 'בהמתנה' | 'בעבודה' | 'חסומה' | 'הושלמה';
 export type TaskPriority = 'נמוכה' | 'בינונית' | 'גבוהה';
 export type TaskType =
-  | 'איסוף/הורדת רכב'
+  | 'איסוף רכב/שינוע'
+  | 'החזרת רכב/שינוע'
   | 'הסעת רכב חלופי'
   | 'הסעת לקוח הביתה'
   | 'הסעת לקוח למוסך'
@@ -27,6 +28,7 @@ export interface Task {
   vehicle_id: string | null;
   created_by: string | null;
   updated_by: string | null;
+  advisor_name?: string | null;
   created_at: string;
   updated_at: string;
 }

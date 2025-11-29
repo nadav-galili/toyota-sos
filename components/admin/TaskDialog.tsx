@@ -16,7 +16,6 @@ import type { Client, Vehicle } from '@/types/entity';
 import { trackFormSubmitted } from '@/lib/events';
 import { useFeatureFlag } from '@/lib/useFeatureFlag';
 import { FLAG_MULTI_DRIVER, FLAG_PDF_GENERATION } from '@/lib/flagKeys';
-import { downloadBlob, generateTaskPdfLikeBlob } from '@/utils/pdf';
 import { toastSuccess, toastError } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,7 +24,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { Calendar, PlusIcon } from 'lucide-react';
+import { Calendar, PlusIcon, SaveIcon, XIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -79,7 +78,8 @@ interface TaskDialogProps {
 }
 
 const types: TaskType[] = [
-  'איסוף/הורדת רכב',
+  'איסוף רכב/שינוע',
+  'החזרת רכב/שינוע',
   'הסעת רכב חלופי',
   'הסעת לקוח הביתה',
   'הסעת לקוח למוסך',
@@ -110,7 +110,6 @@ export function TaskDialog(props: TaskDialogProps) {
 
   // Feature flags
   const multiDriverEnabled = useFeatureFlag(FLAG_MULTI_DRIVER);
-  const pdfEnabled = useFeatureFlag(FLAG_PDF_GENERATION);
 
   // Form state
   const [clientsLocal, setClientsLocal] = useState<Client[]>(clients);
@@ -152,7 +151,7 @@ export function TaskDialog(props: TaskDialogProps) {
   const [showAddVehicle, setShowAddVehicle] = useState(false);
   const [newVehiclePlate, setNewVehiclePlate] = useState('');
   const [newVehicleModel, setNewVehicleModel] = useState('');
-  const [newVehicleVin, setNewVehicleVin] = useState('');
+  const [advisorName, setAdvisorName] = useState(task?.advisor_name ?? '');
 
   useEffect(() => {
     if (open) {
@@ -163,6 +162,7 @@ export function TaskDialog(props: TaskDialogProps) {
       setPriority(task?.priority ?? 'בינונית');
       setStatus(task?.status ?? 'בהמתנה');
       setDetails(task?.details ?? '');
+      setAdvisorName(task?.advisor_name ?? '');
       setEstimatedDate(
         task?.estimated_start ? new Date(task.estimated_start) : new Date()
       );
@@ -174,7 +174,7 @@ export function TaskDialog(props: TaskDialogProps) {
       setEstimatedEndTime(
         task?.estimated_end
           ? dayjs(task.estimated_end).format('HH:mm')
-          : '17:00'
+          : '10:00'
       );
       setAddress(task?.address ?? '');
       setAddressQuery(task?.address ?? '');
@@ -344,7 +344,6 @@ export function TaskDialog(props: TaskDialogProps) {
         body: JSON.stringify({
           license_plate,
           model: newVehicleModel || null,
-          vin: newVehicleVin || null,
         }),
       });
       if (!res.ok) throw new Error(await res.text());
@@ -359,7 +358,6 @@ export function TaskDialog(props: TaskDialogProps) {
       setShowAddVehicle(false);
       setNewVehiclePlate('');
       setNewVehicleModel('');
-      setNewVehicleVin('');
     } catch (err: unknown) {
       const error = err as Error;
       setError(error.message || 'יצירת רכב נכשלה');
@@ -425,6 +423,39 @@ export function TaskDialog(props: TaskDialogProps) {
         }
       }
 
+      // Validation for "Drive Client Home"
+      if (type === 'הסעת לקוח הביתה') {
+        if (!finalClientId) {
+          throw new Error('חובה לבחור לקוח עבור משימת הסעת לקוח הביתה');
+        }
+        if (!finalVehicleId) {
+          throw new Error('חובה לבחור רכב עבור משימת הסעת לקוח הביתה');
+        }
+        if (!advisorName.trim()) {
+          throw new Error('חובה להזין שם יועץ עבור משימת הסעת לקוח הביתה');
+        }
+      }
+
+      // Validation for "Return Vehicle / Transport" (החזרת רכב/שינוע)
+      if (type === 'החזרת רכב/שינוע') {
+        if (!finalVehicleId) {
+          throw new Error('חובה לבחור רכב עבור משימת החזרת רכב/שינוע');
+        }
+        if (!finalClientId) {
+          throw new Error('חובה לבחור לקוח עבור משימת החזרת רכב/שינוע');
+        }
+        // Check if client has phone
+        const selectedClient = clientsLocal.find((c) => c.id === finalClientId);
+        if (!selectedClient?.phone) {
+          throw new Error(
+            'ללקוח הנבחר אין מספר טלפון (חובה עבור משימת החזרת רכב/שינוע)'
+          );
+        }
+        if (!addressQuery.trim()) {
+          throw new Error('חובה להזין כתובת עבור משימת החזרת רכב/שינוע');
+        }
+      }
+
       if (mode === 'create') {
         const estimatedStartDatetime = dayjs(estimatedDate)
           .set('hour', parseInt(estimatedStartTime.split(':')[0]))
@@ -441,6 +472,7 @@ export function TaskDialog(props: TaskDialogProps) {
           priority,
           status,
           details: details || null,
+          advisor_name: advisorName.trim() || null,
           estimated_start: estimatedStartDatetime || null,
           estimated_end: estimatedEndDatetime || null,
           address: addressQuery || '',
@@ -493,6 +525,7 @@ export function TaskDialog(props: TaskDialogProps) {
           priority,
           status,
           details: details || null,
+          advisor_name: advisorName.trim() || null,
           estimated_start: estimatedStartDatetime || undefined,
           estimated_end: estimatedEndDatetime || undefined,
           address: addressQuery || '',
@@ -634,6 +667,21 @@ export function TaskDialog(props: TaskDialogProps) {
               rows={3}
               value={details}
               onChange={(e) => setDetails(e.target.value)}
+            />
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium">
+              שם יועץ{' '}
+              {type === 'הסעת לקוח הביתה' && (
+                <span className="text-red-500">*</span>
+              )}
+            </span>
+            <input
+              className="rounded border border-gray-300 p-2"
+              value={advisorName}
+              onChange={(e) => setAdvisorName(e.target.value)}
+              placeholder="הזן שם יועץ"
             />
           </label>
 
@@ -845,9 +893,6 @@ export function TaskDialog(props: TaskDialogProps) {
                           {v.license_plate}
                           {v.model ? ` · ${v.model}` : ''}
                         </span>
-                        {v.vin && (
-                          <span className="text-xs text-gray-500">{v.vin}</span>
-                        )}
                       </button>
                     ))}
                   </div>
@@ -875,12 +920,6 @@ export function TaskDialog(props: TaskDialogProps) {
                   placeholder="דגם"
                   value={newVehicleModel}
                   onChange={(e) => setNewVehicleModel(e.target.value)}
-                />
-                <input
-                  className="rounded border border-gray-300 p-2 col-span-1"
-                  placeholder="VIN"
-                  value={newVehicleVin}
-                  onChange={(e) => setNewVehicleVin(e.target.value)}
                 />
                 <div className="col-span-3 flex justify-end gap-2">
                   <button
@@ -944,7 +983,7 @@ export function TaskDialog(props: TaskDialogProps) {
           </div>
 
           <div className="col-span-1 md:col-span-2 mt-2 flex items-center justify-end gap-2">
-            {pdfEnabled && (
+            {/* {pdfEnabled && (
               <button
                 type="button"
                 className="rounded border border-gray-300 px-3 py-2 text-sm"
@@ -976,20 +1015,22 @@ export function TaskDialog(props: TaskDialogProps) {
               >
                 ייצוא PDF
               </button>
-            )}
+            )} */}
             <button
               type="button"
-              className="rounded border border-gray-300 px-3 py-2 text-sm"
+              className="rounded flex items-center justify-center gap-2 border border-gray-300 px-3 py-2 text-sm"
               onClick={() => onOpenChange(false)}
               disabled={submitting}
             >
+              <XIcon className="w-4 h-4 mr-2" />
               ביטול
             </button>
             <button
               type="submit"
-              className="rounded bg-primary px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              className="rounded flex items-center justify-center gap-2 bg-primary px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
               disabled={submitting}
             >
+              <SaveIcon className="w-4 h-4 mr-2" />
               {mode === 'create' ? 'צור משימה' : 'שמור שינויים'}
             </button>
           </div>

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import type { TaskAssignee } from '@/types/task';
-import { notifyWithPreferences } from '../../functions/notify/handler-with-prefs';
+import { notify } from '@/lib/notify';
 
 /**
  * POST /api/admin/tasks
@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
       priority,
       status,
       details,
+      advisor_name,
       estimated_start,
       estimated_end,
       address,
@@ -53,6 +54,7 @@ export async function POST(request: NextRequest) {
         priority,
         status,
         details: details ?? null,
+        advisor_name: advisor_name ?? null,
         estimated_start: estimated_start ?? null,
         estimated_end: estimated_end ?? null,
         address: address ?? '',
@@ -103,7 +105,7 @@ export async function POST(request: NextRequest) {
           subscription: undefined,
         }));
 
-        await notifyWithPreferences({
+        await notify({
           type: 'assigned',
           task_id: created.id,
           recipients,

@@ -7,7 +7,7 @@ describe('TasksBoard Grid Layout (7.1.2)', () => {
     {
       id: 'task-1',
       title: 'משימה 1 - איסוף רכב',
-      type: 'pickup_or_dropoff_car',
+      type: 'איסוף רכב/שינוע',
       priority: 'high',
       status: 'pending',
       estimated_start: '2025-11-11T09:00:00Z',
@@ -24,7 +24,7 @@ describe('TasksBoard Grid Layout (7.1.2)', () => {
     {
       id: 'task-2',
       title: 'משימה 2 - הסעת לקוח הביתה',
-      type: 'drive_client_home',
+      type: 'הסעת לקוח הביתה',
       priority: 'medium',
       status: 'in_progress',
       estimated_start: '2025-11-11T11:00:00Z',
@@ -41,7 +41,7 @@ describe('TasksBoard Grid Layout (7.1.2)', () => {
     {
       id: 'task-3',
       title: 'משימה 3 - חילוץ רכב',
-      type: 'rescue_stuck_car',
+      type: 'חילוץ רכב תקוע',
       priority: 'low',
       status: 'pending',
       estimated_start: '2025-11-11T14:00:00Z',
@@ -92,8 +92,8 @@ describe('TasksBoard Grid Layout (7.1.2)', () => {
   ];
 
   const mockVehicles: Vehicle[] = [
-    { id: 'vehicle-1', license_plate: '123-456', model: 'Toyota Camry', vin: 'VIN123456' },
-    { id: 'vehicle-2', license_plate: '789-012', model: 'Honda Civic', vin: 'VIN789012' },
+    { id: 'vehicle-1', license_plate: '123-456', model: 'Toyota Camry' },
+    { id: 'vehicle-2', license_plate: '789-012', model: 'Honda Civic' },
   ];
 
   test('renders responsive grid layout with columns', () => {
@@ -184,7 +184,7 @@ describe('TasksBoard Grid Layout (7.1.2)', () => {
     );
 
     // Check for type labels
-    expect(screen.getByText('איסוף/הורדת רכב')).toBeInTheDocument();
+    expect(screen.getByText('איסוף רכב/שינוע')).toBeInTheDocument();
     expect(screen.getByText('הסעת לקוח הביתה')).toBeInTheDocument();
     expect(screen.getByText('חילוץ רכב תקוע')).toBeInTheDocument();
   });

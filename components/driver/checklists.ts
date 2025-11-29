@@ -17,21 +17,85 @@ export function getStartChecklistForTaskType(
     // "ביצוע טסט" start checklist
     return [
       {
+        id: 'test_invitation',
+        type: 'boolean',
+        title: 'האם לקחת הזמנה של הטסט?',
+        required: true,
+      },
+      {
         id: 'car_license',
         type: 'boolean',
         title: 'האם לקחת רשיון רכב?',
         required: true,
       },
       {
-        id: 'client_license',
+        id: 'client_id',
         type: 'boolean',
-        title: 'האם לקחת רשיון נהיגה של הלקוח?',
+        title: 'האם לקחת ת.ז לקוח? - אם יש 2 בעלים חובה 2 ת.ז',
+        required: true,
+      },
+      {
+        id: 'client_power_of_attorney',
+        type: 'boolean',
+        title: 'האם לקחת יפוי כוח של הלקוח?',
         required: true,
       },
       {
         id: 'vehicle_insurance',
         type: 'boolean',
         title: 'האם לקחת ביטוח חובה של הרכב?',
+        required: true,
+      },
+    ];
+  }
+
+  if (taskType === 'איסוף רכב/שינוע') {
+    return [
+      {
+        id: 'transport_form',
+        type: 'boolean',
+        title: 'האם יש טופס שינוע מהמערכת?',
+        required: true,
+      },
+      {
+        id: 'signed_quote',
+        type: 'boolean',
+        title: 'האם יש הצעת מחיר חתומה ע״י הלקוח?',
+        required: true,
+      },
+      {
+        id: 'vehicle_insurance',
+        type: 'boolean',
+        title: 'האם יש ביטוח לרכב?',
+        required: true,
+      },
+      {
+        id: 'vehicle_photo_nesher',
+        type: 'boolean',
+        title: 'האם יש צילום רכב בנשר?',
+        required: true,
+      },
+    ];
+  }
+
+  if (taskType === 'החזרת רכב/שינוע') {
+    return [
+      {
+        id: 'mobility_approval',
+        type: 'boolean',
+        title: 'אישור תקינות - לרכבי מוביליטי',
+        required: true,
+      },
+      {
+        id: 'invoice',
+        type: 'boolean',
+        title: 'האם יש חשבונית?',
+        required: true,
+      },
+      {
+        id: 'postcard_gift',
+        type: 'boolean',
+        title: 'האם יש גלויה ומתנה?',
         required: true,
       },
     ];
@@ -46,9 +110,12 @@ export function getStartChecklistForTaskType(
  */
 export function getCompletionFlowForTaskType(
   taskType: string | null | undefined
-): 'replacement_car_delivery' | null {
+): 'replacement_car_delivery' | 'test_completion' | null {
   if (taskType === 'הסעת רכב חלופי') {
     return 'replacement_car_delivery';
+  }
+  if (taskType === 'ביצוע טסט') {
+    return 'test_completion';
   }
   return null;
 }

@@ -9,6 +9,7 @@ import React, {
   startTransition,
 } from 'react';
 import { createBrowserClient } from '@/lib/auth';
+import { SaveIcon } from 'lucide-react';
 
 export type ChecklistField =
   | {
@@ -470,10 +471,11 @@ export function ChecklistModal(props: ChecklistModalProps) {
           )}
           <button
             type="button"
-            className="rounded-md bg-primary px-4 py-3 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-primary min-h-[48px] flex-1 sm:flex-initial disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
+            className="rounded-md flex items-center justify-center gap-2 bg-primary px-4 py-3 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-primary min-h-[48px] flex-1 sm:flex-initial disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
             onClick={handleSubmit}
             disabled={persisting}
           >
+            <SaveIcon className="w-4 h-4 mr-2" />
             {persisting ? 'שומר…' : 'שמור'}
           </button>
         </div>

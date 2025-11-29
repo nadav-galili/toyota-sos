@@ -1,7 +1,7 @@
 'use server';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { notify, NotifyBody } from './handler';
+import { notify, NotifyBody } from '@/lib/notify';
 
 export async function POST(req: NextRequest) {
   try {

@@ -5,7 +5,9 @@
 create or replace function public.update_task_status(
   p_task_id uuid,
   p_status public.task_status,
-  p_driver_id uuid default null
+  p_driver_id uuid default null,
+  p_details text default null,
+  p_advisor_name text default null
 )
 returns jsonb
 language plpgsql
@@ -57,7 +59,13 @@ begin
   update public.tasks
   set status = p_status,
       updated_at = now(),
-      updated_by = v_driver_id -- Track who updated it
+      updated_by = v_driver_id, -- Track who updated it
+      details = case 
+        when p_details is not null and details is not null then details || E'\n\n' || p_details 
+        when p_details is not null then p_details 
+        else details 
+      end,
+      advisor_name = coalesce(p_advisor_name, advisor_name)
   where id = p_task_id
   returning status into v_current_status;
 
@@ -78,4 +86,3 @@ $$;
 -- Grant permissions
 grant execute on function public.update_task_status to authenticated;
 grant execute on function public.update_task_status to anon;
-

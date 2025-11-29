@@ -100,13 +100,11 @@ describe('TasksBoard Drag Handlers and Optimistic Preview (7.1.4)', () => {
       id: 'vehicle-1',
       license_plate: '123-456',
       model: 'Toyota Camry',
-      vin: 'VIN123456',
     },
     {
       id: 'vehicle-2',
       license_plate: '789-012',
       model: 'Honda Civic',
-      vin: 'VIN789012',
     },
   ];
 

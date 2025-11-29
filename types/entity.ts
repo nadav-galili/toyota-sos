@@ -13,6 +13,5 @@ export interface Vehicle {
   id: string;
   license_plate: string;
   model: string;
-  vin: string;
 }
 
