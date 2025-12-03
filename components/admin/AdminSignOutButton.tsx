@@ -33,7 +33,7 @@ export function AdminSignOutButton() {
   return (
     <Button
       variant="outline"
-      className="text-sm fixed top-4 left-4 z-50 border-primary bg-primary/10 text-primary"
+      className="text-sm absolute top-4 left-4 z-50 border-primary bg-primary/10 text-primary"
       onClick={handleSignOut}
       disabled={signingOut}
     >

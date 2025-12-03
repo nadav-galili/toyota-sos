@@ -32,12 +32,15 @@ export interface FunnelStep {
 }
 
 export interface DashboardMetricsSummary {
-  tasksCreated: number;
-  tasksCompleted: number;
-  overdueCount: number;
-  onTimeRatePct: number; // 0..100
+  scheduledTasks: number;
+  completedTasks: number;
+  completedLate: number;
+  completedOnTime: number;
+  pendingTasks: number;
+  inProgressTasks: number;
+  cancelledTasks: number;
   slaViolations: number;
-  driverUtilizationPct: number; // 0..100
+  driverUtilizationPct: number;
 }
 
 export interface DashboardDatasets {
@@ -117,105 +120,181 @@ function toYMD(dateIso: string): string {
 }
 
 // Metrics
-export async function getTasksCreatedCount(
+
+// 1. Scheduled Tasks (was Created)
+// Filter: estimated_start in range
+export async function getScheduledTasksCount(
   range: DateRange,
   client?: SupabaseClient
 ): Promise<number> {
-  const key = makeKey('createdCount', range);
+  const key = makeKey('scheduledCount', range);
   const cached = getCached<number>(key);
   if (cached !== null) return cached;
   const supa = getClient(client);
   const { count, error } = await supa
     .from('tasks')
     .select('id', { count: 'exact', head: true })
-    .gte('created_at', range.start)
-    .lt('created_at', range.end);
+    .gte('estimated_start', range.start)
+    .lt('estimated_start', range.end);
   const value = error ? 0 : count || 0;
-  // Use shorter TTL for recent date ranges to ensure fresh data
   const ttl = isRecentRange(range) ? THIRTY_SECONDS_MS : FIVE_MINUTES_MS;
   setCached(key, value, ttl);
   return value;
 }
 
+// 2. Completed Tasks
+// Filter: estimated_start in range AND status = 'הושלמה'
 export async function getTasksCompletedCount(
   range: DateRange,
   client?: SupabaseClient
 ): Promise<number> {
-  const key = makeKey('completedCount', range);
+  const key = makeKey('completedScheduledCount', range);
   const cached = getCached<number>(key);
   if (cached !== null) return cached;
   const supa = getClient(client);
-  // Heuristic: completed tasks = status='הושלמה' updated in range
   const { count, error } = await supa
     .from('tasks')
     .select('id', { count: 'exact', head: true })
     .eq('status', 'הושלמה')
-    .gte('updated_at', range.start)
-    .lt('updated_at', range.end);
+    .gte('estimated_start', range.start)
+    .lt('estimated_start', range.end);
   const value = error ? 0 : count || 0;
-  // Use shorter TTL for recent date ranges to ensure fresh data
   const ttl = isRecentRange(range) ? THIRTY_SECONDS_MS : FIVE_MINUTES_MS;
   setCached(key, value, ttl);
   return value;
 }
 
-export async function getOverdueCount(
+// Helper to fetch completion stats for the scheduled cohort
+async function getCompletionStats(
   range: DateRange,
   client?: SupabaseClient
-): Promise<number> {
-  const key = makeKey('overdueCount', range);
-  const cached = getCached<number>(key);
-  if (cached !== null) return cached;
-  const supa = getClient(client);
-  // Overdue: tasks whose deadline falls within the selected period and are not completed
-  const { count, error } = await supa
-    .from('tasks')
-    .select('id', { count: 'exact', head: true })
-    .neq('status', 'הושלמה')
-    .gte('estimated_end', range.start)
-    .lt('estimated_end', range.end);
-  const value = error ? 0 : count || 0;
-  // Use shorter TTL for recent date ranges to ensure fresh data
-  const ttl = isRecentRange(range) ? THIRTY_SECONDS_MS : FIVE_MINUTES_MS;
-  setCached(key, value, ttl);
-  return value;
-}
+): Promise<{ late: number; onTime: number }> {
+  const key = makeKey('completionStats', range);
+  const cached = getCached<{ late: number; onTime: number }>(key);
+  if (cached) return cached;
 
-export async function getOnTimeRate(
-  range: DateRange,
-  client?: SupabaseClient
-): Promise<number> {
-  const key = makeKey('onTimeRate', range);
-  const cached = getCached<number>(key);
-  if (cached !== null) return cached;
   const supa = getClient(client);
-  // Approximation: completed in range; on-time if updated_at <= estimated_end
   const { data, error } = await supa
     .from('tasks')
     .select('id, updated_at, estimated_end')
     .eq('status', 'הושלמה')
-    .gte('updated_at', range.start)
-    .lt('updated_at', range.end)
-    .limit(2000); // safety
+    .gte('estimated_start', range.start)
+    .lt('estimated_start', range.end)
+    .limit(5000);
+
   if (error || !data) {
-    setCached(key, 0);
-    return 0;
+    return { late: 0, onTime: 0 };
   }
-  const total = data.length;
+
+  let late = 0;
   let onTime = 0;
   for (const row of data) {
     if (!row.estimated_end || !row.updated_at) continue;
-    if (
-      new Date(row.updated_at).getTime() <=
-      new Date(row.estimated_end).getTime()
-    )
+    const end = new Date(row.estimated_end).getTime();
+    const actual = new Date(row.updated_at).getTime();
+    if (actual > end) {
+      late++;
+    } else {
       onTime++;
+    }
   }
-  const pct = total === 0 ? 0 : Math.round((onTime / total) * 100);
-  setCached(key, pct);
-  return pct;
+
+  const result = { late, onTime };
+  const ttl = isRecentRange(range) ? THIRTY_SECONDS_MS : FIVE_MINUTES_MS;
+  setCached(key, result, ttl);
+  return result;
 }
 
+// 3. Completed Late (Overdue in plan terms, but effectively Late Completion)
+export async function getCompletedLateCount(
+  range: DateRange,
+  client?: SupabaseClient
+): Promise<number> {
+  const stats = await getCompletionStats(range, client);
+  return stats.late;
+}
+
+// 4. Completed On Time
+export async function getCompletedOnTimeCount(
+  range: DateRange,
+  client?: SupabaseClient
+): Promise<number> {
+  const stats = await getCompletionStats(range, client);
+  return stats.onTime;
+}
+
+// 5. Pending Tasks
+export async function getPendingTasksCount(
+  range: DateRange,
+  client?: SupabaseClient
+): Promise<number> {
+  const key = makeKey('pendingCount', range);
+  const cached = getCached<number>(key);
+  if (cached !== null) return cached;
+
+  const supa = getClient(client);
+  const { count, error } = await supa
+    .from('tasks')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'בהמתנה')
+    .gte('estimated_start', range.start)
+    .lt('estimated_start', range.end);
+
+  const value = error ? 0 : count || 0;
+  const ttl = isRecentRange(range) ? THIRTY_SECONDS_MS : FIVE_MINUTES_MS;
+  setCached(key, value, ttl);
+  return value;
+}
+
+// 6. In Progress Tasks
+export async function getInProgressTasksCount(
+  range: DateRange,
+  client?: SupabaseClient
+): Promise<number> {
+  const key = makeKey('inProgressCount', range);
+  const cached = getCached<number>(key);
+  if (cached !== null) return cached;
+
+  const supa = getClient(client);
+  const { count, error } = await supa
+    .from('tasks')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'בעבודה')
+    .gte('estimated_start', range.start)
+    .lt('estimated_start', range.end);
+
+  const value = error ? 0 : count || 0;
+  const ttl = isRecentRange(range) ? THIRTY_SECONDS_MS : FIVE_MINUTES_MS;
+  setCached(key, value, ttl);
+  return value;
+}
+
+// 7. Cancelled Tasks (includes Blocked)
+export async function getCancelledTasksCount(
+  range: DateRange,
+  client?: SupabaseClient
+): Promise<number> {
+  const key = makeKey('cancelledCount', range);
+  const cached = getCached<number>(key);
+  if (cached !== null) return cached;
+
+  const supa = getClient(client);
+  const { count, error } = await supa
+    .from('tasks')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'חסומה')
+    .gte('estimated_start', range.start)
+    .lt('estimated_start', range.end);
+
+  const value = error ? 0 : count || 0;
+  const ttl = isRecentRange(range) ? THIRTY_SECONDS_MS : FIVE_MINUTES_MS;
+  setCached(key, value, ttl);
+  return value;
+}
+
+// Keeping original getSlaViolations logic for now as it might be used by charts or legacy,
+// but dashboard summary uses the new fields.
+// Note: This function considers tasks COMPLETED in the range (updated_at), not SCHEDULED.
 export async function getSlaViolations(
   range: DateRange,
   client?: SupabaseClient
@@ -324,9 +403,9 @@ export async function getCreatedCompletedSeries(
   const [{ data: createdData }, { data: completedData }] = await Promise.all([
     supa
       .from('tasks')
-      .select('id, created_at')
-      .gte('created_at', range.start)
-      .lt('created_at', range.end)
+      .select('id, estimated_start')
+      .gte('estimated_start', range.start)
+      .lt('estimated_start', range.end)
       .limit(5000),
     supa
       .from('tasks')
@@ -338,7 +417,7 @@ export async function getCreatedCompletedSeries(
   ]);
   const byDate: Record<string, { created: number; completed: number }> = {};
   (createdData || []).forEach((r) => {
-    const d = toYMD(r.created_at);
+    const d = toYMD(r.estimated_start);
     byDate[d] = byDate[d] || { created: 0, completed: 0 };
     byDate[d].created++;
   });
@@ -500,10 +579,13 @@ export async function fetchDashboardData(
   client?: SupabaseClient
 ): Promise<DashboardData> {
   const [
-    tasksCreated,
-    tasksCompleted,
-    overdueCount,
-    onTimeRatePct,
+    scheduledTasks,
+    completedTasks,
+    completedLate,
+    completedOnTime,
+    pendingTasks,
+    inProgressTasks,
+    cancelledTasks,
     slaViolations,
     driverUtilizationPct,
     createdCompletedSeries,
@@ -511,10 +593,13 @@ export async function fetchDashboardData(
     onTimeVsLate,
     funnel,
   ] = await Promise.all([
-    getTasksCreatedCount(range, client),
+    getScheduledTasksCount(range, client),
     getTasksCompletedCount(range, client),
-    getOverdueCount(range, client),
-    getOnTimeRate(range, client),
+    getCompletedLateCount(range, client),
+    getCompletedOnTimeCount(range, client),
+    getPendingTasksCount(range, client),
+    getInProgressTasksCount(range, client),
+    getCancelledTasksCount(range, client),
     getSlaViolations(range, client),
     getDriverUtilization(range, client),
     getCreatedCompletedSeries(range, client),
@@ -525,10 +610,13 @@ export async function fetchDashboardData(
 
   return {
     summary: {
-      tasksCreated,
-      tasksCompleted,
-      overdueCount,
-      onTimeRatePct,
+      scheduledTasks,
+      completedTasks,
+      completedLate,
+      completedOnTime,
+      pendingTasks,
+      inProgressTasks,
+      cancelledTasks,
       slaViolations,
       driverUtilizationPct,
     },

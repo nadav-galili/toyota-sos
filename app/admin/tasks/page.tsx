@@ -130,6 +130,7 @@ export default async function AdminTasksPage() {
     { name: 'דשבורד', url: '/admin/dashboard', icon: 'LayoutDashboard' },
     { name: 'משימות', url: '/admin/tasks', icon: 'ClipboardList' },
     { name: 'נהגים', url: '/admin/drivers', icon: 'Users' },
+    { name: 'מנהלים', url: '/admin/admins', icon: 'ShieldCheck' },
   ];
 
   return (
@@ -137,7 +138,7 @@ export default async function AdminTasksPage() {
       <NavBar items={navItems} className="z-40" />
       <div className="max-w-full mt-4 sm:mt-8 space-y-4">
         <h1 className="text-3xl font-bold text-primary underline">
-          לוח משימות
+          לוח משימות נהגים{' '}
         </h1>
 
         {(tasksError || driversError || assigneesError) && (

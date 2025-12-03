@@ -26,6 +26,22 @@ const DriverDurationChart = dynamic(
   { ssr: false }
 );
 
+const StatusByPriorityChart = dynamic(
+  () =>
+    import('@/components/admin/dashboard/charts/StatusByPriorityChart').then(
+      (mod) => ({ default: mod.StatusByPriorityChart })
+    ),
+  { ssr: false }
+);
+
+const StatusByTypeChart = dynamic(
+  () =>
+    import('@/components/admin/dashboard/charts/StatusByTypeChart').then(
+      (mod) => ({ default: mod.StatusByTypeChart })
+    ),
+  { ssr: false }
+);
+
 function ChartLegend({
   items,
 }: {
@@ -51,54 +67,64 @@ export function DashboardCharts() {
     <section className="space-y-4">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Chart 1 - Weekly Task Trends (Line Chart) */}
-        <div className="rounded-xl border-2 border-primary bg-white p-4 shadow-md transition-all duration-200 hover:border-primary/50 hover:shadow-lg">
-          <h2 className="text-sm font-semibold text-gray-900">
-            מגמת משימות שבועית
-          </h2>
-          <p className="mt-1 text-xs text-gray-500">
-            קו המציג משימות שהושלמו, לא הושלמו ומשימות באיחור לאורך השבוע.
-          </p>
+        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all duration-200 hover:shadow-lg">
+          <h2 className="text-sm font-semibold text-gray-900">מגמת משימות</h2>
+
           <WeeklyTrendsChart />
           <ChartLegend
             items={[
-              { label: 'הושלמו', color: '#16a34a' },
-              { label: 'לא הושלמו', color: '#f97316' },
-              { label: 'באיחור', color: '#ef4444' },
+              {
+                label: 'סה״כ משימות',
+                color: 'hsl(221.2121 83.1933% 53.3333%)',
+              },
+              { label: 'הושלמו', color: 'hsl(213.1169 93.9024% 67.8431%)' },
+              { label: 'לא הושלמו', color: 'hsl(211.6981 96.3636% 78.4314%)' },
+              { label: 'באיחור', color: 'hsl(213.3333 96.9231% 87.2549%)' },
             ]}
           />
         </div>
 
         {/* Chart 2 - Driver Task Completion Comparison (Bar Chart) */}
-        <div className="rounded-xl border-2 border-primary bg-white p-4 shadow-md transition-all duration-200 hover:border-primary/50 hover:shadow-lg">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all duration-200 hover:shadow-lg">
           <h2 className="text-sm font-semibold text-gray-900">
-            השוואת השלמת משימות לפי נהג
+            ביצוע משימות לפי נהגים
           </h2>
           <p className="mt-1 text-xs text-gray-500">
-            אחוז השלמת משימות לכל נהג, כולל אפשרות למיון לפי ביצועים.
+            השלמת משימות מול סך הכל משימות שהוקצו לנהג.
           </p>
           <DriverCompletionChart />
           <ChartLegend
             items={[
-              { label: 'מעל 80%', color: '#16a34a' },
-              { label: '60%-80%', color: '#eab308' },
-              { label: 'מתחת ל-60%', color: '#ef4444' },
+              { label: 'הושלמו', color: 'hsl(213.1169 93.9024% 67.8431%)' },
+              { label: 'לא הושלמו', color: '#9ca3af' },
             ]}
           />
         </div>
 
         {/* Chart 3 - Driver Task Duration  Analysis */}
-        <div className="rounded-xl border-2 border-primary bg-white p-4 shadow-md transition-all duration-200 hover:border-primary/50 hover:shadow-lg">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all duration-200 hover:shadow-lg">
           <h2 className="text-sm font-semibold text-gray-900">
-            ניתוח זמני טיפול במשימות לפי נהג
+            ממוצע זמן טיפול במשימה לנהג{' '}
           </h2>
           <p className="mt-1 text-xs text-gray-500">
             משך משימה ממוצע בדקות לכל נהג, עם אפשרות לפירוק לפי סוג משימה.
           </p>
           <DriverDurationChart />
           <ChartLegend
-            items={[{ label: 'משך משימה ממוצע', color: '#0ea5e9' }]}
+            items={[
+              {
+                label: 'משך משימה ממוצע',
+                color: 'hsl(211.6981 96.3636% 78.4314%)',
+              },
+            ]}
           />
         </div>
+
+        {/* Chart 4 - Status by Priority */}
+        <StatusByPriorityChart />
+
+        {/* Chart 5 - Status by Type */}
+        <StatusByTypeChart />
       </div>
     </section>
   );

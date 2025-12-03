@@ -134,6 +134,26 @@ export function TaskCard({
         </span>
       </div>
 
+      {/* Advisor info */}
+      {task.advisor_name && (
+        <div className="mb-2 flex items-center gap-1 text-xs text-gray-600">
+          <span className="font-medium">👨‍💼</span>
+          <span className="truncate" title={task.advisor_name}>
+            {task.advisor_name}
+          </span>
+        </div>
+      )}
+
+      {/* Task Details */}
+      {task.details && (
+        <div className="mb-2 flex items-start gap-1 text-xs text-gray-600">
+          <span className="font-medium shrink-0">📝</span>
+          <span className="line-clamp-2" title={task.details}>
+            {task.details}
+          </span>
+        </div>
+      )}
+
       {/* Time window */}
 
       <div className="mb-2 text-xs text-gray-500">
@@ -198,12 +218,12 @@ export function TaskCard({
  */
 export function statusLabel(status: TaskStatus): string {
   const labels: Record<TaskStatus, string> = {
-    בהמתנה: 'בהמתנה',
-    בעבודה: 'בעבודה',
+    בהמתנה: 'ממתינה לביצוע',
+    בעבודה: 'בביצוע',
     חסומה: 'חסומה',
-    הושלמה: 'הושלמה',
+    הושלמה: 'בוצעה',
   };
-  return labels[status];
+  return labels[status] || status;
 }
 
 export function statusColor(status: TaskStatus): string {
@@ -213,7 +233,7 @@ export function statusColor(status: TaskStatus): string {
     חסומה: 'bg-red-100 text-red-800',
     הושלמה: 'bg-green-100 text-green-800',
   };
-  return colors[status];
+  return colors[status] || 'bg-gray-100 text-gray-800';
 }
 
 export function priorityLabel(priority: TaskPriority): string {
