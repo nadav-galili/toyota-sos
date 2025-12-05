@@ -453,7 +453,13 @@ export function DriverHome() {
                       }
                     );
                     if (upErr) {
-                      toastError('שגיאה בעדכון סטטוס המשימה');
+                      // Check if this is the specific validation error for skipping status flow
+                      const errorMessage = upErr.message || '';
+                      if (errorMessage.includes('INVALID_STATUS_FLOW')) {
+                        toastError('המשימה חייבת להיות בסטטוס "בעבודה" לפני שניתן להשלים אותה', 5000);
+                      } else {
+                        toastError('שגיאה בעדכון סטטוס המשימה');
+                      }
                       return;
                     }
                     setRemoteTasks((prev) =>
@@ -515,7 +521,12 @@ export function DriverHome() {
               p_driver_id: driverId || undefined,
             });
             if (upErr) {
-              toastError('שגיאה בעדכון סטטוס המשימה');
+              const errorMessage = upErr.message || '';
+              if (errorMessage.includes('INVALID_STATUS_FLOW')) {
+                toastError('המשימה חייבת להיות בסטטוס "בעבודה" לפני שניתן להשלים אותה', 5000);
+              } else {
+                toastError('שגיאה בעדכון סטטוס המשימה');
+              }
               return;
             }
             setRemoteTasks((prev) =>
@@ -548,7 +559,12 @@ export function DriverHome() {
               p_driver_id: driverId || undefined,
             });
             if (upErr) {
-              toastError('שגיאה בעדכון סטטוס המשימה');
+              const errorMessage = upErr.message || '';
+              if (errorMessage.includes('INVALID_STATUS_FLOW')) {
+                toastError('המשימה חייבת להיות בסטטוס "בעבודה" לפני שניתן להשלים אותה', 5000);
+              } else {
+                toastError('שגיאה בעדכון סטטוס המשימה');
+              }
               throw upErr;
             }
             setRemoteTasks((prev) =>
@@ -582,7 +598,12 @@ export function DriverHome() {
             });
             if (upErr) {
               console.error(upErr);
-              toastError('שגיאה בעדכון סטטוס המשימה');
+              const errorMessage = upErr.message || '';
+              if (errorMessage.includes('INVALID_STATUS_FLOW')) {
+                toastError('המשימה חייבת להיות בסטטוס "בעבודה" לפני שניתן להשלים אותה', 5000);
+              } else {
+                toastError('שגיאה בעדכון סטטוס המשימה');
+              }
               return;
             }
             setRemoteTasks((prev) =>
@@ -604,7 +625,12 @@ export function DriverHome() {
               p_advisor_name: data.advisorName,
             });
             if (upErr) {
-              toastError('שגיאה בעדכון סטטוס המשימה');
+              const errorMessage = upErr.message || '';
+              if (errorMessage.includes('INVALID_STATUS_FLOW')) {
+                toastError('המשימה חייבת להיות בסטטוס "בעבודה" לפני שניתן להשלים אותה', 5000);
+              } else {
+                toastError('שגיאה בעדכון סטטוס המשימה');
+              }
               throw upErr;
             }
             setRemoteTasks((prev) =>
