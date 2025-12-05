@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next';
-import Image from 'next/image';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { Heebo } from 'next/font/google';
 import { AuthProvider } from '@/components/AuthProvider';
@@ -10,6 +9,7 @@ import { OfflineBanner } from '@/components/OfflineBanner';
 import { InstallAppButton } from '@/components/InstallAppButton';
 import { MixpanelInit } from '@/components/MixpanelInit';
 import { Toaster } from '@/lib/toast';
+import { AppLogo } from '@/components/AppLogo';
 import './globals.css';
 
 const geistSans = Geist({
@@ -67,15 +67,7 @@ export default function RootLayout({
             <InstallAppButton />
           </div>
           {/* App Logo */}
-          <div className="absolute top-4 right-4 z-50 w-40 h-40">
-            <Image
-              src="/icons/icon-fresh-192.jpg"
-              alt="Toyota SOS"
-              width={100}
-              height={100}
-              className="rounded-xl shadow-md bg-white/90 backdrop-blur-sm border border-red-200"
-            />
-          </div>
+          <AppLogo />
           <OfflineBanner />
           <AuthProvider>{children}</AuthProvider>
           <Toaster

@@ -8,7 +8,7 @@
   "dir": "rtl",
   "lang": "he",
   "background_color": "#ffffff",
-  "theme_color": "var(--primary)",
+  "theme_color": "#2563eb",
   "orientation": "portrait",
   "icons": [
     {

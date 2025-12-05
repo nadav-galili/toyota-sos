@@ -27,11 +27,11 @@
 
 :root {
   /* Toyota Brand Colors */
-  --toyota-red: hsl(0 85% 52%);      /* Primary Toyota Red #EB0A1E */
-  --toyota-blue: hsl(213 100% 40%);  /* Toyota Blue #0052CC */
-  --toyota-gray: hsl(0 0% 25%);      /* Toyota Dark Gray #2D2D2D */
-  --toyota-silver: hsl(0 0% 75%);    /* Toyota Silver #C0C0C0 */
-  --toyota-gold: hsl(45 100% 85%);   /* Toyota Gold Accent */
+  --toyota-red: hsl(0 85% 52%); /* Primary Toyota Red #EB0A1E */
+  --toyota-blue: hsl(213 100% 40%); /* Toyota Blue #0052CC */
+  --toyota-gray: hsl(0 0% 25%); /* Toyota Dark Gray #2D2D2D */
+  --toyota-silver: hsl(0 0% 75%); /* Toyota Silver #C0C0C0 */
+  --toyota-gold: hsl(45 100% 85%); /* Toyota Gold Accent */
   --background: hsl(210 40% 98.0392%);
   --foreground: hsl(217.2414 32.5843% 17.451%);
   --card: hsl(0 0% 100%);
@@ -161,7 +161,7 @@ body {
 }
 
 /* Hebrew text optimization */
-[dir="rtl"] {
+[dir='rtl'] {
   font-family: var(--font-serif), 'Heebo', 'Arial Hebrew', 'Tahoma', sans-serif;
 }
 
@@ -196,7 +196,8 @@ body {
 }
 
 @keyframes pulse-glow {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.4;
     transform: scale(1);
   }
@@ -207,7 +208,8 @@ body {
 }
 
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0px);
   }
   50% {
@@ -216,14 +218,17 @@ body {
 }
 
 @keyframes gradient-shift {
-  0%, 100% {
+  0%,
+  100% {
     background-position: 0% 50%;
   }
   50% {
     background-position: 100% 50%;
   }
 }
-
+.bg-primary {
+  background-color: var(--toyota-blue);
+}
 .animate-shimmer {
   animation: shimmer 2s ease-in-out infinite;
 }
@@ -243,15 +248,24 @@ body {
 
 /* Enhanced Gradient Utilities */
 .bg-gradient-radial {
-  background-image: radial-gradient(ellipse at center, var(--tw-gradient-stops));
+  background-image: radial-gradient(
+    ellipse at center,
+    var(--tw-gradient-stops)
+  );
 }
 
 .bg-gradient-conic {
-  background-image: conic-gradient(from 0deg at 50% 50%, var(--tw-gradient-stops));
+  background-image: conic-gradient(
+    from 0deg at 50% 50%,
+    var(--tw-gradient-stops)
+  );
 }
 
 .bg-gradient-diamond {
-  background-image: radial-gradient(ellipse 100% 100% at 50% 0%, var(--tw-gradient-stops));
+  background-image: radial-gradient(
+    ellipse 100% 100% at 50% 0%,
+    var(--tw-gradient-stops)
+  );
 }
 
 /* Enhanced Card & Surface Effects */
@@ -262,21 +276,16 @@ body {
 }
 
 .surface-glow {
-  box-shadow:
-    0 0 20px rgba(var(--toyota-red-rgb, 235, 10, 30), 0.1),
+  box-shadow: 0 0 20px rgba(var(--toyota-red-rgb, 235, 10, 30), 0.1),
     0 8px 32px rgba(0, 0, 0, 0.06);
 }
 
 .surface-glow-blue {
-  box-shadow:
-    0 0 20px rgba(59, 130, 246, 0.1),
-    0 8px 32px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.1), 0 8px 32px rgba(0, 0, 0, 0.06);
 }
 
 .surface-depth {
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.12),
-    0 8px 24px rgba(0, 0, 0, 0.08),
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 8px 24px rgba(0, 0, 0, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
@@ -287,9 +296,7 @@ body {
 
 .interactive-lift:hover {
   transform: translateY(-2px) scale(1.02);
-  box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.15),
-    0 2px 4px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.12);
 }
 
 .interactive-press:active {
@@ -320,11 +327,20 @@ body {
 
 /* Toyota Brand Gradients */
 .bg-toyota-gradient {
-  background: linear-gradient(135deg, var(--toyota-red) 0%, #c41e3a 50%, #8b0000 100%);
+  background: linear-gradient(
+    135deg,
+    var(--toyota-red) 0%,
+    #c41e3a 50%,
+    #8b0000 100%
+  );
 }
 
 .bg-toyota-gradient-soft {
-  background: linear-gradient(135deg, rgba(235, 10, 30, 0.1) 0%, rgba(196, 30, 58, 0.05) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(235, 10, 30, 0.1) 0%,
+    rgba(196, 30, 58, 0.05) 100%
+  );
 }
 
 .bg-toyota-blue-gradient {
@@ -340,9 +356,7 @@ body {
 }
 
 .text-glow {
-  text-shadow:
-    0 0 10px rgba(235, 10, 30, 0.3),
-    0 0 20px rgba(235, 10, 30, 0.2),
+  text-shadow: 0 0 10px rgba(235, 10, 30, 0.3), 0 0 20px rgba(235, 10, 30, 0.2),
     0 0 30px rgba(235, 10, 30, 0.1);
 }
 

@@ -15,6 +15,7 @@ import {
 } from '@/components/driver/checklists';
 import { ReplacementCarDeliveryForm } from '@/components/driver/ReplacementCarDeliveryForm';
 import { TestCompletionPopup } from '@/components/driver/TestCompletionPopup';
+import { toastSuccess, toastError } from '@/lib/toast';
 
 function getChecklistInfo(type: string) {
   switch (type) {
@@ -102,7 +103,7 @@ export function DriverHome() {
   // Remote paginated tasks via RPC
   const [remoteTasks, setRemoteTasks] = useState<DriverTask[]>([]);
   const [cursor, setCursor] = useState<{
-    updated_at: string;
+    estimated_start: string;
     id: string;
   } | null>(null);
   const [hasMore, setHasMore] = useState(true);
@@ -179,7 +180,7 @@ export function DriverHome() {
         p_limit: 10,
       };
       if (!reset && cursor) {
-        params.p_cursor_updated = cursor.updated_at;
+        params.p_cursor_start = cursor.estimated_start;
         params.p_cursor_id = cursor.id;
       }
       // Pass driver_id if available (for localStorage-only sessions)
@@ -218,8 +219,9 @@ export function DriverHome() {
       setHasMore((mapped?.length ?? 0) === 10);
       const last = mapped?.[mapped.length - 1];
       if (last && data && data.length > 0) {
+        const lastRow = data[data.length - 1];
         setCursor({
-          updated_at: data[data.length - 1].updated_at,
+          estimated_start: lastRow.estimated_start || new Date().toISOString(),
           id: last.id,
         });
       }
@@ -354,13 +356,13 @@ export function DriverHome() {
         ) : null}
       </div>
       {/* Tabs */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         {(
           [
             { key: 'today', label: 'היום' },
             { key: 'all', label: 'הכל' },
-            { key: 'overdue', label: 'איחורים' },
-            { key: 'forms', label: 'טפסים' },
+            // { key: 'overdue', label: 'איחורים' },
+            // { key: 'forms', label: 'טפסים' },
           ] as const
         ).map((t) => {
           type TabKey = typeof t.key;
@@ -371,9 +373,9 @@ export function DriverHome() {
               type="button"
               onClick={() => setTab(t.key as TabKey)}
               className={[
-                'rounded-md py-2 text-sm font-medium transition-colors',
+                'rounded-md py-3 px-4 text-sm font-medium transition-colors',
                 active
-                  ? 'bg-primary text-white'
+                  ? 'bg-toyota-gradient text-white shadow-md'
                   : 'bg-gray-100 text-gray-800 hover:bg-gray-200',
               ].join(' ')}
               aria-pressed={active}
@@ -451,6 +453,7 @@ export function DriverHome() {
                       }
                     );
                     if (upErr) {
+                      toastError('שגיאה בעדכון סטטוס המשימה');
                       return;
                     }
                     setRemoteTasks((prev) =>
@@ -458,6 +461,7 @@ export function DriverHome() {
                         t.id === task.id ? { ...t, status: next } : t
                       )
                     );
+                    toastSuccess('סטטוס המשימה עודכן בהצלחה');
                   }}
                 />
               </li>
@@ -511,8 +515,7 @@ export function DriverHome() {
               p_driver_id: driverId || undefined,
             });
             if (upErr) {
-              // Let ChecklistModal show persistence errors for the form itself;
-              // here we simply avoid updating local state on failure.
+              toastError('שגיאה בעדכון סטטוס המשימה');
               return;
             }
             setRemoteTasks((prev) =>
@@ -522,6 +525,7 @@ export function DriverHome() {
                   : t
               )
             );
+            toastSuccess('המשימה עודכנה בהצלחה');
           }}
         />
       ) : null}
@@ -544,6 +548,7 @@ export function DriverHome() {
               p_driver_id: driverId || undefined,
             });
             if (upErr) {
+              toastError('שגיאה בעדכון סטטוס המשימה');
               throw upErr;
             }
             setRemoteTasks((prev) =>
@@ -553,6 +558,7 @@ export function DriverHome() {
                   : t
               )
             );
+            toastSuccess('המשימה הושלמה בהצלחה');
           }}
         />
       ) : null}
@@ -576,6 +582,7 @@ export function DriverHome() {
             });
             if (upErr) {
               console.error(upErr);
+              toastError('שגיאה בעדכון סטטוס המשימה');
               return;
             }
             setRemoteTasks((prev) =>
@@ -585,6 +592,7 @@ export function DriverHome() {
                   : t
               )
             );
+            toastSuccess('המשימה הושלמה בהצלחה');
           }}
           onSubmit={async (data) => {
             if (!client || !testCompletionState) return;
@@ -596,6 +604,7 @@ export function DriverHome() {
               p_advisor_name: data.advisorName,
             });
             if (upErr) {
+              toastError('שגיאה בעדכון סטטוס המשימה');
               throw upErr;
             }
             setRemoteTasks((prev) =>
@@ -605,6 +614,7 @@ export function DriverHome() {
                   : t
               )
             );
+            toastSuccess('הטסט הושלם בהצלחה');
           }}
         />
       ) : null}
