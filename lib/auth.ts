@@ -317,8 +317,23 @@ export const loginAsAdmin = async (
       };
     }
 
-    // Get user role from app_metadata (where it's stored during user creation)
-    const role = (data.user?.app_metadata?.role as string) || 'viewer';
+    // Get user role from profiles table (source of truth)
+    const { data: profile, error: profileError } = await client
+      .from('profiles')
+      .select('role')
+      .eq('id', data.user.id)
+      .single();
+
+    if (profileError || !profile) {
+      await client.auth.signOut();
+      return {
+        success: false,
+        error: 'User profile not found',
+      };
+    }
+
+    const role = profile.role as 'admin' | 'manager' | 'viewer' | 'driver';
+    
     if (role !== 'admin' && role !== 'manager' && role !== 'viewer') {
       await client.auth.signOut();
       return {
@@ -363,8 +378,24 @@ export const getAdminSession = async (
 
     if (!user) return null;
 
-    // Get role from app_metadata (where it's stored during user creation)
-    const role = (user.app_metadata?.role as string) || 'viewer';
+    // Get role from profiles table (source of truth)
+    const { data: profile, error: profileError } = await client
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !profile) {
+      return null;
+    }
+
+    const role = profile.role as 'admin' | 'manager' | 'viewer' | 'driver';
+    
+    // Only return session for admin/manager/viewer roles
+    if (role !== 'admin' && role !== 'manager' && role !== 'viewer') {
+      return null;
+    }
+
     return {
       userId: user.id,
       username: user.email || '',
