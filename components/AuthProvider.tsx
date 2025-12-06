@@ -39,18 +39,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   >(null);
   const [client, setClient] = useState<SupabaseClient | null>(null);
 
-  const writeRoleCookie = (
-    newRole: 'driver' | 'admin' | 'manager' | 'viewer' | null
+  const writeAuthCookies = (
+    newRole: 'driver' | 'admin' | 'manager' | 'viewer' | null,
+    userId: string | null = null
   ) => {
     try {
       if (!newRole) {
-        // clear cookie
+        // clear cookies
         document.cookie = `toyota_role=; path=/; max-age=0`;
+        document.cookie = `toyota_user_id=; path=/; max-age=0`;
       } else {
         // 7 days
-        document.cookie = `toyota_role=${newRole}; path=/; max-age=${
-          7 * 24 * 60 * 60
-        }`;
+        const maxAge = 7 * 24 * 60 * 60;
+        document.cookie = `toyota_role=${newRole}; path=/; max-age=${maxAge}`;
+        if (userId) {
+          document.cookie = `toyota_user_id=${userId}; path=/; max-age=${maxAge}`;
+        }
       }
     } catch {
       // ignore
@@ -72,13 +76,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         setSession(currentSession);
         setRole(currentRole);
-        writeRoleCookie(currentRole);
+        writeAuthCookies(currentRole, currentSession?.userId || null);
         setError(null);
       } catch (err: any) {
         setError(err.message || 'Failed to initialize auth');
         setSession(null);
         setRole(null);
-        writeRoleCookie(null);
+        writeAuthCookies(null, null);
       } finally {
         setLoading(false);
       }
@@ -98,11 +102,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const currentSession = await getCurrentSession(client);
           setSession(currentSession);
           setRole(currentRole);
-          writeRoleCookie(currentRole);
+          writeAuthCookies(currentRole, currentSession?.userId || null);
         } else if (event === 'SIGNED_OUT') {
           setSession(null);
           setRole(null);
-          writeRoleCookie(null);
+          writeAuthCookies(null, null);
         }
       }
     );
@@ -124,7 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (result.success && result.session) {
         setSession(result.session);
         setRole('driver');
-        writeRoleCookie('driver');
+        writeAuthCookies('driver', result.session.userId);
         return { success: true };
       } else {
         const errorMsg = result.error || 'Driver login failed';
@@ -150,7 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (result.success && result.session) {
         setSession(result.session);
         setRole(result.session.role);
-        writeRoleCookie(result.session.role);
+        writeAuthCookies(result.session.role, result.session.userId);
         return { success: true };
       } else {
         const errorMsg = result.error || 'Admin login failed';
@@ -174,7 +178,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await logout(client);
       setSession(null);
       setRole(null);
-      writeRoleCookie(null);
+      writeAuthCookies(null, null);
     } catch (err: any) {
       setError(err.message || 'Logout failed');
     }

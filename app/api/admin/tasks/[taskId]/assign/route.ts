@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { cookies } from 'next/headers';
+import { notify } from '@/lib/notify';
 
 /**
  * PATCH /api/admin/tasks/[taskId]/assign
@@ -78,6 +79,34 @@ export async function PATCH(
         updated_at: new Date().toISOString(),
       })
       .eq('id', taskId);
+
+    // Get task details for notification
+    const { data: taskData } = await admin
+      .from('tasks')
+      .select('id, type, title')
+      .eq('id', taskId)
+      .single();
+
+    // Send notification to newly assigned driver
+    if (taskData) {
+      try {
+        await notify({
+          type: 'assigned',
+          task_id: taskId,
+          recipients: [{ user_id: driver_id, subscription: undefined }],
+          payload: {
+            title: 'משימה חדשה',
+            body: `הוקצתה לך משימה חדשה: ${taskData.type || taskData.title || 'ללא כותרת'}`,
+            taskId: taskId,
+            taskType: taskData.type,
+            url: `/driver/tasks/${taskId}`,
+          },
+        });
+      } catch (err) {
+        console.error('Failed to notify driver on reassignment:', err);
+        // Don't fail the request if notification fails
+      }
+    }
 
     return NextResponse.json({ success: true, data }, { status: 200 });
   } catch (error) {

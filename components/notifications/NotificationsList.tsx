@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { createBrowserClient } from '@/lib/auth';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { trackNotificationOpened } from '@/lib/events';
 import { PermissionPrompt } from './PermissionPrompt';
@@ -25,28 +24,22 @@ export function NotificationsList({ pageSize = 20 }: { pageSize?: number }) {
   const [page, setPage] = useState<number>(0);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
 
-  const supa = useMemo(() => createBrowserClient(), []);
-
   const fetchPage = async (pageIndex: number) => {
     setLoading(true);
     setError(null);
     try {
-      const from = pageIndex * pageSize;
-      const to = from + pageSize - 1;
-      // Fetch notifications (client-side filter for soft-delete for now to avoid null issues)
-      const { data, error } = await supa
-        .from('notifications')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .range(from, to);
+      // Use server-side API endpoint instead of direct Supabase query
+      const response = await fetch(
+        `/api/driver/notifications?page=${pageIndex}&pageSize=${pageSize}`
+      );
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Failed to load notifications');
+      }
 
-      const validRows = ((data as NotificationRow[]) || []).filter((r) => {
-        const deleted = r.payload?.deleted;
-        return deleted !== true && deleted !== 'true';
-      });
-      setRows(validRows);
+      const { data } = await response.json();
+      setRows((data as NotificationRow[]) || []);
     } catch (e: unknown) {
       const error = e as Error;
       setError(error.message || 'Failed to load notifications');
@@ -68,14 +61,20 @@ export function NotificationsList({ pageSize = 20 }: { pageSize?: number }) {
   };
 
   const markAsRead = async (id: string) => {
-    const { error } = await supa
-      .from('notifications')
-      .update({ read: true })
-      .eq('id', id);
-    if (!error) {
-      setRows((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, read: true } : r))
-      );
+    try {
+      const response = await fetch('/api/driver/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, read: true }),
+      });
+
+      if (response.ok) {
+        setRows((prev) =>
+          prev.map((r) => (r.id === id ? { ...r, read: true } : r))
+        );
+      }
+    } catch (err) {
+      console.error('Failed to mark notification as read:', err);
     }
   };
 
@@ -96,16 +95,24 @@ export function NotificationsList({ pageSize = 20 }: { pageSize?: number }) {
   // };
 
   const deleteNotification = async (id: string) => {
-    // Soft delete via payload.deleted = true (client-side jsonb merge then update)
+    // Soft delete via payload.deleted = true
     const target = rows.find((r) => r.id === id);
     if (!target) return;
+    
     const nextPayload = { ...(target.payload || {}), deleted: true };
-    const { error } = await supa
-      .from('notifications')
-      .update({ payload: nextPayload })
-      .eq('id', id);
-    if (!error) {
-      setRows((prev) => prev.filter((r) => r.id !== id));
+    
+    try {
+      const response = await fetch('/api/driver/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, payload: nextPayload }),
+      });
+
+      if (response.ok) {
+        setRows((prev) => prev.filter((r) => r.id !== id));
+      }
+    } catch (err) {
+      console.error('Failed to delete notification:', err);
     }
   };
 
