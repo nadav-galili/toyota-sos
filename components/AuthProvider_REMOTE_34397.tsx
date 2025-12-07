@@ -10,7 +10,6 @@ import {
   loginAsDriver,
   loginAsAdmin,
   AuthSession,
-  readCookie,
 } from '@/lib/auth';
 
 interface AuthContextType {
@@ -66,48 +65,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initializeAuth = async () => {
       console.log('AuthProvider: Initializing...');
-
+      
       // OPTIMISTIC CHECK: Check cookies immediately to unblock UI
       try {
         const roleCookie = document.cookie
           .split('; ')
           .find((row) => row.startsWith('toyota_role='))
           ?.split('=')[1];
-
+          
         const userIdCookie = document.cookie
           .split('; ')
           .find((row) => row.startsWith('toyota_user_id='))
           ?.split('=')[1];
-
-        if (
-          roleCookie &&
-          userIdCookie &&
-          ['admin', 'manager', 'viewer', 'driver'].includes(roleCookie)
-        ) {
-          console.log('AuthProvider: Optimistic cookie found, unblocking UI');
-          setRole(roleCookie as 'driver' | 'admin' | 'manager' | 'viewer');
-          setSession({
-            userId: userIdCookie,
-            username: 'Optimistic Session',
-            role: roleCookie as 'driver' | 'admin' | 'manager' | 'viewer',
-            email: 'optimistic@loading',
-          });
-          // We keep loading=true for a split second to let the real auth finish,
-          // BUT if we want "super fast", we can set loading=false here.
-          // However, let's keep it true but rely on the 2s timeout to be a fallback,
-          // OR we can trust this cookie and set loading=false immediately.
-          // Given the user wants "super fast", let's trust the cookie for UI rendering.
-          // The real auth will overwrite this shortly if it succeeds, or correct it if it fails.
-          setLoading(false);
+          
+        if (roleCookie && userIdCookie && ['admin', 'manager', 'viewer', 'driver'].includes(roleCookie)) {
+           console.log('AuthProvider: Optimistic cookie found, unblocking UI');
+           setRole(roleCookie as any);
+           setSession({
+             userId: userIdCookie,
+             username: 'Optimistic Session', 
+             role: roleCookie as any,
+             email: 'optimistic@loading',
+           });
+           // We keep loading=true for a split second to let the real auth finish, 
+           // BUT if we want "super fast", we can set loading=false here.
+           // However, let's keep it true but rely on the 2s timeout to be a fallback,
+           // OR we can trust this cookie and set loading=false immediately.
+           // Given the user wants "super fast", let's trust the cookie for UI rendering.
+           // The real auth will overwrite this shortly if it succeeds, or correct it if it fails.
+           setLoading(false); 
         }
-      } catch (err) {
-        console.warn('Optimistic check failed:', err);
+      } catch (e) {
+        console.warn('Optimistic check failed:', e);
       }
 
       try {
-        if (!client) {
-          // Only if not already set by optimistic render (though it won't be in useEffect)
-          setLoading(true);
+        if (!client) { // Only if not already set by optimistic render (though it won't be in useEffect)
+             setLoading(true); 
         }
 
         // Create client first
@@ -120,11 +114,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           try {
             console.log('AuthProvider: Checking session...');
             const currentSession = await getCurrentSession(supabaseClient);
-            console.log(
-              'AuthProvider: Session result:',
-              currentSession ? 'Found' : 'Null'
-            );
-
+            console.log('AuthProvider: Session result:', currentSession ? 'Found' : 'Null');
+            
             const currentRole = await getCurrentRole(supabaseClient);
             console.log('AuthProvider: Role result:', currentRole);
 
@@ -137,30 +128,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // Race against a 2-second timeout (reduced from 5s for better UX)
         // If Supabase hangs completely, we force a fallback or clear state
-        const { session: currentSession, role: currentRole } =
-          await Promise.race([
-            checkAuth(),
-            new Promise<{ session: any; role: any }>((_, reject) =>
-              setTimeout(
-                () => reject(new Error('Auth initialization timed out')),
-                2000
-              )
-            ),
-          ]);
+        const { session: currentSession, role: currentRole } = await Promise.race([
+          checkAuth(),
+          new Promise<{ session: any; role: any }>((_, reject) =>
+            setTimeout(() => reject(new Error('Auth initialization timed out')), 2000)
+          ),
+        ]);
 
         setSession(currentSession);
         setRole(currentRole);
         writeAuthCookies(currentRole, currentSession?.userId || null);
         setError(null);
         console.log('AuthProvider: Initialization complete');
-      } catch (err: unknown) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Unknown error';
-        console.error(
-          'AuthProvider: Initialization failed/timed out:',
-          errorMessage
-        );
-
+      } catch (err: any) {
+        console.error('AuthProvider: Initialization failed/timed out:', err);
+        
         // Final fallback: try to read from cookies directly if everything else failed
         // This is a "Hail Mary" to prevent being logged out on slow connections
         try {
@@ -168,14 +150,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .split('; ')
             .find((row) => row.startsWith('toyota_role='))
             ?.split('=')[1];
-
-          if (
-            roleCookie &&
-            ['admin', 'manager', 'viewer', 'driver'].includes(roleCookie)
-          ) {
+            
+          if (roleCookie && ['admin', 'manager', 'viewer', 'driver'].includes(roleCookie)) {
             console.warn('AuthProvider: Recovering from error using cookies');
-            setRole(roleCookie as 'driver' | 'admin' | 'manager' | 'viewer');
-            // We can't easily reconstruct the full session here without more data,
+            setRole(roleCookie as any);
+            // We can't easily reconstruct the full session here without more data, 
             // but setting the role might be enough for some UI to show
           } else {
             setSession(null);
@@ -186,7 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(null);
           setRole(null);
         }
-
+        
         // Don't show error to user for timeouts, just let them be "logged out" or "cookie authenticated"
         // setError(err.message || 'Failed to initialize auth');
       } finally {
