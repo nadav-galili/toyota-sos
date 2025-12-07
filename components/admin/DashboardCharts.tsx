@@ -9,25 +9,16 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 
-const DriverCompletionTimelineChart = dynamic(
-  () =>
-    import(
-      '@/components/admin/dashboard/charts/DriverCompletionTimelineChart'
-    ).then((mod) => ({ default: mod.DriverCompletionTimelineChart })),
-  { 
-    ssr: false,
-    loading: () => <div className="h-full w-full animate-pulse bg-slate-100 rounded" />
-  }
-);
-
 const DriverCompletionTrendChart = dynamic(
   () =>
     import(
       '@/components/admin/dashboard/charts/DriverCompletionTrendChart'
     ).then((mod) => ({ default: mod.DriverCompletionTrendChart })),
-  { 
+  {
     ssr: false,
-    loading: () => <div className="h-full w-full animate-pulse bg-slate-100 rounded" />
+    loading: () => (
+      <div className="h-full w-full animate-pulse bg-slate-100 rounded" />
+    ),
   }
 );
 
@@ -36,9 +27,11 @@ const WeeklyTrendsChart = dynamic(
     import('@/components/admin/dashboard/charts/WeeklyTrendsChart').then(
       (mod) => ({ default: mod.WeeklyTrendsChart })
     ),
-  { 
+  {
     ssr: false,
-    loading: () => <div className="h-full w-full animate-pulse bg-slate-100 rounded" />
+    loading: () => (
+      <div className="h-full w-full animate-pulse bg-slate-100 rounded" />
+    ),
   }
 );
 
@@ -47,9 +40,11 @@ const DriverCompletionChart = dynamic(
     import('@/components/admin/dashboard/charts/DriverCompletionChart').then(
       (mod) => ({ default: mod.DriverCompletionChart })
     ),
-  { 
+  {
     ssr: false,
-    loading: () => <div className="h-full w-full animate-pulse bg-slate-100 rounded" />
+    loading: () => (
+      <div className="h-full w-full animate-pulse bg-slate-100 rounded" />
+    ),
   }
 );
 
@@ -58,9 +53,11 @@ const DriverDurationChart = dynamic(
     import('@/components/admin/dashboard/charts/DriverDurationChart').then(
       (mod) => ({ default: mod.DriverDurationChart })
     ),
-  { 
+  {
     ssr: false,
-    loading: () => <div className="h-full w-full animate-pulse bg-slate-100 rounded" />
+    loading: () => (
+      <div className="h-full w-full animate-pulse bg-slate-100 rounded" />
+    ),
   }
 );
 
@@ -69,9 +66,11 @@ const StatusByPriorityChart = dynamic(
     import('@/components/admin/dashboard/charts/StatusByPriorityChart').then(
       (mod) => ({ default: mod.StatusByPriorityChart })
     ),
-  { 
+  {
     ssr: false,
-    loading: () => <div className="h-full w-full animate-pulse bg-slate-100 rounded" />
+    loading: () => (
+      <div className="h-full w-full animate-pulse bg-slate-100 rounded" />
+    ),
   }
 );
 
@@ -80,9 +79,11 @@ const StatusByTypeChart = dynamic(
     import('@/components/admin/dashboard/charts/StatusByTypeChart').then(
       (mod) => ({ default: mod.StatusByTypeChart })
     ),
-  { 
+  {
     ssr: false,
-    loading: () => <div className="h-full w-full animate-pulse bg-slate-100 rounded" />
+    loading: () => (
+      <div className="h-full w-full animate-pulse bg-slate-100 rounded" />
+    ),
   }
 );
 
@@ -122,35 +123,17 @@ export function DashboardCharts() {
   return (
     <section className="space-y-6">
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {/* Chart 1 - Driver Completion Timeline (Area Chart) - PRIMARY - Full Width */}
-        <Card className="group h-[450px] border-0 shadow-lg shadow-slate-900/5 bg-gradient-to-br from-white/98 via-white/95 to-purple-50/20 backdrop-blur-md transition-all duration-300 hover:shadow-xl hover:shadow-slate-900/10 hover:scale-[1.01] transform-gpu border-l-4 border-l-transparent hover:border-l-purple-400/60 overflow-hidden relative md:col-span-2 xl:col-span-3 flex flex-col">
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-50/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-radial from-purple-100/20 to-transparent rounded-full transform translate-x-16 -translate-y-16" />
-          <CardHeader className="pb-4 relative z-10">
-            <CardTitle className="text-lg font-bold text-slate-800 group-hover:text-slate-900 transition-colors duration-200 flex items-center gap-2">
-              <div className="w-2 h-2 bg-purple-500 rounded-full group-hover:scale-125 transition-transform duration-200" />
-              השלמת משימות לפי נהג לאורך זמן
-            </CardTitle>
-            <CardDescription className="text-slate-600 group-hover:text-slate-700 transition-colors duration-200 font-medium">
-              מעקב אחר מספר המשימות שהושלמו על ידי כל נהג במהלך התקופה הנבחרה
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0 relative z-10 flex flex-col flex-1 min-h-0">
-            <DriverCompletionTimelineChart />
-          </CardContent>
-        </Card>
-
-        {/* Chart 2 - Driver Completion Trends (Line Chart) - SECONDARY - Full Width */}
+        {/* Chart 1 - Driver Completion Trends (Line Chart) - Full Width */}
         <Card className="group h-[450px] border-0 shadow-lg shadow-slate-900/5 bg-gradient-to-br from-white/98 via-white/95 to-indigo-50/20 backdrop-blur-md transition-all duration-300 hover:shadow-xl hover:shadow-slate-900/10 hover:scale-[1.01] transform-gpu border-l-4 border-l-transparent hover:border-l-indigo-400/60 overflow-hidden relative md:col-span-2 xl:col-span-3 flex flex-col">
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-radial from-indigo-100/20 to-transparent rounded-full transform translate-x-16 -translate-y-16" />
           <CardHeader className="pb-4 relative z-10">
             <CardTitle className="text-lg font-bold text-slate-800 group-hover:text-slate-900 transition-colors duration-200 flex items-center gap-2">
               <div className="w-2 h-2 bg-indigo-500 rounded-full group-hover:scale-125 transition-transform duration-200" />
-              מגמות השלמת משימות (השוואתי)
+              כמות משימות לפי נהגים{' '}
             </CardTitle>
             <CardDescription className="text-slate-600 group-hover:text-slate-700 transition-colors duration-200 font-medium">
-              השוואת קצב ביצוע המשימות בין הנהגים השונים לאורך ציר הזמן
+              השוואת כמות ביצוע המשימות בין הנהגים השונים לאורך ציר הזמן
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-0 relative z-10 flex flex-col flex-1 min-h-0">
@@ -158,7 +141,7 @@ export function DashboardCharts() {
           </CardContent>
         </Card>
 
-        {/* Chart 3 - Weekly Task Trends (Line Chart) */}
+        {/* Chart 2 - Weekly Task Trends (Line Chart) */}
         <Card className="group h-[450px] border-0 shadow-lg shadow-slate-900/5 bg-gradient-to-br from-white/98 via-white/95 to-blue-50/20 backdrop-blur-md transition-all duration-300 hover:shadow-xl hover:shadow-slate-900/10 hover:scale-[1.01] transform-gpu border-l-4 border-l-transparent hover:border-l-blue-400/60 overflow-hidden relative">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-50/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-radial from-blue-100/20 to-transparent rounded-full transform translate-x-16 -translate-y-16" />
@@ -168,7 +151,7 @@ export function DashboardCharts() {
               סטטוס ביצוע משימות{' '}
             </CardTitle>
             <CardDescription className="text-slate-600 group-hover:text-slate-700 transition-colors duration-200 font-medium">
-              מעקב אחר מגמות יצירה והשלמה של משימות לאורך זמן בתקופה שנבחרה
+              משימות שבוצעו.לא בוצעו{' '}
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-0 relative z-10 flex flex-col">
@@ -188,7 +171,7 @@ export function DashboardCharts() {
           </CardContent>
         </Card>
 
-        {/* Chart 4 - Driver Task Completion Comparison (Bar Chart) */}
+        {/* Chart 3 - Driver Task Completion Comparison (Bar Chart) */}
         <Card className="group h-[450px] border-0 shadow-lg shadow-slate-900/5 bg-gradient-to-br from-white/98 via-white/95 to-green-50/20 backdrop-blur-md transition-all duration-300 hover:shadow-xl hover:shadow-slate-900/10 hover:scale-[1.01] transform-gpu border-l-4 border-l-transparent hover:border-l-green-400/60 overflow-hidden relative">
           <div className="absolute inset-0 bg-gradient-to-br from-green-50/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-radial from-green-100/20 to-transparent rounded-full transform translate-x-16 -translate-y-16" />
@@ -214,7 +197,7 @@ export function DashboardCharts() {
           </CardContent>
         </Card>
 
-        {/* Chart 5 - Driver Task Duration Analysis */}
+        {/* Chart 4 - Driver Task Duration Analysis */}
         <Card className="group h-[450px] border-0 shadow-lg shadow-slate-900/5 bg-gradient-to-br from-white/98 via-white/95 to-orange-50/20 backdrop-blur-md transition-all duration-300 hover:shadow-xl hover:shadow-slate-900/10 hover:scale-[1.01] transform-gpu border-l-4 border-l-transparent hover:border-l-orange-400/60 overflow-hidden relative">
           <div className="absolute inset-0 bg-gradient-to-br from-orange-50/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-radial from-orange-100/20 to-transparent rounded-full transform translate-x-16 -translate-y-16" />
@@ -242,10 +225,10 @@ export function DashboardCharts() {
           </CardContent>
         </Card>
 
-        {/* Chart 6 - Status by Priority */}
+        {/* Chart 5 - Status by Priority */}
         <StatusByPriorityChart />
 
-        {/* Chart 7 - Status by Type */}
+        {/* Chart 6 - Status by Type */}
         <StatusByTypeChart />
       </div>
     </section>

@@ -36,9 +36,14 @@ export async function GET(req: Request) {
         total: 0,
       };
       existing.completed += p.completed;
+      // notCompleted represents tasks created but not completed on the same day
       const open = Math.max(p.created - p.completed, 0);
       existing.notCompleted += open;
-      existing.total += p.created;
+      // Total should always be completed + notCompleted to ensure consistency
+      // This handles both cases:
+      // - If completed <= created: total = completed + (created - completed) = created
+      // - If completed > created: total = completed + 0 = completed
+      existing.total = existing.completed + existing.notCompleted;
       byDate.set(p.date, existing);
     });
 
