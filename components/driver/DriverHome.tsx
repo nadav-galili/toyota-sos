@@ -11,6 +11,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { ChecklistModal } from '@/components/driver/ChecklistModal';
 import {
   getStartChecklistForTaskType,
+  getCompletionChecklistForTaskType,
   getCompletionFlowForTaskType,
 } from '@/components/driver/checklists';
 import { ReplacementCarDeliveryForm } from '@/components/driver/ReplacementCarDeliveryForm';
@@ -114,6 +115,12 @@ export function DriverHome() {
 
   // Checklist flow state: when a status change requires a start checklist
   const [checklistState, setChecklistState] = useState<{
+    task: DriverTask;
+    nextStatus: DriverTask['status'];
+  } | null>(null);
+
+  // Completion checklist state: when moving to 'הושלמה' requires a checklist
+  const [completionChecklistState, setCompletionChecklistState] = useState<{
     task: DriverTask;
     nextStatus: DriverTask['status'];
   } | null>(null);
@@ -428,9 +435,17 @@ export function DriverHome() {
                       }
                     }
 
-                    // If moving into "הושלמה" and this task type has a completion flow,
-                    // open the completion form instead of immediately updating status.
+                    // If moving into "הושלמה" and this task type has a completion checklist,
+                    // open the checklist modal instead of immediately updating status.
                     if (next === 'הושלמה') {
+                      const completionSchema = getCompletionChecklistForTaskType(
+                        task.type
+                      );
+                      if (completionSchema && completionSchema.length > 0) {
+                        setCompletionChecklistState({ task, nextStatus: next });
+                        return;
+                      }
+                      // If no completion checklist, check for special completion flows
                       const completionFlow = getCompletionFlowForTaskType(
                         task.type
                       );
@@ -513,6 +528,7 @@ export function DriverHome() {
           persist
           taskId={checklistState.task.id}
           driverId={driverId || undefined}
+          forceCompletion
           onSubmit={async () => {
             if (!client || !checklistState) return;
             const { error: upErr } = await client.rpc('update_task_status', {
@@ -537,6 +553,56 @@ export function DriverHome() {
               )
             );
             toastSuccess('המשימה עודכנה בהצלחה');
+            setChecklistState(null);
+          }}
+        />
+      ) : null}
+
+      {/* Mandatory completion checklist for specific task types (e.g. "איסוף רכב/שינוע") */}
+      {completionChecklistState ? (
+        <ChecklistModal
+          open={!!completionChecklistState}
+          onOpenChange={(open) => {
+            if (!open) {
+              setCompletionChecklistState(null);
+            }
+          }}
+          schema={
+            getCompletionChecklistForTaskType(
+              completionChecklistState.task.type
+            ) ?? []
+          }
+          title="צ׳ק-ליסט השלמת איסוף רכב"
+          description="אנא וודא שביצעת את כל הפעולות הנדרשות לפני השלמת המשימה."
+          persist
+          taskId={completionChecklistState.task.id}
+          driverId={driverId || undefined}
+          forceCompletion
+          onSubmit={async () => {
+            if (!client || !completionChecklistState) return;
+            const { error: upErr } = await client.rpc('update_task_status', {
+              p_task_id: completionChecklistState.task.id,
+              p_status: completionChecklistState.nextStatus,
+              p_driver_id: driverId || undefined,
+            });
+            if (upErr) {
+              const errorMessage = upErr.message || '';
+              if (errorMessage.includes('INVALID_STATUS_FLOW')) {
+                toastError('המשימה חייבת להיות בסטטוס "בעבודה" לפני שניתן להשלים אותה', 5000);
+              } else {
+                toastError('שגיאה בעדכון סטטוס המשימה');
+              }
+              return;
+            }
+            setRemoteTasks((prev) =>
+              prev.map((t) =>
+                t.id === completionChecklistState.task.id
+                  ? { ...t, status: completionChecklistState.nextStatus }
+                  : t
+              )
+            );
+            toastSuccess('המשימה הושלמה בהצלחה');
+            setCompletionChecklistState(null);
           }}
         />
       ) : null}
