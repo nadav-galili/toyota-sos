@@ -406,8 +406,6 @@ export function DriverHome() {
           [
             { key: 'today', label: 'היום' },
             { key: 'all', label: 'הכל' },
-            // { key: 'overdue', label: 'איחורים' },
-            // { key: 'forms', label: 'טפסים' },
           ] as const
         ).map((t) => {
           type TabKey = typeof t.key;
