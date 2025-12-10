@@ -53,7 +53,7 @@ export function getStartChecklistForTaskType(
     // Phase 1: When moving from 'בהמתנה' to 'בעבודה'
     return [
       {
-        id: 'customer_quote',
+        id: 'client_quote',
         type: 'boolean',
         title: 'האם יש הצעת מחיר מהלקוח?',
         required: true,
@@ -95,7 +95,7 @@ export function getStartChecklistForTaskType(
 
 /**
  * Return the checklist schema a driver must complete when moving a task
- * to 'הושלמה' (completed) status for specific task types.
+ * to 'הושלמה' status for specific task types.
  */
 export function getCompletionChecklistForTaskType(
   taskType: string | null | undefined
