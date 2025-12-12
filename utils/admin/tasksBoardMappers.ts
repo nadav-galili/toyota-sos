@@ -136,9 +136,11 @@ export function sortTasks(params: {
   const { tasks, sortBy, sortDir, driverMap, taskAssigneeMap } = params;
 
   const priorityRank: Record<TaskPriority, number> = {
-    נמוכה: 1,
-    בינונית: 2,
-    גבוהה: 3,
+    'ללא עדיפות': 1,
+    'מיידי': 5,
+    נמוכה: 2,
+    בינונית: 3,
+    גבוהה: 4,
   };
 
   const list = tasks.slice().sort((a, b) => {

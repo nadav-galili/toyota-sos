@@ -10,7 +10,7 @@ export type TaskCardProps = {
   id: string;
   title: string;
   type: string;
-  priority: 'נמוכה' | 'בינונית' | 'גבוהה';
+  priority: 'ללא עדיפות' | 'מיידי' | 'נמוכה' | 'בינונית' | 'גבוהה';
   status: 'בהמתנה' | 'בעבודה' | 'חסומה' | 'הושלמה';
   estimatedStart?: string | Date | null;
   estimatedEnd?: string | Date | null;
@@ -42,11 +42,15 @@ export function TaskCard(props: TaskCardProps) {
   } = props;
 
   const priorityColor =
-    priority === 'גבוהה'
+    priority === 'מיידי'
+      ? 'bg-red-600'
+      : priority === 'גבוהה'
       ? 'bg-red-600'
       : priority === 'בינונית'
       ? 'bg-yellow-500'
-      : 'bg-green-600';
+      : priority === 'נמוכה'
+      ? 'bg-green-600'
+      : 'bg-gray-400';
 
   const statusTheme: Record<
     TaskCardProps['status'],
@@ -93,19 +97,21 @@ export function TaskCard(props: TaskCardProps) {
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-xs text-gray-500">עדיפות</span>
-            <span
-              className={cn(
-                'inline-flex rounded px-2 py-1 text-xs text-white',
-                priorityColor
-              )}
-            >
-              {priority}
-            </span>
+        {priority !== 'ללא עדיפות' && (
+          <div className="flex items-center gap-4">
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-xs text-gray-500">עדיפות</span>
+              <span
+                className={cn(
+                  'inline-flex rounded px-2 py-1 text-xs text-white',
+                  priorityColor
+                )}
+              >
+                {priority}
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="flex flex-col gap-1">
           <span className="text-center text-xs text-gray-500 sm:text-right">

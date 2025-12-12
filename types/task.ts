@@ -3,7 +3,7 @@
  */
 
 export type TaskStatus = 'בהמתנה' | 'בעבודה' | 'חסומה' | 'הושלמה';
-export type TaskPriority = 'נמוכה' | 'בינונית' | 'גבוהה';
+export type TaskPriority = 'ללא עדיפות' | 'מיידי' | 'נמוכה' | 'בינונית' | 'גבוהה';
 export type TaskType =
   | 'איסוף רכב/שינוע'
   | 'החזרת רכב/שינוע'

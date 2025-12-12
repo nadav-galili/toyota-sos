@@ -1013,9 +1013,8 @@ export function TasksBoard({
                 label: string;
               }> = [
                 { value: 'all', label: 'כל העדיפויות' },
-                { value: 'נמוכה', label: 'נמוכה' },
-                { value: 'בינונית', label: 'בינונית' },
-                { value: 'גבוהה', label: 'גבוהה' },
+                { value: 'ללא עדיפות', label: 'ללא עדיפות' },
+                { value: 'מיידי', label: 'מיידי' },
               ];
               const currentLabel =
                 priorityOptions.find((o) => o.value === filterPriority)

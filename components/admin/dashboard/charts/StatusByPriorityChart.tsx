@@ -40,9 +40,11 @@ const STATUS_DISPLAY_NAMES: Record<TaskStatus, string> = {
 
 // Priority colors - more distinct colors
 const PRIORITY_COLORS: Record<string, string> = {
-  גבוהה: 'hsl(0 84% 60%)', // Red
-  בינונית: 'hsl(38 92% 50%)', // Orange
-  נמוכה: 'hsl(142 76% 36%)', // Green
+  'מיידי': 'hsl(0 84% 60%)', // Red
+  'ללא עדיפות': 'hsl(0 0% 60%)', // Gray
+  גבוהה: 'hsl(0 84% 60%)', // Red (legacy)
+  בינונית: 'hsl(38 92% 50%)', // Orange (legacy)
+  נמוכה: 'hsl(142 76% 36%)', // Green (legacy)
 };
 
 // Custom Tooltip Component

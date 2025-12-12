@@ -92,7 +92,7 @@ const types: TaskType[] = [
   'חילוץ רכב תקוע',
   'אחר',
 ];
-const priorities: TaskPriority[] = ['נמוכה', 'בינונית', 'גבוהה'];
+const priorities: TaskPriority[] = ['ללא עדיפות', 'מיידי'];
 const statuses: TaskStatus[] = ['בהמתנה', 'בעבודה', 'חסומה', 'הושלמה'];
 const multiStopTypes: TaskType[] = ['הסעת לקוח הביתה', 'הסעת לקוח למוסך'];
 const multiStopAliases = ['drive_client_home', 'drive_client_to_dealership'];
@@ -138,7 +138,7 @@ export function TaskDialog(props: TaskDialogProps) {
   const [title, setTitle] = useState(task?.title ?? '');
   const [type, setType] = useState<TaskType>(task?.type ?? 'אחר');
   const [priority, setPriority] = useState<TaskPriority>(
-    task?.priority ?? 'בינונית'
+    task?.priority ?? 'ללא עדיפות'
   );
   const [status, setStatus] = useState<TaskStatus>(task?.status ?? 'בהמתנה');
   const [details, setDetails] = useState(task?.details ?? '');
@@ -197,7 +197,7 @@ export function TaskDialog(props: TaskDialogProps) {
       setError(null);
       setTitle(task?.title ?? '');
       setType(task?.type ?? 'אחר');
-      setPriority(task?.priority ?? 'בינונית');
+      setPriority(task?.priority ?? 'ללא עדיפות');
       setStatus(task?.status ?? 'בהמתנה');
       setDetails(task?.details ?? '');
       setAdvisorName(task?.advisor_name ?? '');

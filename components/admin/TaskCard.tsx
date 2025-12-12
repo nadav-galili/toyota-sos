@@ -86,13 +86,15 @@ export function TaskCard({
             {task.title}
           </h4> */}
         </div>
-        <span
-          className={`shrink-0 inline-block rounded-full px-1.5 py-0.5 text-xs font-bold text-white ${priorityColor(
-            task.priority
-          )}`}
-        >
-          {priorityLabel(task.priority)}
-        </span>
+        {task.priority !== 'ללא עדיפות' && (
+          <span
+            className={`shrink-0 inline-block rounded-full px-1.5 py-0.5 text-xs font-bold text-white ${priorityColor(
+              task.priority
+            )}`}
+          >
+            {priorityLabel(task.priority)}
+          </span>
+        )}
       </div>
 
       {/* Type badge */}
@@ -242,20 +244,24 @@ export function statusColor(status: TaskStatus): string {
 
 export function priorityLabel(priority: TaskPriority): string {
   const labels: Record<TaskPriority, string> = {
+    'ללא עדיפות': 'ללא עדיפות',
+    'מיידי': 'מיידי',
     נמוכה: 'נמוכה',
     בינונית: 'בינונית',
     גבוהה: 'גבוהה',
   };
-  return labels[priority];
+  return labels[priority] || priority;
 }
 
 export function priorityColor(priority: TaskPriority): string {
   const colors: Record<TaskPriority, string> = {
+    'ללא עדיפות': 'bg-gray-400',
+    'מיידי': 'bg-red-600',
     נמוכה: 'bg-gray-500',
     בינונית: 'bg-yellow-500',
     גבוהה: 'bg-red-600',
   };
-  return colors[priority];
+  return colors[priority] || 'bg-gray-500';
 }
 
 export function typeLabel(type: TaskType): string {
