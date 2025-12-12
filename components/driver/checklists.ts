@@ -90,6 +90,17 @@ export function getStartChecklistForTaskType(
     ];
   }
 
+  if (taskType === 'הסעת רכב חלופי') {
+    return [
+      {
+        id: 'signed_at_desk',
+        type: 'boolean',
+        title: 'האם חתמת על הרכב בדלפק?',
+        required: true,
+      },
+    ];
+  }
+
   return null;
 }
 

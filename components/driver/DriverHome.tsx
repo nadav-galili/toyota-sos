@@ -35,6 +35,11 @@ function getChecklistInfo(type: string) {
         title: 'צ׳ק-ליסט החזרת רכב',
         description: 'אנא וודא שביצעת את כל הפעולות הנדרשות לפני ההחזרה.',
       };
+    case 'הסעת רכב חלופי':
+      return {
+        title: 'צ׳ק-ליסט הסעת רכב חלופי',
+        description: 'אנא וודא שביצעת את כל הפעולות הנדרשות לפני תחילת העבודה.',
+      };
     default:
       return {
         title: 'צ׳ק-ליסט',
