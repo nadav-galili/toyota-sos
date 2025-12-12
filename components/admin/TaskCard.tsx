@@ -17,6 +17,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
+import { TaskAttachments } from './TaskAttachments';
 
 /**
  * TaskCard Component
@@ -164,6 +165,9 @@ export function TaskCard({
       <div className="mb-2 text-xs text-gray-500">
         {formatDate(task.estimated_start)} - {formatDate(task.estimated_end)}
       </div>
+
+      {/* Task Attachments (images and signatures) */}
+      <TaskAttachments taskId={task.id} taskType={task.type} />
 
       {/* Footer: Status + Actions */}
       <div className="mt-2 flex items-center justify-between">
