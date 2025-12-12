@@ -234,8 +234,9 @@ export function TasksByDriverTypeChart() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis
                   type="number"
+                  allowDecimals={false}
                   tick={{ fontSize: 11, fill: '#6b7280' }}
-                  tickFormatter={(value) => value.toString()}
+                  tickFormatter={(value) => Math.round(value).toString()}
                   axisLine={false}
                   tickLine={false}
                 />

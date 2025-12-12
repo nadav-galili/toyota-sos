@@ -55,7 +55,7 @@ export function TaskCard({
     <div
       ref={setNodeRef}
       id={task.id}
-      className={`relative cursor-grab active:cursor-grabbing select-none rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-all hover:shadow-md hover:border-gray-300 ${
+      className={`relative cursor-grab active:cursor-grabbing select-none rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-all hover:shadow-md hover:border-gray-300 max-w-full ${
         isActive ? 'opacity-50 ring-2 ring-primary' : ''
       } ${isDragging ? 'opacity-50' : ''}`}
       aria-label={`משימה: ${task.title}`}
@@ -86,7 +86,7 @@ export function TaskCard({
             {task.title}
           </h4> */}
         </div>
-        {task.priority !== 'ללא עדיפות' && (
+        {task.priority === 'מיידי' && (
           <span
             className={`shrink-0 inline-block rounded-full px-1.5 py-0.5 text-xs font-bold text-white ${priorityColor(
               task.priority
@@ -169,7 +169,7 @@ export function TaskCard({
       </div>
 
       {/* Task Attachments (images and signatures) */}
-      <TaskAttachments taskId={task.id} taskType={task.type} />
+      <TaskAttachments key={task.id} taskId={task.id} taskType={task.type} />
 
       {/* Footer: Status + Actions */}
       <div className="mt-2 flex items-center justify-between">

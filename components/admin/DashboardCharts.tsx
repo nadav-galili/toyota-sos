@@ -239,7 +239,7 @@ export function DashboardCharts() {
         </Card>
 
         {/* Chart 5 - Status by Priority */}
-        <StatusByPriorityChart />
+        {/* <StatusByPriorityChart /> */}
 
         {/* Chart 6 - Status by Type */}
         <StatusByTypeChart />
