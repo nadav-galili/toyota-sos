@@ -556,6 +556,7 @@ export function TaskDialog(props: TaskDialogProps) {
                 clientQuery: created.name || '',
                 address: '',
                 advisorName: '',
+                advisorColor: null,
               },
             ];
           }
@@ -1169,6 +1170,7 @@ export function TaskDialog(props: TaskDialogProps) {
                           clientQuery: '',
                           address: '',
                           advisorName: '',
+                          advisorColor: null,
                         },
                       ])
                     }
