@@ -41,7 +41,8 @@ export default async function AdminTasksPage() {
         created_by,
         updated_by,
         created_at,
-        updated_at
+        updated_at,
+        task_stops(id, client_id, address, advisor_name, sort_order)
       `
       )
       .is('deleted_at', null)
@@ -51,7 +52,23 @@ export default async function AdminTasksPage() {
     if (error) {
       tasksError = error.message;
     } else {
-      tasks = data || [];
+      tasks = (data || []).map((task: any) => ({
+        ...task,
+        stops: task.task_stops
+          ? task.task_stops
+              .sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0))
+              .map((stop: any) => ({
+                id: stop.id,
+                task_id: task.id,
+                client_id: stop.client_id,
+                address: stop.address,
+                advisor_name: stop.advisor_name,
+                sort_order: stop.sort_order,
+                created_at: '',
+                updated_at: '',
+              }))
+          : undefined,
+      }));
     }
   } catch (e) {
     tasksError = e instanceof Error ? e.message : 'Failed to fetch tasks';

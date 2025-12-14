@@ -87,13 +87,13 @@ export function TaskCard({
           </h4> */}
         </div>
         {task.priority === 'מיידי' && (
-        <span
-          className={`shrink-0 inline-block rounded-full px-1.5 py-0.5 text-xs font-bold text-white ${priorityColor(
-            task.priority
-          )}`}
-        >
-          {priorityLabel(task.priority)}
-        </span>
+          <span
+            className={`shrink-0 inline-block rounded-full px-1.5 py-0.5 text-xs font-bold text-white ${priorityColor(
+              task.priority
+            )}`}
+          >
+            {priorityLabel(task.priority)}
+          </span>
         )}
       </div>
 
@@ -105,18 +105,52 @@ export function TaskCard({
       {/* Driver info */}
       {leadDriver && (
         <div className="mb-2 flex items-center gap-1 text-xs text-gray-600">
-          <span className="font-medium">👤</span>
+          <span className="font-medium">👨‍✈️</span>
           <span className="truncate">{leadDriver.name || 'Unknown'}</span>
         </div>
       )}
 
-      {/* Client info */}
-      {client && (
-        <div className="mb-2 flex items-center gap-1 text-xs text-gray-600">
-          <span className="font-medium">🏢</span>
-          <span className="truncate">{client.name}</span>
-        </div>
-      )}
+      {/* Client info - show all clients for multi-stop tasks */}
+      {(() => {
+        const multiStopTypes: TaskType[] = [
+          'הסעת לקוח הביתה',
+          'הסעת לקוח למוסך',
+        ];
+        const isMultiStop = multiStopTypes.includes(task.type);
+        const stops = task.stops || [];
+
+        if (isMultiStop && stops.length > 0) {
+          // Get unique clients from stops, preserving order
+          const clientIds = stops
+            .map((stop) => stop.client_id)
+            .filter((id): id is string => Boolean(id));
+          const uniqueClientIds = Array.from(new Set(clientIds));
+
+          return uniqueClientIds.map((clientId) => {
+            const stopClient = clientMap.get(clientId);
+            if (!stopClient) return null;
+
+            return (
+              <div
+                key={clientId}
+                className="mb-1.5 flex items-center gap-1 text-xs text-gray-600"
+              >
+                <span className="font-medium">👤</span>
+                <span className="truncate">{stopClient.name}</span>
+              </div>
+            );
+          });
+        } else if (client) {
+          // Show single client for non-multi-stop tasks
+          return (
+            <div className="mb-2 flex items-center gap-1 text-xs text-gray-600">
+              <span className="font-medium">🏢</span>
+              <span className="truncate">{client.name}</span>
+            </div>
+          );
+        }
+        return null;
+      })()}
 
       {/* Vehicle info */}
       {vehicle && (
@@ -245,7 +279,7 @@ export function statusColor(status: TaskStatus): string {
 export function priorityLabel(priority: TaskPriority): string {
   const labels: Record<TaskPriority, string> = {
     'ללא עדיפות': 'ללא עדיפות',
-    'מיידי': 'מיידי',
+    מיידי: 'מיידי',
     נמוכה: 'נמוכה',
     בינונית: 'בינונית',
     גבוהה: 'גבוהה',
@@ -256,7 +290,7 @@ export function priorityLabel(priority: TaskPriority): string {
 export function priorityColor(priority: TaskPriority): string {
   const colors: Record<TaskPriority, string> = {
     'ללא עדיפות': 'bg-gray-400',
-    'מיידי': 'bg-red-600',
+    מיידי: 'bg-red-600',
     נמוכה: 'bg-gray-500',
     בינונית: 'bg-yellow-500',
     גבוהה: 'bg-red-600',
