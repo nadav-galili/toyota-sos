@@ -1,5 +1,5 @@
 import React from 'react';
-import { AdminSignOutButton } from '@/components/admin/AdminSignOutButton';
+import { AdminNotificationBell } from '@/components/admin/AdminNotificationBell';
 
 export default function AdminLayout({
   children,
@@ -8,7 +8,9 @@ export default function AdminLayout({
 }) {
   return (
     <>
-      <AdminSignOutButton />
+      <div className="fixed top-4 left-4 z-[60]">
+        <AdminNotificationBell />
+      </div>
       {children}
     </>
   );

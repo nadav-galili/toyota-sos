@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AdminSignOutButton } from '@/components/admin/AdminSignOutButton';
 
 interface NavItem {
   name: string;
@@ -28,6 +29,8 @@ const iconMap: Record<
   User: Icons.User,
   Briefcase: Icons.Briefcase,
   FileText: Icons.FileText,
+  ShieldCheck: Icons.ShieldCheck,
+  Users: Icons.Users,
 };
 
 export function NavBar({ items, className }: NavBarProps) {
@@ -39,6 +42,7 @@ export function NavBar({ items, className }: NavBarProps) {
         {items.map((item) => {
           const Icon =
             typeof item.icon === 'string'
+              // @ts-ignore
               ? iconMap[item.icon] || Icons.LayoutDashboard
               : item.icon;
           const isActive =
@@ -79,6 +83,10 @@ export function NavBar({ items, className }: NavBarProps) {
             </Link>
           );
         })}
+        <div className="h-6 w-px bg-border mx-1" />
+        <div className="px-1">
+             <AdminSignOutButton />
+        </div>
       </div>
     </div>
   );

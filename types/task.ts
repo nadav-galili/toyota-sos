@@ -31,6 +31,7 @@ export interface Task {
   advisor_name?: string | null;
   created_at: string;
   updated_at: string;
+  admin_notified_late_start?: boolean;
   stops?: TaskStop[];
 }
 

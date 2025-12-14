@@ -48,13 +48,14 @@ export function AdminSignOutButton() {
 
   return (
     <Button
-      variant="outline"
-      className="text-sm absolute top-4 left-4 z-50 border-primary bg-blue-600 text-white"
+      variant="ghost"
+      size="icon"
+      className="text-foreground/80 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
       onClick={handleSignOut}
       disabled={signingOut}
+      title="יציאה"
     >
-      <LogOutIcon className="w-4 h-4 mr-2" />
-      יציאה
+      <LogOutIcon className="w-5 h-5" />
     </Button>
   );
 }
