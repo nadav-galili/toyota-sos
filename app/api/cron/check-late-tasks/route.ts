@@ -39,6 +39,9 @@ export async function GET(request: NextRequest) {
         profiles (
           name
         )
+      ),
+      clients (
+        name
       )
     `
     )
@@ -92,7 +95,8 @@ export async function GET(request: NextRequest) {
             .filter(Boolean)
             .join(', ') || 'ללא שם';
 
-        const taskTitle = task.title || 'ללא כותרת';
+        const clientName = (task.clients && task.clients.name) || 'ללא שם';
+        const taskType = task.type || 'משימה';
 
         // Send Push Notification
         await notify({
@@ -101,7 +105,7 @@ export async function GET(request: NextRequest) {
           recipients: recipientList,
           payload: {
             title: 'התראה על איחור במשימה',
-            body: `המשימה "${taskTitle}" (נהג: ${drivers}) לא התחילה בזמן (איחור של 5 דקות).`,
+            body: `המשימה "${taskType}" עבור ${clientName} (נהג: ${drivers}) לא התחילה בזמן (איחור של 5 דקות).`,
             url: `/admin/dashboard?taskId=${task.id}`, // Deep link to task in dashboard
             priority: 'high',
             taskId: task.id,
