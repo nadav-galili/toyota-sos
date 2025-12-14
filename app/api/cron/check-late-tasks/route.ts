@@ -5,7 +5,13 @@ import { notify } from '@/lib/notify';
 export async function GET(request: NextRequest) {
   // 1. Verify Cron Secret to prevent unauthorized execution
   const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const url = new URL(request.url);
+  const queryKey = url.searchParams.get('key');
+
+  if (
+    authHeader !== `Bearer ${process.env.CRON_SECRET}` &&
+    queryKey !== process.env.CRON_SECRET
+  ) {
     return new NextResponse('Unauthorized', { status: 401 });
   }
 
@@ -17,13 +23,14 @@ export async function GET(request: NextRequest) {
   // - Estimated Start: Over 5 minutes ago
   // - Assigned: Has at least one driver (checked via inner join on task_assignees)
   // - Notified: admin_notified_late_start is false
-  
+
   const now = new Date();
   const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000).toISOString();
 
   const { data: tasks, error } = await admin
     .from('tasks')
-    .select(`
+    .select(
+      `
       id,
       title,
       type,
@@ -33,7 +40,8 @@ export async function GET(request: NextRequest) {
           name
         )
       )
-    `)
+    `
+    )
     .in('type', ['הסעת לקוח הביתה', 'הסעת לקוח למוסך'])
     .eq('status', 'בהמתנה')
     .lt('estimated_start', fiveMinutesAgo)
@@ -61,22 +69,28 @@ export async function GET(request: NextRequest) {
 
   if (!recipients || recipients.length === 0) {
     console.warn('No admins/managers found to notify');
-    return NextResponse.json({ ok: true, count: tasks.length, notified: 0, warning: 'No recipients found' });
+    return NextResponse.json({
+      ok: true,
+      count: tasks.length,
+      notified: 0,
+      warning: 'No recipients found',
+    });
   }
 
-  const recipientList = recipients.map(r => ({ user_id: r.id }));
+  const recipientList = recipients.map((r) => ({ user_id: r.id }));
 
   // 4. Send Notifications and Update Tasks
   let notifiedCount = 0;
-  
+
   await Promise.all(
     tasks.map(async (task: any) => {
       try {
         // Extract driver names for the message
-        const drivers = task.task_assignees
-          ?.map((ta: any) => ta.profiles?.name)
-          .filter(Boolean)
-          .join(', ') || 'ללא שם';
+        const drivers =
+          task.task_assignees
+            ?.map((ta: any) => ta.profiles?.name)
+            .filter(Boolean)
+            .join(', ') || 'ללא שם';
 
         // Send Push Notification
         await notify({
@@ -88,8 +102,8 @@ export async function GET(request: NextRequest) {
             body: `המשימה "${task.title}" (נהג: ${drivers}) לא התחילה בזמן (איחור של 5 דקות).`,
             url: `/admin/dashboard?taskId=${task.id}`, // Deep link to task in dashboard
             priority: 'high',
-            taskId: task.id
-          }
+            taskId: task.id,
+          },
         });
 
         // Update DB flag to prevent duplicate alerts
@@ -99,7 +113,10 @@ export async function GET(request: NextRequest) {
           .eq('id', task.id);
 
         if (updateError) {
-          console.error(`Failed to update task ${task.id} notified flag:`, updateError);
+          console.error(
+            `Failed to update task ${task.id} notified flag:`,
+            updateError
+          );
         } else {
           notifiedCount++;
         }
@@ -109,10 +126,9 @@ export async function GET(request: NextRequest) {
     })
   );
 
-  return NextResponse.json({ 
-    ok: true, 
-    count: tasks.length, 
-    notified: notifiedCount 
+  return NextResponse.json({
+    ok: true,
+    count: tasks.length,
+    notified: notifiedCount,
   });
 }
-

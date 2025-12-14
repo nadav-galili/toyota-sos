@@ -1,9 +1,8 @@
 {
   "crons": [
     {
-      "path": "/api/cron/check-late-tasks",
+      "path": "/api/cron/check-late-tasks?key=${CRON_SECRET}",
       "schedule": "* * * * *"
     }
   ]
 }
-
