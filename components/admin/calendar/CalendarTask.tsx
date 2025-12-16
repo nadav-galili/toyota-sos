@@ -73,8 +73,6 @@ export function CalendarTask({
     locale: he,
   });
 
-  const priorityIcon = priorityIndicators[task.priority];
-
   if (compact) {
     // Compact view for month grid - shows task type clearly
     return (
@@ -97,12 +95,7 @@ export function CalendarTask({
       >
         <div className="flex items-center justify-between gap-1">
           <span className="font-bold truncate">{task.type}</span>
-          <span className="flex items-center gap-0.5 shrink-0">
-            {priorityIcon && (
-              <span className="text-[10px]">{priorityIcon}</span>
-            )}
-            <span className="text-[10px] opacity-80">{startTime}</span>
-          </span>
+          <span className="text-[10px] opacity-80 shrink-0">{startTime}</span>
         </div>
       </div>
     );
@@ -127,7 +120,7 @@ export function CalendarTask({
       )}
       dir="rtl"
     >
-      {/* Header: Time and priority */}
+      {/* Header: Time */}
       <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-center gap-1.5">
           <Clock className="h-3.5 w-3.5 opacity-80" />
@@ -138,7 +131,6 @@ export function CalendarTask({
             </span>
           )}
         </div>
-        {priorityIcon && <span className="text-sm">{priorityIcon}</span>}
       </div>
 
       {/* Task type badge */}

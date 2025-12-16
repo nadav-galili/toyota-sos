@@ -190,7 +190,9 @@ export function CalendarShell({
   }, [view]);
 
   const handleToday = useCallback(() => {
-    setCurrentDate(new Date());
+    const today = new Date();
+    // Force update even if already on today by creating a new Date object
+    setCurrentDate(new Date(today.getTime()));
   }, []);
 
   const handleViewChange = useCallback((newView: CalendarView) => {
