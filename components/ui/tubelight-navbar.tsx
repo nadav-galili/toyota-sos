@@ -25,6 +25,7 @@ const iconMap: Record<
 > = {
   LayoutDashboard: Icons.LayoutDashboard,
   ClipboardList: Icons.ClipboardList,
+  Calendar: Icons.Calendar,
   Home: Icons.Home,
   User: Icons.User,
   Briefcase: Icons.Briefcase,

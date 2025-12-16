@@ -175,6 +175,7 @@ export default async function AdminTasksPage() {
   const navItems = [
     { name: 'דשבורד', url: '/admin/dashboard', icon: 'LayoutDashboard' },
     { name: 'משימות', url: '/admin/tasks', icon: 'ClipboardList' },
+    { name: 'יומן', url: '/admin/calendar', icon: 'Calendar' },
     { name: 'נהגים', url: '/admin/drivers', icon: 'Users' },
     { name: 'מנהלים', url: '/admin/admins', icon: 'ShieldCheck' },
   ];

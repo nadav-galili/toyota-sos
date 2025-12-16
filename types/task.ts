@@ -56,3 +56,24 @@ export interface TaskStop {
   created_at: string;
   updated_at: string;
 }
+
+// Calendar view types
+export type CalendarView = 'week' | 'month';
+
+export interface TaskDragEvent {
+  taskId: string;
+  newStartDate: string;
+  newEndDate: string;
+}
+
+export interface CalendarFilters {
+  taskTypes: TaskType[];
+  statuses: TaskStatus[];
+  priorities: TaskPriority[];
+  driverIds: string[];
+  clientIds: string[];
+  dateRange?: {
+    start: Date;
+    end: Date;
+  };
+}
