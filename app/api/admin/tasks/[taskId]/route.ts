@@ -137,41 +137,25 @@ export async function PATCH(
     const rawStops = Array.isArray(body?.stops) ? body.stops : [];
     const normalizedStops = rawStops.length ? normalizeStops(rawStops) : [];
 
-    // Fetch current task info when needed (type derivation or to ensure existence)
+    // Fetch current task info - always needed for validation
     const admin = getSupabaseAdmin();
-    let currentTask:
-      | { type?: string | null; client_id?: string | null; address?: string | null; advisor_name?: string | null; advisor_color?: string | null }
-      | null = null;
-    if (normalizedStops.length > 0 || updatePayload.type) {
-      const { data: existing, error: existingError } = await admin
-        .from('tasks')
-        .select('type, client_id, address, advisor_name, advisor_color')
-        .eq('id', taskId)
-        .single();
+    const { data: currentTask, error: existingError } = await admin
+      .from('tasks')
+      .select('type, client_id, address, advisor_name, advisor_color')
+      .eq('id', taskId)
+      .single();
 
-      if (existingError || !existing) {
-        return NextResponse.json(
-          { error: existingError?.message || 'Task not found' },
-          { status: 404 }
-        );
-      }
-      currentTask = existing;
+    if (existingError || !currentTask) {
+      return NextResponse.json(
+        { error: existingError?.message || 'Task not found' },
+        { status: 404 }
+      );
     }
 
-    // Determine effective type for validation - fetch if not already loaded
-    let effectiveType: string | undefined =
+    // Determine effective type for validation
+    const effectiveType: string | undefined =
       (updatePayload.type as string | undefined) ??
       (currentTask?.type as string | undefined);
-    
-    // If we still don't have the type, fetch it
-    if (!effectiveType) {
-      const { data: taskData } = await admin
-        .from('tasks')
-        .select('type')
-        .eq('id', taskId)
-        .single();
-      effectiveType = taskData?.type as string | undefined;
-    }
     
     const isMulti =
       isMultiStopType(effectiveType) || normalizedStops.length > 0;

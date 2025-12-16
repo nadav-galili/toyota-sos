@@ -121,13 +121,15 @@ function DayCell({
                 dayTasks.length >= 5
                   ? 'bg-red-500 text-white'
                   : dayTasks.length >= 3
-                    ? 'bg-orange-500 text-white'
-                    : 'bg-blue-500 text-white'
+                  ? 'bg-orange-500 text-white'
+                  : 'bg-blue-500 text-white'
               )}
             >
               {dayTasks.length}
             </span>
-            <span className="text-[9px] text-slate-400 font-medium">מס׳ משימות</span>
+            <span className="text-[9px] text-slate-400 font-medium">
+              מס׳ משימות
+            </span>
           </div>
         )}
         {(dayTasks.length === 0 || !isCurrentMonth) && <span />}
