@@ -1,9 +1,10 @@
 'use client';
 
 import dayjs from '@/lib/dayjs';
+import React, { useMemo } from 'react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { cn } from '@/lib/utils';
-import { MapPinIcon, PhoneIcon } from 'lucide-react';
+import { MapPinIcon, PhoneIcon, Navigation } from 'lucide-react';
 import { TaskAttachments } from '@/components/admin/TaskAttachments';
 import {
   getAdvisorColorBgClass,
@@ -57,6 +58,15 @@ export function TaskCard(props: TaskCardProps) {
     onStatusChange,
   } = props;
 
+  const sortedStops = useMemo(() => {
+    if (!stops || stops.length === 0) return [];
+    return [...stops].sort((a, b) => {
+      const distA = a.distanceFromGarage ?? Infinity;
+      const distB = b.distanceFromGarage ?? Infinity;
+      return distA - distB;
+    });
+  }, [stops]);
+
   const priorityColor =
     priority === 'מיידי'
       ? 'bg-red-600'
@@ -104,11 +114,31 @@ export function TaskCard(props: TaskCardProps) {
       : 'ללא זמן יעד';
 
   const primaryAddress =
-    stops && stops.length > 0 ? stops[0].address : address || undefined;
+    sortedStops.length > 0 ? sortedStops[0].address : address || undefined;
 
   const wazeHref = primaryAddress
     ? `waze://?navigate=yes&q=${encodeURIComponent(primaryAddress)}`
     : undefined;
+
+  const googleMapsHref = useMemo(() => {
+    if (sortedStops.length <= 1) {
+      return primaryAddress
+        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+            primaryAddress
+          )}`
+        : undefined;
+    }
+
+    const destination = encodeURIComponent(
+      sortedStops[sortedStops.length - 1].address
+    );
+    const waypoints = sortedStops
+      .slice(0, -1)
+      .map((s) => encodeURIComponent(s.address))
+      .join('|');
+
+    return `https://www.google.com/maps/dir/?api=1&destination=${destination}&waypoints=${waypoints}&travelmode=driving`;
+  }, [sortedStops, primaryAddress]);
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
@@ -170,9 +200,9 @@ export function TaskCard(props: TaskCardProps) {
 
       <div className="mt-3 space-y-2 text-sm text-gray-700">
         <div>חלון זמן: {timeWindow}</div>
-        {stops && stops.length > 0 ? (
+        {sortedStops && sortedStops.length > 0 ? (
           <div className="space-y-1 rounded border border-gray-200 bg-gray-50 p-2">
-            {stops.map((s, idx) => {
+            {sortedStops.map((s, idx) => {
               return (
                 <div key={`${s.address}-${idx}`} className="space-y-0.5">
                   <div className="text-xs font-semibold text-gray-600">
@@ -288,14 +318,26 @@ export function TaskCard(props: TaskCardProps) {
       {/* Task Attachments (images and signatures) */}
       <TaskAttachments taskId={id} taskType={type} />
 
-      <div className="mt-3 flex gap-2">
+      <div className="mt-3 flex flex-wrap gap-2">
         {wazeHref ? (
           <a
             href={wazeHref}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-sm text-white hover:bg-red-700"
+            className="inline-flex items-center justify-center rounded-md bg-[#33CCFF] px-3 py-2 text-sm font-medium text-white hover:bg-[#2BB5E0]"
           >
             <MapPinIcon className="w-4 h-4 mr-2" />
-            פתיחה ב-Waze
+            Waze {sortedStops.length > 1 ? '(עצירה ראשונה)' : ''}
+          </a>
+        ) : null}
+
+        {googleMapsHref ? (
+          <a
+            href={googleMapsHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center rounded-md bg-[#4285F4] px-3 py-2 text-sm font-medium text-white hover:bg-[#357ABD]"
+          >
+            <Navigation className="w-4 h-4 mr-2" />
+            Google Maps {sortedStops.length > 1 ? '(כל העצירות)' : ''}
           </a>
         ) : null}
       </div>
