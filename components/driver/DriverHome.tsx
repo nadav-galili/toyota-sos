@@ -518,7 +518,7 @@ export function DriverHome() {
           'shadow-sm hover:shadow-md transition-all',
           isOnBreak
             ? 'bg-orange-500 text-white hover:bg-orange-600'
-            : 'bg-gray-900 text-white hover:bg-gray-800',
+            : 'bg-primary text-white hover:bg-gray-800',
         ].join(' ')}
       >
         <div className="flex items-center gap-3 min-w-0">
