@@ -107,7 +107,7 @@ export default function Home() {
           <div className="absolute inset-0 bg-primary rounded-[2.5rem] blur-xl opacity-20 group-hover:opacity-30 transition-opacity duration-500" />
           <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-[2.5rem] shadow-2xl overflow-hidden transition-transform duration-500 group-hover:scale-105">
             <Image
-              src="/icons/icon-fresh-192.jpg"
+              src="/icons/icon-fresh-192.png"
               alt="Toyota S.O.S App Icon"
               fill
               className="object-cover"
