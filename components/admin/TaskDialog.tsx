@@ -35,6 +35,8 @@ import { Calendar, PlusIcon, SaveIcon, XIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RtlSelectDropdown } from './RtlSelectDropdown';
+import { optimizeRoute, geocodeAddress, calculateDistance, GARAGE_LOCATION } from '@/lib/geocoding';
+
 type Mode = 'create' | 'edit';
 type StopForm = {
   clientId: string;
@@ -42,6 +44,9 @@ type StopForm = {
   address: string;
   advisorName: string;
   advisorColor: AdvisorColor | null;
+  lat?: number | null;
+  lng?: number | null;
+  distanceFromGarage?: number | null;
 };
 
 // Validation schema for estimated date (no past dates allowed)
@@ -385,6 +390,9 @@ export function TaskDialog(props: TaskDialogProps) {
               address: s?.address || '',
               advisorName: s?.advisor_name || '',
               advisorColor: (s?.advisor_color as AdvisorColor) || null,
+              lat: s?.lat || null,
+              lng: s?.lng || null,
+              distanceFromGarage: s?.distance_from_garage || null,
             };
           });
         if (!cancelled) {
@@ -675,16 +683,38 @@ export function TaskDialog(props: TaskDialogProps) {
       let finalAdvisorForTask = advisorName.trim();
       let finalAdvisorColor = advisorColor;
       let addressForTask = addressQuery || '';
+      let finalDistanceFromGarage: number | null = null;
       let stopsPayload: {
         client_id: string;
         address: string;
         advisor_name: string | null;
         advisor_color: AdvisorColor | null;
         sort_order: number;
+        lat: number | null;
+        lng: number | null;
+        distance_from_garage: number | null;
       }[] = [];
 
+      let stopsToProcess: StopForm[] = stops;
+
       if (isMultiStopType) {
-        stopsPayload = stops.map((stop, idx) => {
+        if (stops.length > 1) {
+          toastSuccess('מבצע אופטימיזציה למסלול...');
+          try {
+            const result = await optimizeRoute(stops, (s) => s.address);
+            stopsToProcess = result.map(({ item, geocode }) => ({
+              ...item,
+              lat: geocode?.coords.lat ?? item.lat,
+              lng: geocode?.coords.lng ?? item.lng,
+              distanceFromGarage: geocode?.distance ?? item.distanceFromGarage,
+            }));
+            toastSuccess('המסלול עבר אופטימיזציה בהצלחה');
+          } catch (err) {
+            console.error('Optimization failed', err);
+          }
+        }
+
+        stopsPayload = stopsToProcess.map((stop, idx) => {
           const resolvedClientId = resolveClientId(
             stop.clientId,
             stop.clientQuery
@@ -708,6 +738,9 @@ export function TaskDialog(props: TaskDialogProps) {
             advisor_name: advisorValue || null,
             advisor_color: advisorColorValue || null,
             sort_order: idx,
+            lat: stop.lat || null,
+            lng: stop.lng || null,
+            distance_from_garage: stop.distanceFromGarage || null,
           };
         });
 
@@ -716,12 +749,24 @@ export function TaskDialog(props: TaskDialogProps) {
           addressForTask = stopsPayload[0].address;
           finalAdvisorForTask = stopsPayload[0].advisor_name || '';
           finalAdvisorColor = stopsPayload[0].advisor_color;
+          finalDistanceFromGarage = stopsPayload[0].distance_from_garage;
           setAddressQuery(stopsPayload[0].address);
         }
       } else {
         finalClientId = resolveClientId(clientId, clientQuery);
         finalAdvisorForTask = advisorName.trim();
         addressForTask = addressQuery || '';
+
+        if (addressForTask) {
+          try {
+            const coords = await geocodeAddress(addressForTask);
+            if (coords) {
+              finalDistanceFromGarage = calculateDistance(GARAGE_LOCATION, coords);
+            }
+          } catch (err) {
+            console.error('Geocoding main address failed', err);
+          }
+        }
       }
 
       // Validation for "Replacement Car Delivery" - must have client and vehicle
@@ -802,6 +847,7 @@ export function TaskDialog(props: TaskDialogProps) {
           address: addressForTask || '',
           client_id: finalClientId || null,
           vehicle_id: finalVehicleId || null,
+          distance_from_garage: finalDistanceFromGarage || null,
           lead_driver_id: leadDriverId || null,
           co_driver_ids: coDriverIds,
           stops: stopsPayload.length > 0 ? stopsPayload : undefined,
@@ -850,6 +896,9 @@ export function TaskDialog(props: TaskDialogProps) {
             advisor_name: string | null;
             advisor_color: AdvisorColor | null;
             sort_order: number;
+            lat: number | null;
+            lng: number | null;
+            distance_from_garage: number | null;
           }[];
         } = {
           title: title.trim() || 'משימה ללא כותרת',
@@ -864,6 +913,7 @@ export function TaskDialog(props: TaskDialogProps) {
           address: addressForTask || '',
           client_id: finalClientId || null,
           vehicle_id: finalVehicleId || null,
+          distance_from_garage: finalDistanceFromGarage || null,
           lead_driver_id: leadDriverId || null,
           co_driver_ids: coDriverIds,
           stops: stopsPayload.length > 0 ? stopsPayload : undefined,

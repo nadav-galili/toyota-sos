@@ -9,6 +9,7 @@ import {
   getAdvisorColorBgClass,
   getAdvisorColorTextClass,
 } from '@/lib/advisorColors';
+import { formatDistance } from '@/lib/geocoding';
 import type { AdvisorColor } from '@/types/task';
 
 export type TaskCardProps = {
@@ -20,11 +21,13 @@ export type TaskCardProps = {
   estimatedStart?: string | Date | null;
   estimatedEnd?: string | Date | null;
   address?: string | null;
+  distanceFromGarage?: number | null;
   clientName?: string | null;
   advisorName?: string | null;
   advisorColor?: AdvisorColor | null;
   stops?: {
     address: string;
+    distanceFromGarage?: number | null;
     clientName?: string | null;
     advisorName?: string | null;
     advisorColor?: AdvisorColor | null;
@@ -36,13 +39,13 @@ export type TaskCardProps = {
 export function TaskCard(props: TaskCardProps) {
   const {
     id,
-    title,
     type,
     priority,
     status,
     estimatedStart,
     estimatedEnd,
     address,
+    distanceFromGarage,
     clientName,
     advisorName,
     advisorColor,
@@ -171,7 +174,20 @@ export function TaskCard(props: TaskCardProps) {
                 <div className="text-xs font-semibold text-gray-600">
                   עצירה {idx + 1}
                 </div>
-                {s.address ? <div>כתובת: {s.address}</div> : null}
+                {s.address ? (
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex-1">כתובת: {s.address}</div>
+                    {s.distanceFromGarage !== null &&
+                      s.distanceFromGarage !== undefined && (
+                        <span
+                          className="shrink-0 text-[10px] text-gray-400 font-medium"
+                          dir="ltr"
+                        >
+                          ({formatDistance(s.distanceFromGarage)})
+                        </span>
+                      )}
+                  </div>
+                ) : null}
                 {s.clientName ? <div>לקוח: {s.clientName}</div> : null}
                 {(s.advisorName || s.advisorColor) && (
                   <div className="flex items-center gap-2">
@@ -193,7 +209,20 @@ export function TaskCard(props: TaskCardProps) {
           </div>
         ) : (
           <>
-            {address ? <div>כתובת: {address}</div> : null}
+            {address ? (
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex-1">כתובת: {address}</div>
+                {distanceFromGarage !== null &&
+                  distanceFromGarage !== undefined && (
+                    <span
+                      className="shrink-0 text-[10px] text-gray-400 font-medium"
+                      dir="ltr"
+                    >
+                      ({formatDistance(distanceFromGarage)})
+                    </span>
+                  )}
+              </div>
+            ) : null}
             {clientName ? <div>לקוח: {clientName}</div> : null}
             {(advisorName || advisorColor) && (
               <div className="flex items-center gap-2">

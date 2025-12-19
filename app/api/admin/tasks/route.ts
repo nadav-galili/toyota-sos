@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
       address,
       client_id,
       vehicle_id,
+      distance_from_garage,
       lead_driver_id,
       co_driver_ids,
       stops,
@@ -95,6 +96,12 @@ export async function POST(request: NextRequest) {
           typeof s?.sort_order === 'number' && Number.isFinite(s.sort_order)
             ? s.sort_order
             : idx,
+        distance_from_garage:
+          typeof s?.distance_from_garage === 'number'
+            ? s.distance_from_garage
+            : null,
+        lat: typeof s?.lat === 'number' ? s.lat : null,
+        lng: typeof s?.lng === 'number' ? s.lng : null,
       }));
 
       for (const stop of normalizedStops) {
@@ -160,6 +167,7 @@ export async function POST(request: NextRequest) {
         address: effectiveAddress ?? '',
         client_id: effectiveClientId ?? null,
         vehicle_id: vehicle_id ?? null,
+        distance_from_garage: distance_from_garage ?? null,
       })
       .select('*')
       .single();

@@ -10,6 +10,7 @@ import {
   getAdvisorColorBgClass,
   getAdvisorColorTextClass,
 } from '@/lib/advisorColors';
+import { formatDistance } from '@/lib/geocoding';
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -175,21 +176,35 @@ export function TaskCard({
             .map((stop, index) => (
               <div
                 key={stop.id}
-                className="flex items-center gap-1 text-xs text-gray-600"
+                className="flex items-center justify-between gap-1 text-xs text-gray-600"
               >
-                <span className="font-medium">📍</span>
-                <span className="truncate" title={stop.address}>
-                  {index + 1}. {stop.address}
-                </span>
+                <div className="flex items-center gap-1 truncate">
+                  <span className="font-medium">📍</span>
+                  <span className="truncate" title={stop.address}>
+                    {index + 1}. {stop.address}
+                  </span>
+                </div>
+                {stop.distance_from_garage !== null && stop.distance_from_garage !== undefined && (
+                  <span className="shrink-0 text-[10px] text-gray-400 font-medium" dir="ltr">
+                    ({formatDistance(stop.distance_from_garage)})
+                  </span>
+                )}
               </div>
             ))}
         </div>
       ) : (
-        <div className="mb-2 flex items-center gap-1 text-xs text-gray-600">
-          <span className="font-medium">📍</span>
-          <span className="truncate" title={task.address || 'לא הוכנסה כתובת'}>
-            {task.address || 'לא הוכנסה כתובת'}
-          </span>
+        <div className="mb-2 flex items-center justify-between gap-1 text-xs text-gray-600">
+          <div className="flex items-center gap-1 truncate">
+            <span className="font-medium">📍</span>
+            <span className="truncate" title={task.address || 'לא הוכנסה כתובת'}>
+              {task.address || 'לא הוכנסה כתובת'}
+            </span>
+          </div>
+          {task.distance_from_garage !== null && task.distance_from_garage !== undefined && (
+            <span className="shrink-0 text-[10px] text-gray-400 font-medium" dir="ltr">
+              ({formatDistance(task.distance_from_garage)})
+            </span>
+          )}
         </div>
       )}
 

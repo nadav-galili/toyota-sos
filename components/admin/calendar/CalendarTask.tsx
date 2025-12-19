@@ -5,7 +5,8 @@ import { CSS } from '@dnd-kit/utilities';
 import { format, parseISO } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Clock, MapPin, User, Car } from 'lucide-react';
-import type { Task, TaskPriority, TaskStatus, TaskType } from '@/types/task';
+import { formatDistance } from '@/lib/geocoding';
+import type { Task, TaskStatus, TaskType } from '@/types/task';
 import type { Driver } from '@/types/user';
 import type { Client } from '@/types/entity';
 import { cn } from '@/lib/utils';
@@ -140,20 +141,42 @@ export function CalendarTask({
             .map((stop, index) => (
               <div
                 key={stop.id}
-                className="flex items-start gap-1.5 text-xs opacity-90"
+                className="flex items-start justify-between gap-1.5 text-xs opacity-90"
               >
-                <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                <span className="line-clamp-1">
-                  {index + 1}. {stop.address}
-                </span>
+                <div className="flex items-start gap-1.5 truncate">
+                  <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                  <span className="line-clamp-1">
+                    {index + 1}. {stop.address}
+                  </span>
+                </div>
+                {stop.distance_from_garage !== null &&
+                  stop.distance_from_garage !== undefined && (
+                    <span
+                      className="shrink-0 text-[10px] opacity-70 font-medium"
+                      dir="ltr"
+                    >
+                      ({formatDistance(stop.distance_from_garage)})
+                    </span>
+                  )}
               </div>
             ))}
         </div>
       ) : (
         task.address && (
-          <div className="flex items-start gap-1.5 text-xs opacity-90 mb-1">
-            <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-            <span className="line-clamp-1">{task.address}</span>
+          <div className="flex items-start justify-between gap-1.5 text-xs opacity-90 mb-1">
+            <div className="flex items-start gap-1.5 truncate">
+              <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              <span className="line-clamp-1">{task.address}</span>
+            </div>
+            {task.distance_from_garage !== null &&
+              task.distance_from_garage !== undefined && (
+                <span
+                  className="shrink-0 text-[10px] opacity-70 font-medium"
+                  dir="ltr"
+                >
+                  ({formatDistance(task.distance_from_garage)})
+                </span>
+              )}
           </div>
         )
       )}

@@ -34,6 +34,7 @@ export interface Task {
   created_at: string;
   updated_at: string;
   admin_notified_late_start?: boolean;
+  distance_from_garage?: number | null;
   stops?: TaskStop[];
 }
 
@@ -53,6 +54,7 @@ export interface TaskStop {
   advisor_name: string | null;
   advisor_color: AdvisorColor | null;
   sort_order: number;
+  distance_from_garage?: number | null;
   created_at: string;
   updated_at: string;
 }

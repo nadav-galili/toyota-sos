@@ -20,6 +20,9 @@ type StopPayload = {
   advisor_name: string | null;
   advisor_color: string | null;
   sort_order: number;
+  distance_from_garage?: number | null;
+  lat?: number | null;
+  lng?: number | null;
 };
 
 function normalizeStops(rawStops: any[]): StopPayload[] {
@@ -39,6 +42,12 @@ function normalizeStops(rawStops: any[]): StopPayload[] {
       typeof s?.sort_order === 'number' && Number.isFinite(s.sort_order)
         ? s.sort_order
         : idx,
+    distance_from_garage:
+      typeof s?.distance_from_garage === 'number'
+        ? s.distance_from_garage
+        : null,
+    lat: typeof s?.lat === 'number' ? s.lat : null,
+    lng: typeof s?.lng === 'number' ? s.lng : null,
   }));
 }
 
@@ -125,6 +134,7 @@ export async function PATCH(
       'vehicle_id',
       'advisor_name',
       'advisor_color',
+      'distance_from_garage',
     ];
     const updatePayload: Record<string, any> = {};
 
