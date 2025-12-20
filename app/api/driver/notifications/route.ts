@@ -121,7 +121,7 @@ export async function PATCH(request: NextRequest) {
         // Bulk update with potentially different payloads per notification (only used for soft delete currently)
         // Since we can't easily bulk update with different payloads in one query via .update() 
         // without complex syntax, and our only bulk payload use case is soft delete:
-        const results = await Promise.all(targetIds.map(async (tid) => {
+        const results = await Promise.all(targetIds.map(async (tid: string) => {
           const row = existing.find(e => e.id === tid);
           // For soft delete, we need the original payload to merge
           const { data: fullRow } = await admin.from('notifications').select('payload').eq('id', tid).single();
