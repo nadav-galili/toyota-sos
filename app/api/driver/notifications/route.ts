@@ -69,45 +69,91 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, read, payload } = body;
+    const { id, ids, read, payload } = body;
 
-    if (!id) {
+    if (!id && (!ids || !Array.isArray(ids) || ids.length === 0)) {
       return NextResponse.json(
-        { error: 'Notification ID required' },
+        { error: 'Notification ID(s) required' },
         { status: 400 }
       );
     }
 
     const admin = getSupabaseAdmin();
+    const targetIds = id ? [id] : ids;
 
-    // Verify this notification belongs to the current driver
+    // Verify all notifications belong to the current driver
     const { data: existing } = await admin
       .from('notifications')
-      .select('user_id')
-      .eq('id', id)
-      .single();
+      .select('id, user_id')
+      .in('id', targetIds);
 
-    if (!existing || existing.user_id !== userIdCookie) {
+    if (!existing || existing.length === 0) {
+      return NextResponse.json({ error: 'Notifications not found' }, { status: 404 });
+    }
+
+    const allBelong = existing.every(n => n.user_id === userIdCookie);
+    if (!allBelong) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Update the notification
-    const updateData: Record<string, unknown> = {};
-    if (read !== undefined) updateData.read = read;
-    if (payload !== undefined) updateData.payload = payload;
+    // Update the notification(s)
+    if (id) {
+      // Single update (preserving existing logic for returning single object)
+      const updateData: Record<string, unknown> = {};
+      if (read !== undefined) updateData.read = read;
+      if (payload !== undefined) updateData.payload = payload;
 
-    const { data, error } = await admin
-      .from('notifications')
-      .update(updateData)
-      .eq('id', id)
-      .select('*')
-      .single();
+      const { data, error } = await admin
+        .from('notifications')
+        .update(updateData)
+        .eq('id', id)
+        .select('*')
+        .single();
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+
+      return NextResponse.json({ data }, { status: 200 });
+    } else {
+      // Bulk update
+      if (payload !== undefined) {
+        // Bulk update with potentially different payloads per notification (only used for soft delete currently)
+        // Since we can't easily bulk update with different payloads in one query via .update() 
+        // without complex syntax, and our only bulk payload use case is soft delete:
+        const results = await Promise.all(targetIds.map(async (tid) => {
+          const row = existing.find(e => e.id === tid);
+          // For soft delete, we need the original payload to merge
+          const { data: fullRow } = await admin.from('notifications').select('payload').eq('id', tid).single();
+          const nextPayload = { ...(fullRow?.payload || {}), ...payload };
+          
+          return admin
+            .from('notifications')
+            .update({ read: read !== undefined ? read : undefined, payload: nextPayload })
+            .eq('id', tid);
+        }));
+
+        const hasError = results.some(r => r.error);
+        if (hasError) {
+          return NextResponse.json({ error: 'Some updates failed' }, { status: 400 });
+        }
+      } else {
+        // Simple bulk update (e.g. just mark as read)
+        const updateData: Record<string, unknown> = {};
+        if (read !== undefined) updateData.read = read;
+
+        const { error } = await admin
+          .from('notifications')
+          .update(updateData)
+          .in('id', targetIds);
+
+        if (error) {
+          return NextResponse.json({ error: error.message }, { status: 400 });
+        }
+      }
+
+      return NextResponse.json({ ok: true }, { status: 200 });
     }
-
-    return NextResponse.json({ data }, { status: 200 });
   } catch (err: unknown) {
     const error = err as Error;
     return NextResponse.json(

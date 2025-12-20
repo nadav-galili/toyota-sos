@@ -78,21 +78,27 @@ export function NotificationsList({ pageSize = 20 }: { pageSize?: number }) {
     }
   };
 
-  // const markSelectedAsRead = async () => {
-  //   const ids = Object.keys(selected).filter((id) => selected[id]);
-  //   if (ids.length === 0) return;
-  //   const res = await supa
-  //     .from('notifications')
-  //     .update({ read: true })
-  //     .in('id', ids);
-  //   const err = (res as any)?.error ?? null;
-  //   if (!err) {
-  //     setRows((prev) =>
-  //       prev.map((r) => (ids.includes(r.id) ? { ...r, read: true } : r))
-  //     );
-  //     setSelected({});
-  //   }
-  // };
+  const markSelectedAsRead = async () => {
+    const ids = Object.keys(selected).filter((id) => selected[id]);
+    if (ids.length === 0) return;
+    
+    try {
+      const response = await fetch('/api/driver/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, read: true }),
+      });
+
+      if (response.ok) {
+        setRows((prev) =>
+          prev.map((r) => (ids.includes(r.id) ? { ...r, read: true } : r))
+        );
+        setSelected({});
+      }
+    } catch (err) {
+      console.error('Failed to mark selected notifications as read:', err);
+    }
+  };
 
   const deleteNotification = async (id: string) => {
     // Soft delete via payload.deleted = true
@@ -116,24 +122,25 @@ export function NotificationsList({ pageSize = 20 }: { pageSize?: number }) {
     }
   };
 
-  // const deleteSelected = async () => {
-  //   const ids = Object.keys(selected).filter((id) => selected[id]);
-  //   if (ids.length === 0) return;
-  //   // batch soft-delete (client-side payload update per row)
-  //   const updates = rows
-  //     .filter((r) => ids.includes(r.id))
-  //     .map((r) => ({
-  //       id: r.id,
-  //       payload: { ...(r.payload || {}), deleted: true },
-  //     }));
-  //   const { error } = await supa
-  //     .from('notifications')
-  //     .upsert(updates, { onConflict: 'id' });
-  //   if (!error) {
-  //     setRows((prev) => prev.filter((r) => !ids.includes(r.id)));
-  //     setSelected({});
-  //   }
-  // };
+  const deleteSelected = async () => {
+    const ids = Object.keys(selected).filter((id) => selected[id]);
+    if (ids.length === 0) return;
+    
+    try {
+      const response = await fetch('/api/driver/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, payload: { deleted: true } }),
+      });
+
+      if (response.ok) {
+        setRows((prev) => prev.filter((r) => !ids.includes(r.id)));
+        setSelected({});
+      }
+    } catch (err) {
+      console.error('Failed to delete selected notifications:', err);
+    }
+  };
 
   const onOpen = async (row: NotificationRow) => {
     try {
@@ -158,28 +165,39 @@ export function NotificationsList({ pageSize = 20 }: { pageSize?: number }) {
       <div className="mb-4">
         <PermissionPrompt />
       </div>
-      {/* <div className="mb-3 flex items-center gap-2">
-        <button
-          type="button"
-          aria-label="סמן כנקראו"
-          className="rounded border px-3 py-2 text-sm hover:bg-gray-50"
-          onClick={markSelectedAsRead}
-          disabled={Object.values(selected).every((v) => !v)}
-        >
-          סמן כנקראו
-        </button>
-        <button
-          type="button"
-          aria-label="מחק"
-          className="rounded border px-3 py-2 text-sm hover:bg-gray-50"
-          onClick={deleteSelected}
-          disabled={Object.values(selected).every((v) => !v)}
-        >
-          מחק
-        </button>
-      </div> */}
 
-      {loading ? <div role="status">טוען...</div> : null}
+      {Object.values(selected).some((v) => v) && (
+        <div className="mb-3 flex items-center gap-2 p-2 bg-slate-50 rounded-lg border border-slate-200 animate-in fade-in slide-in-from-top-2">
+          <span className="text-xs font-semibold text-slate-500 mr-2">
+            נבחרו {Object.values(selected).filter(Boolean).length} התראות:
+          </span>
+          <button
+            type="button"
+            aria-label="סמן כנקראו"
+            className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors"
+            onClick={markSelectedAsRead}
+          >
+            סמן כנקראו
+          </button>
+          <button
+            type="button"
+            aria-label="מחק"
+            className="rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm ring-1 ring-inset ring-red-200 hover:bg-red-50 transition-colors"
+            onClick={deleteSelected}
+          >
+            מחק נבחרות
+          </button>
+          <button
+            type="button"
+            className="text-xs text-slate-400 hover:text-slate-600 px-2 py-1 transition-colors mr-auto"
+            onClick={() => setSelected({})}
+          >
+            ביטול
+          </button>
+        </div>
+      )}
+
+      {loading ? <div role="status" className="py-4 text-center text-sm text-slate-500 animate-pulse">טוען...</div> : null}
       {error ? (
         <div role="alert" className="text-red-600 text-sm">
           {error}

@@ -559,11 +559,11 @@ export function DriverHome() {
       </Button>
 
       {/* Tabs */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 gap-2">
         {(
           [
             { key: 'today', label: 'היום' },
-            { key: 'all', label: 'הכל' },
+            // { key: 'all', label: 'הכל' },
           ] as const
         ).map((t) => {
           type TabKey = typeof t.key;
