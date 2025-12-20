@@ -228,27 +228,25 @@ export function TasksByDriverTypeChart() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
-                margin={{ top: 10, right: 10, left: 160, bottom: 60 }}
-                layout="vertical"
+                margin={{ top: 10, right: 30, left: 30, bottom: 60 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
                 <XAxis
+                  type="category"
+                  dataKey="driverName"
+                  tick={{ fontSize: 11, fill: '#1f2937', fontWeight: 600 }}
+                  interval={0}
+                  axisLine={false}
+                  tickLine={false}
+                  tickMargin={8}
+                />
+                <YAxis
                   type="number"
                   allowDecimals={false}
                   tick={{ fontSize: 11, fill: '#6b7280' }}
                   tickFormatter={(value) => Math.round(value).toString()}
                   axisLine={false}
                   tickLine={false}
-                />
-                <YAxis
-                  type="category"
-                  dataKey="driverName"
-                  width={150}
-                  tick={{ fontSize: 12, fill: '#1f2937', fontWeight: 600 }}
-                  interval={0}
-                  axisLine={false}
-                  tickLine={false}
-                  tickMargin={8}
                 />
                 <Tooltip
                   cursor={{ fill: 'rgba(148, 163, 184, 0.1)' }}
@@ -297,7 +295,7 @@ export function TasksByDriverTypeChart() {
                               key={index}
                               className="flex items-center justify-between gap-4 text-sm"
                             >
-                              <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                              <div className="flex items-center gap-2.5 flex-1 min-w-0" dir="rtl">
                                 <div
                                   className="h-3.5 w-3.5 rounded-full shrink-0"
                                   style={{ backgroundColor: item.color }}
@@ -311,7 +309,7 @@ export function TasksByDriverTypeChart() {
                               </span>
                             </div>
                           ))}
-                          <div className="mt-3 pt-3 border-t-2 border-gray-300 flex items-center justify-between">
+                          <div className="mt-3 pt-3 border-t-2 border-gray-300 flex items-center justify-between" dir="rtl">
                             <span className="text-sm font-bold text-gray-900">
                               סה״כ:
                             </span>
@@ -380,7 +378,7 @@ export function TasksByDriverTypeChart() {
                           ? chartConfig[taskType]?.color || TYPE_COLORS['אחר']
                           : '#e5e7eb'
                       }
-                      radius={[0, 4, 4, 0]}
+                      radius={[4, 4, 0, 0]}
                       opacity={isSelected ? 1 : 0.2}
                       hide={!isSelected && selectedTaskTypes.size > 0}
                     />

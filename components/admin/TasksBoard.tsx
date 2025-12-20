@@ -174,6 +174,7 @@ export function TasksBoard({
           });
         }
       } catch (error) {
+        console.log('🚀 ~ pollDriverBreaks ~ error:', error);
         // Silent error handling
       }
     };

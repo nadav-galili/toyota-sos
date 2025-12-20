@@ -597,6 +597,7 @@ export async function getActiveDriversCount(
     setCached(key, 0, ttl);
     return 0;
   } catch (error) {
+    console.error('[ActiveDriversCount] Error:', error);
     const ttl = isRecentRange(range) ? THIRTY_SECONDS_MS : FIVE_MINUTES_MS;
     setCached(key, 0, ttl);
     return 0;
