@@ -49,7 +49,7 @@ export default async function AdminTasksPage() {
         advisor_name,
         advisor_color,
         distance_from_garage,
-        task_stops(id, client_id, address, advisor_name, advisor_color, sort_order, distance_from_garage)
+        task_stops(id, client_id, address, advisor_name, advisor_color, phone, sort_order, distance_from_garage)
       `
       )
       .is('deleted_at', null)
@@ -71,6 +71,7 @@ export default async function AdminTasksPage() {
                 address: stop.address,
                 advisor_name: stop.advisor_name,
                 advisor_color: stop.advisor_color,
+                phone: stop.phone || null,
                 sort_order: stop.sort_order,
                 distance_from_garage: stop.distance_from_garage,
                 created_at: '',
@@ -159,12 +160,12 @@ export default async function AdminTasksPage() {
     // silently ignore client fetch errors
   }
 
-  // Fetch vehicles
+  // Fetch vehicles (include all vehicles, TaskDialog will filter unavailable ones)
   let vehicles: Vehicle[] = [];
   try {
     const { data, error } = await admin
       .from('vehicles')
-      .select('id, license_plate, model');
+      .select('id, license_plate, model, is_available, unavailability_reason');
 
     if (!error) {
       vehicles = data || [];
@@ -180,6 +181,7 @@ export default async function AdminTasksPage() {
     { name: 'יומן', url: '/admin/calendar', icon: 'Calendar' },
     { name: 'נהגים', url: '/admin/drivers', icon: 'Users' },
     { name: 'מנהלים', url: '/admin/admins', icon: 'ShieldCheck' },
+    { name: 'רכבים', url: '/admin/vehicles', icon: 'Car' },
   ];
 
   return (

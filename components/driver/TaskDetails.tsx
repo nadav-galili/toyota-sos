@@ -14,6 +14,7 @@ import {
   CardDescription,
   CardFooter,
 } from '@/components/ui/card';
+import { formatLicensePlate } from '@/lib/vehicleLicensePlate';
 
 type TaskDetailsData = {
   id: string;
@@ -132,10 +133,13 @@ export function TaskDetails({ taskId }: { taskId: string }) {
           </p>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
-          {/* Details Block */}
-          {task.details && (
+          {/* Details Block - only show for 'אחר' task type */}
+          {task.type === 'אחר' && task.details && (
             <div className="bg-gray-50 p-3 rounded-md whitespace-pre-wrap text-gray-700">
-              {task.details}
+              <div className="text-xs font-semibold text-gray-600 mb-2">
+                תיאור המשימה:
+              </div>
+              <div>{task.details}</div>
             </div>
           )}
 
@@ -148,7 +152,7 @@ export function TaskDetails({ taskId }: { taskId: string }) {
             <div>
               <div className="text-xs text-gray-500 mb-1">רכב</div>
               <div className="font-medium">
-                {task.vehicle_plate ?? '—'}
+                {task.vehicle_plate ? formatLicensePlate(task.vehicle_plate) : '—'}
                 {task.vehicle_model && (
                   <span className="block text-xs font-normal text-gray-600">
                     {task.vehicle_model}

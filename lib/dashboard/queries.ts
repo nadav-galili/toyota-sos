@@ -18,6 +18,7 @@ export interface CreatedCompletedPoint {
 export interface OverdueByDriverPoint {
   driver_id: string;
   driver_name: string;
+  employee_id?: string | null;
   overdue: number;
 }
 
@@ -171,6 +172,7 @@ export async function getScheduledTasksCount(
   const { count, error } = await supa
     .from('tasks')
     .select('id', { count: 'exact', head: true })
+    .is('deleted_at', null)
     .gte('estimated_start', range.start)
     .lt('estimated_start', range.end);
   const value = error ? 0 : count || 0;
@@ -192,6 +194,7 @@ export async function getTasksCompletedCount(
   const { count, error } = await supa
     .from('tasks')
     .select('id', { count: 'exact', head: true })
+    .is('deleted_at', null)
     .eq('status', 'הושלמה')
     .gte('estimated_start', range.start)
     .lt('estimated_start', range.end);
@@ -214,6 +217,7 @@ async function getCompletionStats(
   const { data, error } = await supa
     .from('tasks')
     .select('id, updated_at, estimated_end')
+    .is('deleted_at', null)
     .eq('status', 'הושלמה')
     .gte('estimated_start', range.start)
     .lt('estimated_start', range.end)
@@ -273,6 +277,7 @@ export async function getPendingTasksCount(
   const { count, error } = await supa
     .from('tasks')
     .select('id', { count: 'exact', head: true })
+    .is('deleted_at', null)
     .eq('status', 'בהמתנה')
     .gte('estimated_start', range.start)
     .lt('estimated_start', range.end);
@@ -296,6 +301,7 @@ export async function getInProgressTasksCount(
   const { count, error } = await supa
     .from('tasks')
     .select('id', { count: 'exact', head: true })
+    .is('deleted_at', null)
     .eq('status', 'בעבודה')
     .gte('estimated_start', range.start)
     .lt('estimated_start', range.end);
@@ -319,6 +325,7 @@ export async function getCancelledTasksCount(
   const { count, error } = await supa
     .from('tasks')
     .select('id', { count: 'exact', head: true })
+    .is('deleted_at', null)
     .eq('status', 'חסומה')
     .gte('estimated_start', range.start)
     .lt('estimated_start', range.end);
@@ -344,6 +351,7 @@ export async function getSlaViolations(
   const { data, error } = await supa
     .from('tasks')
     .select('id, updated_at, estimated_end')
+    .is('deleted_at', null)
     .eq('status', 'הושלמה')
     .gte('updated_at', range.start)
     .lt('updated_at', range.end)
@@ -441,12 +449,14 @@ export async function getCreatedCompletedSeries(
     supa
       .from('tasks')
       .select('id, estimated_start')
+      .is('deleted_at', null)
       .gte('estimated_start', range.start)
       .lt('estimated_start', range.end)
       .limit(5000),
     supa
       .from('tasks')
       .select('id, updated_at')
+      .is('deleted_at', null)
       .eq('status', 'הושלמה')
       .gte('updated_at', range.start)
       .lt('updated_at', range.end)
@@ -486,7 +496,7 @@ export async function getOverdueByDriver(
   const { data, error } = await supa
     .from('task_assignees')
     .select(
-      'driver_id, is_lead, tasks(id, status, estimated_end), profiles:driver_id(name)'
+      'driver_id, is_lead, tasks(id, status, estimated_end, deleted_at), profiles:driver_id(name,employee_id)'
     )
     .eq('is_lead', true)
     .limit(5000);
@@ -501,7 +511,8 @@ export async function getOverdueByDriver(
     // Handle both array and single object cases from Supabase join
     const taskArray = Array.isArray(tasks) ? tasks : [tasks];
     const task = taskArray[0];
-    if (!task || !task.status) return;
+    // Filter out soft-deleted tasks
+    if (!task || !task.status || task.deleted_at) return;
     const deadlineTime = task.estimated_end
       ? new Date(task.estimated_end).getTime()
       : null;
@@ -519,7 +530,8 @@ export async function getOverdueByDriver(
       ? [profiles]
       : [];
     const name = (profileArray[0]?.name as string) || '—';
-    const prev = counts.get(id) || { name, count: 0 };
+    const employeeId = (profileArray[0]?.employee_id as string) || null;
+    const prev = counts.get(id) || { name, employeeId, count: 0 };
     prev.count += 1;
     counts.set(id, prev);
   });
@@ -527,6 +539,7 @@ export async function getOverdueByDriver(
     ([driver_id, v]) => ({
       driver_id,
       driver_name: v.name,
+      employee_id: v.employeeId,
       overdue: v.count,
     })
   );
@@ -615,6 +628,7 @@ export async function getOnTimeVsLate(
   const { data, error } = await supa
     .from('tasks')
     .select('id, updated_at, estimated_end, status')
+    .is('deleted_at', null)
     .eq('status', 'הושלמה')
     .gte('updated_at', range.start)
     .lt('updated_at', range.end)
@@ -659,6 +673,7 @@ export async function getFunnel(
       supa
         .from('tasks')
         .select('id, status, updated_at')
+        .is('deleted_at', null)
         .in('status', ['בעבודה', 'הושלמה'])
         .gte('updated_at', range.start)
         .lt('updated_at', range.end)
@@ -667,6 +682,7 @@ export async function getFunnel(
       supa
         .from('tasks')
         .select('id, updated_at')
+        .is('deleted_at', null)
         .eq('status', 'הושלמה')
         .gte('updated_at', range.start)
         .lt('updated_at', range.end)

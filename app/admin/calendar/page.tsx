@@ -22,9 +22,10 @@ export default async function AdminCalendarPage() {
       .select(
         `
         *,
-        task_stops(id, task_id, client_id, address, advisor_name, advisor_color, sort_order, distance_from_garage, created_at, updated_at)
+        task_stops(id, task_id, client_id, address, advisor_name, advisor_color, phone, sort_order, distance_from_garage, created_at, updated_at)
       `
       )
+      .is('deleted_at', null)
       .order('estimated_start', { ascending: true });
 
     if (error) {
@@ -42,6 +43,7 @@ export default async function AdminCalendarPage() {
                 address: stop.address,
                 advisor_name: stop.advisor_name,
                 advisor_color: stop.advisor_color,
+                phone: stop.phone || null,
                 sort_order: stop.sort_order,
                 distance_from_garage: stop.distance_from_garage,
                 created_at: stop.created_at,
@@ -122,6 +124,7 @@ export default async function AdminCalendarPage() {
     { name: 'יומן', url: '/admin/calendar', icon: 'Calendar' },
     { name: 'נהגים', url: '/admin/drivers', icon: 'Users' },
     { name: 'מנהלים', url: '/admin/admins', icon: 'ShieldCheck' },
+    { name: 'רכבים', url: '/admin/vehicles', icon: 'Car' },
   ];
 
   return (

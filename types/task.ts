@@ -7,7 +7,7 @@ export type TaskPriority = 'ללא עדיפות' | 'מיידי' | 'נמוכה' |
 export type TaskType =
   | 'איסוף רכב/שינוע'
   | 'החזרת רכב/שינוע'
-  | 'הסעת רכב חלופי'
+  | 'מסירת רכב חלופי'
   | 'הסעת לקוח הביתה'
   | 'הסעת לקוח למוסך'
   | 'ביצוע טסט'
@@ -56,6 +56,7 @@ export interface TaskStop {
   advisor_name: string | null;
   advisor_color: AdvisorColor | null;
   sort_order: number;
+  phone?: string | null;
   distance_from_garage?: number | null;
   lat?: number | null;
   lng?: number | null;

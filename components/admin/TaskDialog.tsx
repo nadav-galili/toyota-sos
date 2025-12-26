@@ -43,6 +43,11 @@ import {
   GARAGE_LOCATION,
 } from '@/lib/geocoding';
 import { AddressAutocomplete } from './AddressAutocomplete';
+import {
+  formatLicensePlate,
+  isValidLicensePlate,
+  normalizeLicensePlate,
+} from '@/lib/vehicleLicensePlate';
 
 type Mode = 'create' | 'edit';
 type StopForm = {
@@ -51,6 +56,7 @@ type StopForm = {
   address: string;
   advisorName: string;
   advisorColor: AdvisorColor | null;
+  phone: string;
   lat?: number | null;
   lng?: number | null;
   distanceFromGarage?: number | null;
@@ -106,7 +112,7 @@ interface TaskDialogProps {
 const types: TaskType[] = [
   'איסוף רכב/שינוע',
   'החזרת רכב/שינוע',
-  'הסעת רכב חלופי',
+  'מסירת רכב חלופי',
   'הסעת לקוח הביתה',
   'הסעת לקוח למוסך',
   'ביצוע טסט',
@@ -204,6 +210,10 @@ export function TaskDialog(props: TaskDialogProps) {
   );
   const [stops, setStops] = useState<StopForm[]>([]);
   const [activeStopIndex, setActiveStopIndex] = useState(0);
+  const [occupiedVehicleIds, setOccupiedVehicleIds] = useState<Set<string>>(
+    new Set()
+  );
+  const [checkingConflicts, setCheckingConflicts] = useState(false);
 
   useEffect(() => {
     setClientsLocal(clients);
@@ -267,6 +277,7 @@ export function TaskDialog(props: TaskDialogProps) {
               address: task.address ?? '',
               advisorName: task.advisor_name ?? '',
               advisorColor: (task.advisor_color as AdvisorColor) || null,
+              phone: existing?.phone || '',
             },
           ]);
         }
@@ -280,6 +291,7 @@ export function TaskDialog(props: TaskDialogProps) {
               address: task?.address ?? '',
               advisorName: task?.advisor_name ?? '',
               advisorColor: (task?.advisor_color as AdvisorColor) || null,
+              phone: '',
             },
           ]);
         }
@@ -287,13 +299,14 @@ export function TaskDialog(props: TaskDialogProps) {
       setVehicleId(task?.vehicle_id ?? '');
       if (task?.vehicle_id) {
         const existingVehicle = vehicles.find((v) => v.id === task.vehicle_id);
-        setVehicleQuery(
-          existingVehicle
-            ? `${existingVehicle.license_plate}${
-                existingVehicle.model ? ` · ${existingVehicle.model}` : ''
-              }`
-            : ''
-        );
+        if (existingVehicle) {
+          const plateDisplay = formatLicensePlate(existingVehicle.license_plate);
+          const modelDisplay = existingVehicle.model ? ` · ${existingVehicle.model}` : '';
+          const unavailableDisplay = existingVehicle.is_available === false ? ' (מושבת)' : '';
+          setVehicleQuery(`${plateDisplay}${modelDisplay}${unavailableDisplay}`);
+        } else {
+          setVehicleQuery('');
+        }
       } else {
         setVehicleQuery('');
       }
@@ -347,9 +360,95 @@ export function TaskDialog(props: TaskDialogProps) {
 
   const isMultiStopType = useMemo(() => isMultiStopTaskType(type), [type]);
 
+  // Check for vehicle conflicts when date/time/vehicle changes
+  useEffect(() => {
+    let cancelled = false;
+    const checkVehicleConflicts = async () => {
+      // Only check if we have a date and times set
+      if (!estimatedDate || !estimatedStartTime || !estimatedEndTime) {
+        setOccupiedVehicleIds(new Set());
+        return;
+      }
+
+      // Build datetime strings
+      const startDatetime = dayjs(estimatedDate)
+        .set('hour', parseInt(estimatedStartTime.split(':')[0]))
+        .set('minute', parseInt(estimatedStartTime.split(':')[1]))
+        .toISOString();
+      const endDatetime = dayjs(estimatedDate)
+        .set('hour', parseInt(estimatedEndTime.split(':')[0]))
+        .set('minute', parseInt(estimatedEndTime.split(':')[1]))
+        .toISOString();
+
+      setCheckingConflicts(true);
+      try {
+        // Check all vehicles for conflicts
+        const conflictChecks = await Promise.all(
+          vehiclesLocal.map(async (vehicle) => {
+            try {
+              const params = new URLSearchParams({
+                vehicle_id: vehicle.id,
+                estimated_start: startDatetime,
+                estimated_end: endDatetime,
+                ...(mode === 'edit' && task?.id
+                  ? { task_id: task.id }
+                  : {}),
+              });
+              const res = await fetch(
+                `/api/admin/tasks/check-vehicle-conflict?${params}`
+              );
+              if (!res.ok) return { vehicleId: vehicle.id, hasConflict: false };
+              const json = await res.json();
+              return {
+                vehicleId: vehicle.id,
+                hasConflict: json.hasConflict || false,
+              };
+            } catch {
+              return { vehicleId: vehicle.id, hasConflict: false };
+            }
+          })
+        );
+
+        if (!cancelled) {
+          const occupied = new Set<string>();
+          conflictChecks.forEach((check) => {
+            if (check.hasConflict) {
+              occupied.add(check.vehicleId);
+            }
+          });
+          setOccupiedVehicleIds(occupied);
+        }
+      } catch (err) {
+        console.error('Failed to check vehicle conflicts', err);
+        if (!cancelled) {
+          setOccupiedVehicleIds(new Set());
+        }
+      } finally {
+        if (!cancelled) {
+          setCheckingConflicts(false);
+        }
+      }
+    };
+
+    // Debounce the check
+    const timeoutId = setTimeout(checkVehicleConflicts, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [
+    estimatedDate,
+    estimatedStartTime,
+    estimatedEndTime,
+    vehiclesLocal,
+    mode,
+    task?.id,
+  ]);
+
   useEffect(() => {
     if (isMultiStopType) {
       if (stops.length === 0) {
+        const selectedClient = clientsLocal.find((c) => c.id === clientId);
         setStops([
           {
             clientId: clientId || '',
@@ -357,6 +456,7 @@ export function TaskDialog(props: TaskDialogProps) {
             address: addressQuery || '',
             advisorName: advisorName || '',
             advisorColor: advisorColor,
+            phone: selectedClient?.phone || '',
           },
         ]);
       }
@@ -396,14 +496,17 @@ export function TaskDialog(props: TaskDialogProps) {
               (a.sort_order ?? 0) - (b.sort_order ?? 0)
           )
           .map((s: Partial<TaskStop>) => {
-            const clientName =
-              clientsLocal.find((c) => c.id === s?.client_id)?.name || '';
+            const client = clientsLocal.find((c) => c.id === s?.client_id);
+            const clientName = client?.name || '';
+            // Use phone from stop if exists, otherwise fallback to client's phone
+            const phone = s?.phone || client?.phone || '';
             return {
               clientId: s?.client_id || '',
               clientQuery: clientName,
               address: s?.address || '',
               advisorName: s?.advisor_name || '',
               advisorColor: (s?.advisor_color as AdvisorColor) || null,
+              phone,
               lat: s?.lat || null,
               lng: s?.lng || null,
               distanceFromGarage: s?.distance_from_garage || null,
@@ -436,14 +539,27 @@ export function TaskDialog(props: TaskDialogProps) {
   const vehicleSuggestions = useMemo(() => {
     const q = vehicleQuery.trim().toLowerCase();
     if (!q) return [];
+    // Normalize search query (remove dashes/spaces) to match normalized plates in DB
+    const normalizedQuery = q.replace(/\D/g, '');
     return vehiclesLocal
       .filter((v) => {
         const plate = v.license_plate?.toLowerCase() ?? '';
+        const normalizedPlate = plate.replace(/\D/g, ''); // Normalize plate for comparison
         const model = v.model?.toLowerCase() ?? '';
-        return plate.includes(q) || model.includes(q);
+        // Search in both formatted and normalized plate, and in model
+        return (
+          plate.includes(q) ||
+          normalizedPlate.includes(normalizedQuery) ||
+          model.includes(q)
+        );
       })
-      .slice(0, 8);
-  }, [vehiclesLocal, vehicleQuery]);
+      .slice(0, 8)
+      .map((v) => ({
+        ...v,
+        isOccupied: occupiedVehicleIds.has(v.id),
+        isUnavailable: v.is_available === false,
+      }));
+  }, [vehiclesLocal, vehicleQuery, occupiedVehicleIds]);
 
   const getClientSuggestions = React.useCallback(
     (query: string) => {
@@ -487,6 +603,10 @@ export function TaskDialog(props: TaskDialogProps) {
           toastError('חובה לבחור לקוח עבור כל עצירה');
           return 'חובה לבחור לקוח עבור כל עצירה';
         }
+        if (!stop.phone?.trim()) {
+          toastError('חובה להזין טלפון עבור כל עצירה');
+          return 'חובה להזין טלפון עבור כל עצירה';
+        }
         if (!stop.address.trim()) {
           toastError('חובה להזין כתובת עבור כל עצירה');
           return 'חובה להזין כתובת עבור כל עצירה';
@@ -529,6 +649,7 @@ export function TaskDialog(props: TaskDialogProps) {
                 address: '',
                 advisorName: '',
                 advisorColor: null,
+                phone: created.phone || '',
               },
             ];
           }
@@ -542,6 +663,7 @@ export function TaskDialog(props: TaskDialogProps) {
                   ...stop,
                   clientId: created.id,
                   clientQuery: created.name || '',
+                  phone: created.phone || stop.phone || '',
                 }
               : stop
           );
@@ -562,31 +684,91 @@ export function TaskDialog(props: TaskDialogProps) {
 
   const createVehicle = async () => {
     const license_plate = newVehiclePlate.trim();
-    if (!license_plate) return;
+    if (!license_plate) {
+      setError('חובה להזין מספר רישוי');
+      return;
+    }
+
+    // Validate license plate format
+    const digitsOnly = license_plate.replace(/\D/g, '');
+    const digitCount = digitsOnly.length;
+
+    if (digitCount < 7) {
+      setError(
+        `מספר רישוי חייב להכיל לפחות 7 ספרות (נמצאו ${digitCount} ספרות)`
+      );
+      return;
+    }
+
+    if (digitCount > 8) {
+      setError(
+        `מספר רישוי חייב להכיל לכל היותר 8 ספרות (נמצאו ${digitCount} ספרות)`
+      );
+      return;
+    }
+
+    if (!isValidLicensePlate(license_plate)) {
+      setError('מספר רישוי חייב להכיל בדיוק 7 או 8 ספרות');
+      return;
+    }
+
+    // Normalize license plate (remove dashes/spaces) before sending to API
+    const normalizedPlate = normalizeLicensePlate(license_plate);
+
     try {
       const res = await fetch('/api/admin/vehicles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          license_plate,
+          license_plate: normalizedPlate,
           model: newVehicleModel || null,
         }),
       });
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        const errorText = await res.text();
+        let errorMessage = errorText;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error || errorText;
+        } catch {
+          // If not JSON, use the text as is
+        }
+        
+        // Check for duplicate key error
+        if (
+          errorMessage.includes('duplicate key value violates unique constraint') ||
+          errorMessage.includes('vehicles_license_plate_key')
+        ) {
+          toastError('מספר רישוי זה כבר קיים במערכת');
+          setError('מספר רישוי זה כבר קיים במערכת');
+          return;
+        }
+        
+        throw new Error(errorMessage);
+      }
       const json = await res.json();
       const created: Vehicle = json.data;
       setVehiclesLocal((prev) => [...prev, created]);
       onVehicleCreated?.(created);
       setVehicleId(created.id);
       setVehicleQuery(
-        `${created.license_plate}${created.model ? ` · ${created.model}` : ''}`
+        `${formatLicensePlate(created.license_plate)}${
+          created.model ? ` · ${created.model}` : ''
+        }`
       );
       setShowAddVehicle(false);
       setNewVehiclePlate('');
       setNewVehicleModel('');
     } catch (err: unknown) {
       const error = err as Error;
-      setError(error.message || 'יצירת רכב נכשלה');
+      const errorMessage = error.message || 'יצירת רכב נכשלה';
+      setError(errorMessage);
+      // Only show toast if not already shown (duplicate key case)
+      if (
+        !errorMessage.includes('מספר רישוי זה כבר קיים במערכת')
+      ) {
+        toastError(errorMessage);
+      }
     }
   };
 
@@ -624,17 +806,31 @@ export function TaskDialog(props: TaskDialogProps) {
       let finalVehicleId = vehicleId;
       if (!finalVehicleId && vehicleQuery.trim()) {
         const normalizedQuery = vehicleQuery.trim().toLowerCase();
+        // Normalize query (remove dashes/spaces) for comparison
+        const normalizedQueryDigits = normalizedQuery.replace(/\D/g, '');
         const match = vehiclesLocal.find((v) => {
           const plate = v.license_plate.toLowerCase();
-          // Check against plate only, or the formatted "plate · model" string
-          const formatted = `${v.license_plate}${
+          const normalizedPlate = plate.replace(/\D/g, ''); // Normalize plate
+          // Check against plate (formatted or normalized), or the formatted "plate · model" string
+          const formatted = `${formatLicensePlate(v.license_plate)}${
             v.model ? ` · ${v.model}` : ''
           }`.toLowerCase();
-          return plate === normalizedQuery || formatted === normalizedQuery;
+          return (
+            plate === normalizedQuery ||
+            normalizedPlate === normalizedQueryDigits ||
+            formatted === normalizedQuery
+          );
         });
         if (match) {
           finalVehicleId = match.id;
         }
+      }
+
+      // Validate vehicle conflict before submission
+      if (finalVehicleId && occupiedVehicleIds.has(finalVehicleId)) {
+        throw new Error(
+          'רכב זה כבר משוייך למשימה אחרת באותו יום ובאותו טווח זמן'
+        );
       }
 
       let finalClientId = clientId;
@@ -649,6 +845,7 @@ export function TaskDialog(props: TaskDialogProps) {
         address: string;
         advisor_name: string | null;
         advisor_color: AdvisorColor | null;
+        phone: string;
         sort_order: number;
         lat: number | null;
         lng: number | null;
@@ -682,6 +879,10 @@ export function TaskDialog(props: TaskDialogProps) {
           if (!resolvedClientId) {
             throw new Error('חובה לבחור לקוח עבור כל עצירה');
           }
+          const phoneValue = stop.phone?.trim() || '';
+          if (!phoneValue) {
+            throw new Error('חובה להזין טלפון עבור כל עצירה');
+          }
           const addressValue = stop.address.trim();
           if (!addressValue) {
             throw new Error('חובה להזין כתובת עבור כל עצירה');
@@ -699,6 +900,7 @@ export function TaskDialog(props: TaskDialogProps) {
             address: addressValue,
             advisor_name: advisorValue || null,
             advisor_color: advisorColorValue || null,
+            phone: phoneValue,
             sort_order: idx,
             lat: stop.lat || null,
             lng: stop.lng || null,
@@ -749,12 +951,12 @@ export function TaskDialog(props: TaskDialogProps) {
       }
 
       // Validation for "Replacement Car Delivery" - must have client and vehicle
-      if (type === 'הסעת רכב חלופי') {
+      if (type === 'מסירת רכב חלופי') {
         if (!finalClientId) {
-          throw new Error('חובה לבחור לקוח עבור משימת הסעת רכב חלופי');
+          throw new Error('חובה לבחור לקוח עבור משימת מסירת רכב חלופי');
         }
         if (!finalVehicleId) {
-          throw new Error('חובה לבחור רכב עבור משימת הסעת רכב חלופי');
+          throw new Error('חובה לבחור רכב עבור משימת מסירת רכב חלופי');
         }
       }
 
@@ -783,6 +985,24 @@ export function TaskDialog(props: TaskDialogProps) {
         }
       }
 
+      // Validation for "Pickup Vehicle / Transport" (איסוף רכב/שינוע)
+      if (type === 'איסוף רכב/שינוע') {
+        if (!finalVehicleId) {
+          throw new Error('חובה לבחור רכב עבור משימת איסוף רכב/שינוע');
+        }
+        if (!finalClientId) {
+          throw new Error('חובה לבחור לקוח עבור משימת איסוף רכב/שינוע');
+        }
+        if (!addressForTask.trim()) {
+          throw new Error('חובה להזין כתובת עבור משימת איסוף רכב/שינוע');
+        }
+        if (!finalAdvisorForTask.trim() && !finalAdvisorColor) {
+          throw new Error(
+            'חובה להזין שם יועץ או לבחור צבע יועץ עבור משימת איסוף רכב/שינוע'
+          );
+        }
+      }
+
       // Validation for "Return Vehicle / Transport" (החזרת רכב/שינוע)
       if (type === 'החזרת רכב/שינוע') {
         if (!finalVehicleId) {
@@ -800,6 +1020,29 @@ export function TaskDialog(props: TaskDialogProps) {
         }
         if (!addressForTask.trim()) {
           throw new Error('חובה להזין כתובת עבור משימת החזרת רכב/שינוע');
+        }
+      }
+
+      // Validation for "Test Execution" (ביצוע טסט) - must have client and vehicle
+      if (type === 'ביצוע טסט') {
+        if (!finalClientId) {
+          throw new Error('חובה לבחור לקוח עבור משימת ביצוע טסט');
+        }
+        if (!finalVehicleId) {
+          throw new Error('חובה לבחור רכב עבור משימת ביצוע טסט');
+        }
+      }
+
+      // Validation for "Vehicle Rescue" (חילוץ רכב תקוע) - must have client, vehicle, and address
+      if (type === 'חילוץ רכב תקוע') {
+        if (!finalClientId) {
+          throw new Error('חובה לבחור לקוח עבור משימת חילוץ רכב תקוע');
+        }
+        if (!finalVehicleId) {
+          throw new Error('חובה לבחור רכב עבור משימת חילוץ רכב תקוע');
+        }
+        if (!addressForTask.trim()) {
+          throw new Error('חובה להזין כתובת עבור משימת חילוץ רכב תקוע');
         }
       }
 
@@ -878,6 +1121,7 @@ export function TaskDialog(props: TaskDialogProps) {
             address: string;
             advisor_name: string | null;
             advisor_color: AdvisorColor | null;
+            phone: string;
             sort_order: number;
             lat: number | null;
             lng: number | null;
@@ -1035,7 +1279,8 @@ export function TaskDialog(props: TaskDialogProps) {
                 <label className="flex flex-col gap-1">
                   <span className="text-sm font-medium text-primary">
                     שם יועץ{' '}
-                    {type === 'הסעת לקוח הביתה' && (
+                    {(type === 'הסעת לקוח הביתה' ||
+                      type === 'איסוף רכב/שינוע') && (
                       <span className="text-red-500">*</span>
                     )}
                   </span>
@@ -1049,7 +1294,8 @@ export function TaskDialog(props: TaskDialogProps) {
                 <label className="flex flex-col gap-1">
                   <span className="text-sm font-medium text-primary">
                     צבע יועץ{' '}
-                    {type === 'הסעת לקוח הביתה' && (
+                    {(type === 'הסעת לקוח הביתה' ||
+                      type === 'איסוף רכב/שינוע') && (
                       <span className="text-red-500">*</span>
                     )}
                   </span>
@@ -1161,7 +1407,14 @@ export function TaskDialog(props: TaskDialogProps) {
 
             {!isMultiStopType && (
               <label className="col-span-1 md:col-span-2 flex flex-col gap-1">
-                <span className="text-sm font-medium text-primary">כתובת</span>
+                <span className="text-sm font-medium text-primary">
+                  כתובת
+                  {(type === 'חילוץ רכב תקוע' ||
+                    type === 'איסוף רכב/שינוע' ||
+                    type === 'החזרת רכב/שינוע') && (
+                    <span className="text-red-500"> *</span>
+                  )}
+                </span>
                 <AddressAutocomplete
                   value={addressQuery}
                   onChange={(val) => {
@@ -1201,6 +1454,7 @@ export function TaskDialog(props: TaskDialogProps) {
                             address: '',
                             advisorName: '',
                             advisorColor: null,
+                            phone: '',
                           },
                         ])
                       }
@@ -1245,165 +1499,203 @@ export function TaskDialog(props: TaskDialogProps) {
                           </button>
                         )}
                       </div>
-                      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                        <div className="flex flex-col gap-1">
-                          <Label className="text-primary">לקוח</Label>
-                          <Input
-                            type="text"
-                            placeholder="שם לקוח"
-                            value={stop.clientQuery}
-                            onFocus={() => setActiveStopIndex(idx)}
-                            onChange={(e) =>
-                              setStops((prev) =>
-                                prev.map((s, i) =>
-                                  i === idx
-                                    ? {
-                                        ...s,
-                                        clientQuery: e.target.value,
-                                        clientId: '',
-                                      }
-                                    : s
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                          <div className="flex flex-col gap-1">
+                            <Label className="text-primary">
+                              לקוח
+                              {(type === 'הסעת לקוח הביתה' ||
+                                type === 'הסעת לקוח למוסך') && (
+                                <span className="text-red-500"> *</span>
+                              )}
+                            </Label>
+                            <Input
+                              type="text"
+                              placeholder="שם לקוח"
+                              value={stop.clientQuery}
+                              onFocus={() => setActiveStopIndex(idx)}
+                              onChange={(e) =>
+                                setStops((prev) =>
+                                  prev.map((s, i) =>
+                                    i === idx
+                                      ? {
+                                          ...s,
+                                          clientQuery: e.target.value,
+                                          clientId: '',
+                                        }
+                                      : s
+                                  )
                                 )
-                              )
-                            }
-                          />
-                          {suggestions.length > 0 && !stop.clientId && (
-                            <div className="mt-1 max-h-40 w-full overflow-y-auto rounded border border-gray-300 bg-white text-sm shadow-sm">
-                              {suggestions.map((c) => (
-                                <button
-                                  key={c.id}
-                                  type="button"
-                                  className="flex w-full items-center justify-between px-2 py-1 text-right hover:bg-blue-50"
-                                  onClick={() =>
-                                    setStops((prev) =>
-                                      prev.map((s, i) =>
-                                        i === idx
-                                          ? {
-                                              ...s,
-                                              clientId: c.id,
-                                              clientQuery: c.name,
-                                            }
-                                          : s
+                              }
+                            />
+                            {suggestions.length > 0 && !stop.clientId && (
+                              <div className="mt-1 max-h-40 w-full overflow-y-auto rounded border border-gray-300 bg-white text-sm shadow-sm">
+                                {suggestions.map((c) => (
+                                  <button
+                                    key={c.id}
+                                    type="button"
+                                    className="flex w-full items-center justify-between px-2 py-1 text-right hover:bg-blue-50"
+                                    onClick={() =>
+                                      setStops((prev) =>
+                                        prev.map((s, i) =>
+                                          i === idx
+                                            ? {
+                                                ...s,
+                                                clientId: c.id,
+                                                clientQuery: c.name,
+                                                phone: c.phone || '',
+                                              }
+                                            : s
+                                        )
                                       )
-                                    )
-                                  }
+                                    }
+                                  >
+                                    <span>{c.name}</span>
+                                    {c.phone && (
+                                      <span className="text-xs text-gray-500">
+                                        {c.phone}
+                                      </span>
+                                    )}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <Label className="text-primary">
+                              טלפון
+                              {(type === 'הסעת לקוח הביתה' ||
+                                type === 'הסעת לקוח למוסך') && (
+                                <span className="text-red-500"> *</span>
+                              )}
+                            </Label>
+                            <Input
+                              type="tel"
+                              placeholder="טלפון"
+                              value={stop.phone}
+                              onChange={(e) =>
+                                setStops((prev) =>
+                                  prev.map((s, i) =>
+                                    i === idx ? { ...s, phone: e.target.value } : s
+                                  )
+                                )
+                              }
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <Label className="text-primary">
+                              כתובת
+                              {(type === 'הסעת לקוח הביתה' ||
+                                type === 'הסעת לקוח למוסך') && (
+                                <span className="text-red-500"> *</span>
+                              )}
+                            </Label>
+                            <AddressAutocomplete
+                              value={stop.address}
+                              onChange={(val) =>
+                                setStops((prev) =>
+                                  prev.map((s, i) =>
+                                    i === idx
+                                      ? {
+                                          ...s,
+                                          address: val,
+                                          lat: null,
+                                          lng: null,
+                                          distanceFromGarage: null,
+                                        }
+                                      : s
+                                  )
+                                )
+                              }
+                              onSelect={(addr, lat, lng) =>
+                                setStops((prev) =>
+                                  prev.map((s, i) =>
+                                    i === idx
+                                      ? {
+                                          ...s,
+                                          address: addr,
+                                          lat,
+                                          lng,
+                                          distanceFromGarage: calculateDistance(
+                                            GARAGE_LOCATION,
+                                            { lat, lng }
+                                          ),
+                                        }
+                                      : s
+                                  )
+                                )
+                              }
+                              placeholder="כתובת"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                          <div className="flex flex-col gap-1">
+                            <Label className="text-primary">
+                              שם יועץ <span className="text-red-500">*</span>
+                            </Label>
+                            <Input
+                              type="text"
+                              placeholder="שם יועץ"
+                              value={stop.advisorName}
+                              onChange={(e) =>
+                                setStops((prev) =>
+                                  prev.map((s, i) =>
+                                    i === idx
+                                      ? { ...s, advisorName: e.target.value }
+                                      : s
+                                  )
+                                )
+                              }
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <Label className="text-primary">
+                              צבע יועץ <span className="text-red-500">*</span>
+                            </Label>
+                            <RtlSelectDropdown
+                              value={stop.advisorColor || ''}
+                              options={[
+                                { value: '', label: '—' },
+                                ...getAdvisorColorOptions().map((color) => ({
+                                  value: color,
+                                  label: color,
+                                  bgClass: getAdvisorColorBgClass(color),
+                                  textClass: getAdvisorColorTextClass(color),
+                                  color: getAdvisorColorHex(color),
+                                })),
+                              ]}
+                              onChange={(value) =>
+                                setStops((prev) =>
+                                  prev.map((s, i) =>
+                                    i === idx
+                                      ? {
+                                          ...s,
+                                          advisorColor:
+                                            value === ''
+                                              ? null
+                                              : (value as AdvisorColor),
+                                        }
+                                      : s
+                                  )
+                                )
+                              }
+                              placeholder="בחר צבע"
+                            />
+                            {stop.advisorColor && (
+                              <div className="mt-1 flex items-center gap-2">
+                                <span
+                                  className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getAdvisorColorBgClass(
+                                    stop.advisorColor
+                                  )} ${getAdvisorColorTextClass(
+                                    stop.advisorColor
+                                  )}`}
                                 >
-                                  <span>{c.name}</span>
-                                  {c.phone && (
-                                    <span className="text-xs text-gray-500">
-                                      {c.phone}
-                                    </span>
-                                  )}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <Label className="text-primary">כתובת</Label>
-                          <AddressAutocomplete
-                            value={stop.address}
-                            onChange={(val) =>
-                              setStops((prev) =>
-                                prev.map((s, i) =>
-                                  i === idx
-                                    ? {
-                                        ...s,
-                                        address: val,
-                                        lat: null,
-                                        lng: null,
-                                        distanceFromGarage: null,
-                                      }
-                                    : s
-                                )
-                              )
-                            }
-                            onSelect={(addr, lat, lng) =>
-                              setStops((prev) =>
-                                prev.map((s, i) =>
-                                  i === idx
-                                    ? {
-                                        ...s,
-                                        address: addr,
-                                        lat,
-                                        lng,
-                                        distanceFromGarage: calculateDistance(
-                                          GARAGE_LOCATION,
-                                          { lat, lng }
-                                        ),
-                                      }
-                                    : s
-                                )
-                              )
-                            }
-                            placeholder="כתובת"
-                          />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <Label className="text-primary">
-                            שם יועץ <span className="text-red-500">*</span>
-                          </Label>
-                          <Input
-                            type="text"
-                            placeholder="שם יועץ"
-                            value={stop.advisorName}
-                            onChange={(e) =>
-                              setStops((prev) =>
-                                prev.map((s, i) =>
-                                  i === idx
-                                    ? { ...s, advisorName: e.target.value }
-                                    : s
-                                )
-                              )
-                            }
-                          />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <Label className="text-primary">
-                            צבע יועץ <span className="text-red-500">*</span>
-                          </Label>
-                          <RtlSelectDropdown
-                            value={stop.advisorColor || ''}
-                            options={[
-                              { value: '', label: '—' },
-                              ...getAdvisorColorOptions().map((color) => ({
-                                value: color,
-                                label: color,
-                                bgClass: getAdvisorColorBgClass(color),
-                                textClass: getAdvisorColorTextClass(color),
-                                color: getAdvisorColorHex(color),
-                              })),
-                            ]}
-                            onChange={(value) =>
-                              setStops((prev) =>
-                                prev.map((s, i) =>
-                                  i === idx
-                                    ? {
-                                        ...s,
-                                        advisorColor:
-                                          value === ''
-                                            ? null
-                                            : (value as AdvisorColor),
-                                      }
-                                    : s
-                                )
-                              )
-                            }
-                            placeholder="בחר צבע"
-                          />
-                          {stop.advisorColor && (
-                            <div className="mt-1 flex items-center gap-2">
-                              <span
-                                className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getAdvisorColorBgClass(
-                                  stop.advisorColor
-                                )} ${getAdvisorColorTextClass(
-                                  stop.advisorColor
-                                )}`}
-                              >
-                                {stop.advisorColor}
-                              </span>
-                            </div>
-                          )}
+                                  {stop.advisorColor}
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1455,6 +1747,14 @@ export function TaskDialog(props: TaskDialogProps) {
                   <div className="grid w-full max-w-sm items-center gap-1">
                     <Label htmlFor="client" className="text-primary">
                       לקוח
+                      {(type === 'ביצוע טסט' ||
+                        type === 'חילוץ רכב תקוע' ||
+                        type === 'מסירת רכב חלופי' ||
+                        type === 'הסעת לקוח הביתה' ||
+                        type === 'איסוף רכב/שינוע' ||
+                        type === 'החזרת רכב/שינוע') && (
+                        <span className="text-red-500"> *</span>
+                      )}
                     </Label>
                     <Input
                       type="text"
@@ -1545,6 +1845,14 @@ export function TaskDialog(props: TaskDialogProps) {
                 <div className="grid w-full max-w-sm items-center gap-1">
                   <Label htmlFor="vehicle" className="text-primary">
                     רכב
+                    {(type === 'ביצוע טסט' ||
+                      type === 'חילוץ רכב תקוע' ||
+                      type === 'מסירת רכב חלופי' ||
+                      type === 'הסעת לקוח הביתה' ||
+                      type === 'איסוף רכב/שינוע' ||
+                      type === 'החזרת רכב/שינוע') && (
+                      <span className="text-red-500"> *</span>
+                    )}
                   </Label>
                   <Input
                     type="text"
@@ -1558,26 +1866,60 @@ export function TaskDialog(props: TaskDialogProps) {
                   />
                   {vehicleSuggestions.length > 0 && !vehicleId && (
                     <div className="mt-1 max-h-40 w-full overflow-y-auto rounded border border-gray-300 bg-white text-sm shadow-sm">
-                      {vehicleSuggestions.map((v) => (
-                        <button
-                          key={v.id}
-                          type="button"
-                          className="flex w-full items-center justify-between px-2 py-1 text-right hover:bg-blue-50"
-                          onClick={() => {
-                            setVehicleId(v.id);
-                            setVehicleQuery(
-                              `${v.license_plate}${
-                                v.model ? ` · ${v.model}` : ''
-                              }`
-                            );
-                          }}
-                        >
-                          <span>
-                            {v.license_plate}
-                            {v.model ? ` · ${v.model}` : ''}
-                          </span>
-                        </button>
-                      ))}
+                      {vehicleSuggestions.map((v) => {
+                        // Don't mark as occupied if it's the currently selected vehicle
+                        const isOccupied =
+                          (v.isOccupied || false) && v.id !== vehicleId;
+                        const isUnavailable = v.isUnavailable || false;
+                        const isDisabled = isOccupied || isUnavailable;
+                        return (
+                          <button
+                            key={v.id}
+                            type="button"
+                            disabled={isDisabled}
+                            className={`flex w-full items-center justify-between px-2 py-1 text-right ${
+                              isDisabled
+                                ? 'cursor-not-allowed bg-gray-100 text-gray-400 opacity-60'
+                                : 'hover:bg-blue-50'
+                            }`}
+                            onClick={() => {
+                              if (isOccupied) {
+                                toastError(
+                                  'רכב זה כבר משוייך למשימה אחרת באותו יום ובאותו טווח זמן'
+                                );
+                                return;
+                              }
+                              if (isUnavailable) {
+                                toastError('רכב זה מושבת ולא זמין לשימוש');
+                                return;
+                              }
+                              setVehicleId(v.id);
+                              setVehicleQuery(
+                                `${formatLicensePlate(v.license_plate)}${
+                                  v.model ? ` · ${v.model}` : ''
+                                }`
+                              );
+                            }}
+                          >
+                            <span
+                              className={isDisabled ? 'text-gray-400' : ''}
+                            >
+                              {formatLicensePlate(v.license_plate)}
+                              {v.model ? ` · ${v.model}` : ''}
+                              {isOccupied && (
+                                <span className="mr-2 text-xs">
+                                  (תפוס)
+                                </span>
+                              )}
+                              {isUnavailable && (
+                                <span className="mr-2 text-xs">
+                                  (מושבת)
+                                </span>
+                              )}
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -1592,18 +1934,63 @@ export function TaskDialog(props: TaskDialogProps) {
               </div>
               {showAddVehicle && (
                 <div className="mt-2 grid grid-cols-3 gap-2">
-                  <input
-                    className="rounded border border-gray-300 p-2 col-span-1"
-                    placeholder="מספר רישוי"
-                    value={newVehiclePlate}
-                    onChange={(e) => setNewVehiclePlate(e.target.value)}
-                  />
-                  <input
-                    className="rounded border border-gray-300 p-2 col-span-1"
-                    placeholder="דגם"
-                    value={newVehicleModel}
-                    onChange={(e) => setNewVehicleModel(e.target.value)}
-                  />
+                  <div className="col-span-1 flex flex-col gap-1">
+                    <label className="text-sm font-medium text-primary">
+                      מספר רישוי <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      className="rounded border border-gray-300 p-2"
+                      placeholder="מספר רישוי (7 או 8 ספרות)"
+                      value={newVehiclePlate}
+                      onChange={(e) => {
+                        const input = e.target.value;
+                        // Allow digits and dashes only
+                        const cleaned = input.replace(/[^\d-]/g, '');
+                        // Format as user types
+                        const formatted = formatLicensePlate(cleaned);
+                        setNewVehiclePlate(formatted);
+                        // Clear error when user starts typing
+                        if (error && error.includes('מספר רישוי')) {
+                          setError(null);
+                        }
+                      }}
+                      maxLength={10} // Max length for formatted plate (e.g., "123-45-678")
+                    />
+                    {newVehiclePlate &&
+                      (() => {
+                        const digitsOnly = newVehiclePlate.replace(/\D/g, '');
+                        const digitCount = digitsOnly.length;
+                        if (digitCount === 0) return null;
+                        if (digitCount < 7) {
+                          return (
+                            <p className="text-xs text-red-600">
+                              מספר רישוי חייב להכיל לפחות 7 ספרות (נמצאו{' '}
+                              {digitCount} ספרות)
+                            </p>
+                          );
+                        }
+                        if (digitCount > 8) {
+                          return (
+                            <p className="text-xs text-red-600">
+                              מספר רישוי חייב להכיל לכל היותר 8 ספרות (נמצאו{' '}
+                              {digitCount} ספרות)
+                            </p>
+                          );
+                        }
+                        return null;
+                      })()}
+                  </div>
+                  <div className="col-span-1 flex flex-col gap-1">
+                    <label className="text-sm font-medium text-primary">
+                      דגם
+                    </label>
+                    <input
+                      className="rounded border border-gray-300 p-2"
+                      placeholder="דגם"
+                      value={newVehicleModel}
+                      onChange={(e) => setNewVehicleModel(e.target.value)}
+                    />
+                  </div>
                   <div className="col-span-3 flex justify-end gap-2">
                     <button
                       type="button"
