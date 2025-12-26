@@ -56,6 +56,7 @@ type StopForm = {
   address: string;
   advisorName: string;
   advisorColor: AdvisorColor | null;
+  phone: string;
   lat?: number | null;
   lng?: number | null;
   distanceFromGarage?: number | null;
@@ -272,6 +273,7 @@ export function TaskDialog(props: TaskDialogProps) {
               address: task.address ?? '',
               advisorName: task.advisor_name ?? '',
               advisorColor: (task.advisor_color as AdvisorColor) || null,
+              phone: existing?.phone || '',
             },
           ]);
         }
@@ -285,6 +287,7 @@ export function TaskDialog(props: TaskDialogProps) {
               address: task?.address ?? '',
               advisorName: task?.advisor_name ?? '',
               advisorColor: (task?.advisor_color as AdvisorColor) || null,
+              phone: '',
             },
           ]);
         }
@@ -355,6 +358,7 @@ export function TaskDialog(props: TaskDialogProps) {
   useEffect(() => {
     if (isMultiStopType) {
       if (stops.length === 0) {
+        const selectedClient = clientsLocal.find((c) => c.id === clientId);
         setStops([
           {
             clientId: clientId || '',
@@ -362,6 +366,7 @@ export function TaskDialog(props: TaskDialogProps) {
             address: addressQuery || '',
             advisorName: advisorName || '',
             advisorColor: advisorColor,
+            phone: selectedClient?.phone || '',
           },
         ]);
       }
@@ -401,14 +406,17 @@ export function TaskDialog(props: TaskDialogProps) {
               (a.sort_order ?? 0) - (b.sort_order ?? 0)
           )
           .map((s: Partial<TaskStop>) => {
-            const clientName =
-              clientsLocal.find((c) => c.id === s?.client_id)?.name || '';
+            const client = clientsLocal.find((c) => c.id === s?.client_id);
+            const clientName = client?.name || '';
+            // Use phone from stop if exists, otherwise fallback to client's phone
+            const phone = s?.phone || client?.phone || '';
             return {
               clientId: s?.client_id || '',
               clientQuery: clientName,
               address: s?.address || '',
               advisorName: s?.advisor_name || '',
               advisorColor: (s?.advisor_color as AdvisorColor) || null,
+              phone,
               lat: s?.lat || null,
               lng: s?.lng || null,
               distanceFromGarage: s?.distance_from_garage || null,
@@ -500,6 +508,10 @@ export function TaskDialog(props: TaskDialogProps) {
           toastError('חובה לבחור לקוח עבור כל עצירה');
           return 'חובה לבחור לקוח עבור כל עצירה';
         }
+        if (!stop.phone?.trim()) {
+          toastError('חובה להזין טלפון עבור כל עצירה');
+          return 'חובה להזין טלפון עבור כל עצירה';
+        }
         if (!stop.address.trim()) {
           toastError('חובה להזין כתובת עבור כל עצירה');
           return 'חובה להזין כתובת עבור כל עצירה';
@@ -542,6 +554,7 @@ export function TaskDialog(props: TaskDialogProps) {
                 address: '',
                 advisorName: '',
                 advisorColor: null,
+                phone: created.phone || '',
               },
             ];
           }
@@ -555,6 +568,7 @@ export function TaskDialog(props: TaskDialogProps) {
                   ...stop,
                   clientId: created.id,
                   clientQuery: created.name || '',
+                  phone: created.phone || stop.phone || '',
                 }
               : stop
           );
@@ -615,7 +629,28 @@ export function TaskDialog(props: TaskDialogProps) {
           model: newVehicleModel || null,
         }),
       });
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        const errorText = await res.text();
+        let errorMessage = errorText;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error || errorText;
+        } catch {
+          // If not JSON, use the text as is
+        }
+        
+        // Check for duplicate key error
+        if (
+          errorMessage.includes('duplicate key value violates unique constraint') ||
+          errorMessage.includes('vehicles_license_plate_key')
+        ) {
+          toastError('מספר רישוי זה כבר קיים במערכת');
+          setError('מספר רישוי זה כבר קיים במערכת');
+          return;
+        }
+        
+        throw new Error(errorMessage);
+      }
       const json = await res.json();
       const created: Vehicle = json.data;
       setVehiclesLocal((prev) => [...prev, created]);
@@ -631,7 +666,14 @@ export function TaskDialog(props: TaskDialogProps) {
       setNewVehicleModel('');
     } catch (err: unknown) {
       const error = err as Error;
-      setError(error.message || 'יצירת רכב נכשלה');
+      const errorMessage = error.message || 'יצירת רכב נכשלה';
+      setError(errorMessage);
+      // Only show toast if not already shown (duplicate key case)
+      if (
+        !errorMessage.includes('מספר רישוי זה כבר קיים במערכת')
+      ) {
+        toastError(errorMessage);
+      }
     }
   };
 
@@ -701,6 +743,7 @@ export function TaskDialog(props: TaskDialogProps) {
         address: string;
         advisor_name: string | null;
         advisor_color: AdvisorColor | null;
+        phone: string;
         sort_order: number;
         lat: number | null;
         lng: number | null;
@@ -734,6 +777,10 @@ export function TaskDialog(props: TaskDialogProps) {
           if (!resolvedClientId) {
             throw new Error('חובה לבחור לקוח עבור כל עצירה');
           }
+          const phoneValue = stop.phone?.trim() || '';
+          if (!phoneValue) {
+            throw new Error('חובה להזין טלפון עבור כל עצירה');
+          }
           const addressValue = stop.address.trim();
           if (!addressValue) {
             throw new Error('חובה להזין כתובת עבור כל עצירה');
@@ -751,6 +798,7 @@ export function TaskDialog(props: TaskDialogProps) {
             address: addressValue,
             advisor_name: advisorValue || null,
             advisor_color: advisorColorValue || null,
+            phone: phoneValue,
             sort_order: idx,
             lat: stop.lat || null,
             lng: stop.lng || null,
@@ -971,6 +1019,7 @@ export function TaskDialog(props: TaskDialogProps) {
             address: string;
             advisor_name: string | null;
             advisor_color: AdvisorColor | null;
+            phone: string;
             sort_order: number;
             lat: number | null;
             lng: number | null;
@@ -1303,6 +1352,7 @@ export function TaskDialog(props: TaskDialogProps) {
                             address: '',
                             advisorName: '',
                             advisorColor: null,
+                            phone: '',
                           },
                         ])
                       }
@@ -1347,177 +1397,203 @@ export function TaskDialog(props: TaskDialogProps) {
                           </button>
                         )}
                       </div>
-                      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                        <div className="flex flex-col gap-1">
-                          <Label className="text-primary">
-                            לקוח
-                            {(type === 'הסעת לקוח הביתה' ||
-                              type === 'הסעת לקוח למוסך') && (
-                              <span className="text-red-500"> *</span>
-                            )}
-                          </Label>
-                          <Input
-                            type="text"
-                            placeholder="שם לקוח"
-                            value={stop.clientQuery}
-                            onFocus={() => setActiveStopIndex(idx)}
-                            onChange={(e) =>
-                              setStops((prev) =>
-                                prev.map((s, i) =>
-                                  i === idx
-                                    ? {
-                                        ...s,
-                                        clientQuery: e.target.value,
-                                        clientId: '',
-                                      }
-                                    : s
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                          <div className="flex flex-col gap-1">
+                            <Label className="text-primary">
+                              לקוח
+                              {(type === 'הסעת לקוח הביתה' ||
+                                type === 'הסעת לקוח למוסך') && (
+                                <span className="text-red-500"> *</span>
+                              )}
+                            </Label>
+                            <Input
+                              type="text"
+                              placeholder="שם לקוח"
+                              value={stop.clientQuery}
+                              onFocus={() => setActiveStopIndex(idx)}
+                              onChange={(e) =>
+                                setStops((prev) =>
+                                  prev.map((s, i) =>
+                                    i === idx
+                                      ? {
+                                          ...s,
+                                          clientQuery: e.target.value,
+                                          clientId: '',
+                                        }
+                                      : s
+                                  )
                                 )
-                              )
-                            }
-                          />
-                          {suggestions.length > 0 && !stop.clientId && (
-                            <div className="mt-1 max-h-40 w-full overflow-y-auto rounded border border-gray-300 bg-white text-sm shadow-sm">
-                              {suggestions.map((c) => (
-                                <button
-                                  key={c.id}
-                                  type="button"
-                                  className="flex w-full items-center justify-between px-2 py-1 text-right hover:bg-blue-50"
-                                  onClick={() =>
-                                    setStops((prev) =>
-                                      prev.map((s, i) =>
-                                        i === idx
-                                          ? {
-                                              ...s,
-                                              clientId: c.id,
-                                              clientQuery: c.name,
-                                            }
-                                          : s
+                              }
+                            />
+                            {suggestions.length > 0 && !stop.clientId && (
+                              <div className="mt-1 max-h-40 w-full overflow-y-auto rounded border border-gray-300 bg-white text-sm shadow-sm">
+                                {suggestions.map((c) => (
+                                  <button
+                                    key={c.id}
+                                    type="button"
+                                    className="flex w-full items-center justify-between px-2 py-1 text-right hover:bg-blue-50"
+                                    onClick={() =>
+                                      setStops((prev) =>
+                                        prev.map((s, i) =>
+                                          i === idx
+                                            ? {
+                                                ...s,
+                                                clientId: c.id,
+                                                clientQuery: c.name,
+                                                phone: c.phone || '',
+                                              }
+                                            : s
+                                        )
                                       )
-                                    )
-                                  }
-                                >
-                                  <span>{c.name}</span>
-                                  {c.phone && (
-                                    <span className="text-xs text-gray-500">
-                                      {c.phone}
-                                    </span>
-                                  )}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <Label className="text-primary">
-                            כתובת
-                            {(type === 'הסעת לקוח הביתה' ||
-                              type === 'הסעת לקוח למוסך') && (
-                              <span className="text-red-500"> *</span>
+                                    }
+                                  >
+                                    <span>{c.name}</span>
+                                    {c.phone && (
+                                      <span className="text-xs text-gray-500">
+                                        {c.phone}
+                                      </span>
+                                    )}
+                                  </button>
+                                ))}
+                              </div>
                             )}
-                          </Label>
-                          <AddressAutocomplete
-                            value={stop.address}
-                            onChange={(val) =>
-                              setStops((prev) =>
-                                prev.map((s, i) =>
-                                  i === idx
-                                    ? {
-                                        ...s,
-                                        address: val,
-                                        lat: null,
-                                        lng: null,
-                                        distanceFromGarage: null,
-                                      }
-                                    : s
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <Label className="text-primary">
+                              טלפון
+                              {(type === 'הסעת לקוח הביתה' ||
+                                type === 'הסעת לקוח למוסך') && (
+                                <span className="text-red-500"> *</span>
+                              )}
+                            </Label>
+                            <Input
+                              type="tel"
+                              placeholder="טלפון"
+                              value={stop.phone}
+                              onChange={(e) =>
+                                setStops((prev) =>
+                                  prev.map((s, i) =>
+                                    i === idx ? { ...s, phone: e.target.value } : s
+                                  )
                                 )
-                              )
-                            }
-                            onSelect={(addr, lat, lng) =>
-                              setStops((prev) =>
-                                prev.map((s, i) =>
-                                  i === idx
-                                    ? {
-                                        ...s,
-                                        address: addr,
-                                        lat,
-                                        lng,
-                                        distanceFromGarage: calculateDistance(
-                                          GARAGE_LOCATION,
-                                          { lat, lng }
-                                        ),
-                                      }
-                                    : s
+                              }
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <Label className="text-primary">
+                              כתובת
+                              {(type === 'הסעת לקוח הביתה' ||
+                                type === 'הסעת לקוח למוסך') && (
+                                <span className="text-red-500"> *</span>
+                              )}
+                            </Label>
+                            <AddressAutocomplete
+                              value={stop.address}
+                              onChange={(val) =>
+                                setStops((prev) =>
+                                  prev.map((s, i) =>
+                                    i === idx
+                                      ? {
+                                          ...s,
+                                          address: val,
+                                          lat: null,
+                                          lng: null,
+                                          distanceFromGarage: null,
+                                        }
+                                      : s
+                                  )
                                 )
-                              )
-                            }
-                            placeholder="כתובת"
-                          />
+                              }
+                              onSelect={(addr, lat, lng) =>
+                                setStops((prev) =>
+                                  prev.map((s, i) =>
+                                    i === idx
+                                      ? {
+                                          ...s,
+                                          address: addr,
+                                          lat,
+                                          lng,
+                                          distanceFromGarage: calculateDistance(
+                                            GARAGE_LOCATION,
+                                            { lat, lng }
+                                          ),
+                                        }
+                                      : s
+                                  )
+                                )
+                              }
+                              placeholder="כתובת"
+                            />
+                          </div>
                         </div>
-                        <div className="flex flex-col gap-1">
-                          <Label className="text-primary">
-                            שם יועץ <span className="text-red-500">*</span>
-                          </Label>
-                          <Input
-                            type="text"
-                            placeholder="שם יועץ"
-                            value={stop.advisorName}
-                            onChange={(e) =>
-                              setStops((prev) =>
-                                prev.map((s, i) =>
-                                  i === idx
-                                    ? { ...s, advisorName: e.target.value }
-                                    : s
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                          <div className="flex flex-col gap-1">
+                            <Label className="text-primary">
+                              שם יועץ <span className="text-red-500">*</span>
+                            </Label>
+                            <Input
+                              type="text"
+                              placeholder="שם יועץ"
+                              value={stop.advisorName}
+                              onChange={(e) =>
+                                setStops((prev) =>
+                                  prev.map((s, i) =>
+                                    i === idx
+                                      ? { ...s, advisorName: e.target.value }
+                                      : s
+                                  )
                                 )
-                              )
-                            }
-                          />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <Label className="text-primary">
-                            צבע יועץ <span className="text-red-500">*</span>
-                          </Label>
-                          <RtlSelectDropdown
-                            value={stop.advisorColor || ''}
-                            options={[
-                              { value: '', label: '—' },
-                              ...getAdvisorColorOptions().map((color) => ({
-                                value: color,
-                                label: color,
-                                bgClass: getAdvisorColorBgClass(color),
-                                textClass: getAdvisorColorTextClass(color),
-                                color: getAdvisorColorHex(color),
-                              })),
-                            ]}
-                            onChange={(value) =>
-                              setStops((prev) =>
-                                prev.map((s, i) =>
-                                  i === idx
-                                    ? {
-                                        ...s,
-                                        advisorColor:
-                                          value === ''
-                                            ? null
-                                            : (value as AdvisorColor),
-                                      }
-                                    : s
+                              }
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <Label className="text-primary">
+                              צבע יועץ <span className="text-red-500">*</span>
+                            </Label>
+                            <RtlSelectDropdown
+                              value={stop.advisorColor || ''}
+                              options={[
+                                { value: '', label: '—' },
+                                ...getAdvisorColorOptions().map((color) => ({
+                                  value: color,
+                                  label: color,
+                                  bgClass: getAdvisorColorBgClass(color),
+                                  textClass: getAdvisorColorTextClass(color),
+                                  color: getAdvisorColorHex(color),
+                                })),
+                              ]}
+                              onChange={(value) =>
+                                setStops((prev) =>
+                                  prev.map((s, i) =>
+                                    i === idx
+                                      ? {
+                                          ...s,
+                                          advisorColor:
+                                            value === ''
+                                              ? null
+                                              : (value as AdvisorColor),
+                                        }
+                                      : s
+                                  )
                                 )
-                              )
-                            }
-                            placeholder="בחר צבע"
-                          />
-                          {stop.advisorColor && (
-                            <div className="mt-1 flex items-center gap-2">
-                              <span
-                                className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getAdvisorColorBgClass(
-                                  stop.advisorColor
-                                )} ${getAdvisorColorTextClass(
-                                  stop.advisorColor
-                                )}`}
-                              >
-                                {stop.advisorColor}
-                              </span>
-                            </div>
-                          )}
+                              }
+                              placeholder="בחר צבע"
+                            />
+                            {stop.advisorColor && (
+                              <div className="mt-1 flex items-center gap-2">
+                                <span
+                                  className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getAdvisorColorBgClass(
+                                    stop.advisorColor
+                                  )} ${getAdvisorColorTextClass(
+                                    stop.advisorColor
+                                  )}`}
+                                >
+                                  {stop.advisorColor}
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>

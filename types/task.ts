@@ -56,6 +56,7 @@ export interface TaskStop {
   advisor_name: string | null;
   advisor_color: AdvisorColor | null;
   sort_order: number;
+  phone?: string | null;
   distance_from_garage?: number | null;
   lat?: number | null;
   lng?: number | null;

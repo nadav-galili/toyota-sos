@@ -254,7 +254,7 @@ export function DriverHome() {
         const { data: stopRows, error: stopsError } = await client
           .from('task_stops')
           .select(
-            'task_id, address, advisor_name, advisor_color, sort_order, distance_from_garage, client:clients(id,name,phone)'
+            'task_id, address, advisor_name, advisor_color, phone, sort_order, distance_from_garage, client:clients(id,name,phone)'
           )
           .in('task_id', taskIds)
           .order('sort_order', { ascending: true });
@@ -268,11 +268,13 @@ export function DriverHome() {
               : row.client;
 
             const entry = grouped.get(row.task_id) || [];
+            // Use phone from stop if exists, otherwise fallback to client's phone
+            const phone = row.phone || clientData?.phone || null;
             entry.push({
               address: row.address || '',
               distanceFromGarage: row.distance_from_garage || null,
               clientName: clientData?.name || null,
-              clientPhone: clientData?.phone || null,
+              clientPhone: phone,
               advisorName: row.advisor_name || null,
               advisorColor: (row.advisor_color as AdvisorColor) || null,
             });

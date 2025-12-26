@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
       address: string;
       advisor_name: string | null;
       advisor_color: string | null;
+      phone: string;
       sort_order: number;
       distance_from_garage?: number | null;
       lat?: number | null;
@@ -97,6 +98,7 @@ export async function POST(request: NextRequest) {
           ['צהוב', 'ירוק', 'כתום', 'סגול בהיר'].includes(s.advisor_color)
             ? s.advisor_color
             : null,
+        phone: typeof s?.phone === 'string' ? s.phone.trim() : '',
         sort_order:
           typeof s?.sort_order === 'number' && Number.isFinite(s.sort_order)
             ? s.sort_order
@@ -113,6 +115,12 @@ export async function POST(request: NextRequest) {
         if (!stop.client_id) {
           return NextResponse.json(
             { error: 'חובה לבחור לקוח עבור כל עצירה' },
+            { status: 400 }
+          );
+        }
+        if (!stop.phone) {
+          return NextResponse.json(
+            { error: 'חובה להזין טלפון עבור כל עצירה' },
             { status: 400 }
           );
         }
