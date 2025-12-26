@@ -504,7 +504,7 @@ export async function getOverdueByDriver(
     setCached(key, []);
     return [];
   }
-  const counts = new Map<string, { name: string; count: number }>();
+  const counts = new Map<string, { name: string; employeeId: string | null; count: number }>();
   (data as any[]).forEach((row) => {
     const tasks = row.tasks;
     if (!tasks) return;

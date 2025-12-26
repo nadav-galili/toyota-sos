@@ -22,32 +22,38 @@ import { CarIcon } from 'lucide-react';
 
 // ---- Form schema & types ----
 
-export const VehicleFormSchema = vehicleSchema.extend({
-  model: z
-    .union([
-      z.string().trim().max(100, 'מודל לא יכול להכיל יותר מ-100 תווים'),
-      z.literal(''),
-      z.undefined(),
-    ])
-    .transform((val) => {
-      if (!val || val.trim().length === 0) return undefined;
-      return val.trim();
+export const VehicleFormSchema = vehicleSchema
+  .omit({ unavailability_reason: true })
+  .extend({
+    model: z
+      .union([
+        z.string().trim().max(100, 'מודל לא יכול להכיל יותר מ-100 תווים'),
+        z.literal(''),
+        z.undefined(),
+      ])
+      .transform((val) => {
+        if (!val || val.trim().length === 0) return undefined;
+        return val.trim();
+      }),
+    is_available: z.boolean(),
+    unavailability_reason: z.any().transform((val): string | null => {
+      if (
+        val === null ||
+        val === undefined ||
+        (typeof val === 'string' && val.trim().length === 0)
+      ) {
+        return null;
+      }
+      if (typeof val === 'string') {
+        const trimmed = val.trim();
+        if (trimmed.length > 500) {
+          throw new Error('סיבת אי זמינות לא יכולה להכיל יותר מ-500 תווים');
+        }
+        return trimmed;
+      }
+      return null;
     }),
-  unavailability_reason: z
-    .union([
-      z
-        .string()
-        .trim()
-        .max(500, 'סיבת אי זמינות לא יכולה להכיל יותר מ-500 תווים'),
-      z.literal(''),
-      z.undefined(),
-    ])
-    .transform((val) => {
-      if (!val || val.trim().length === 0) return null;
-      return val.trim();
-    })
-    .nullable(),
-});
+  });
 
 export type VehicleFormValues = z.infer<typeof VehicleFormSchema>;
 

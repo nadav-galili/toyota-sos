@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 interface DriverDurationAgg {
   driver_id: string;
   driver_name: string | null;
+  employee_id: string | null;
   totalDurationMs: number;
   count: number;
 }
