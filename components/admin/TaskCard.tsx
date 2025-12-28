@@ -128,10 +128,17 @@ export function TaskCard({
               if (!secondaryDriver) return null;
 
               return (
-                <div key={assignee.id} className="flex items-center gap-1 text-xs text-gray-600">
+                <div
+                  key={assignee.id}
+                  className="flex items-center gap-1 text-xs text-gray-600"
+                >
                   <span className="font-medium">👨‍🚗</span>
-                  <span className="truncate">{secondaryDriver.name || 'Unknown'}</span>
-                  <span className="text-[10px] text-gray-400 font-medium">(משני)</span>
+                  <span className="truncate">
+                    {secondaryDriver.name || 'Unknown'}
+                  </span>
+                  <span className="text-[10px] text-gray-400 font-medium">
+                    (משני)
+                  </span>
                 </div>
               );
             })}
@@ -175,6 +182,42 @@ export function TaskCard({
             <div className="mb-2 flex items-center gap-1 text-xs text-gray-600">
               <span className="font-medium">🏢</span>
               <span className="truncate">{client.name}</span>
+            </div>
+          );
+        }
+        return null;
+      })()}
+
+      {/* Phone info */}
+      {(() => {
+        const multiStopTypes: TaskType[] = [
+          'הסעת לקוח הביתה',
+          'הסעת לקוח למוסך',
+        ];
+        const isMultiStop = multiStopTypes.includes(task.type);
+
+        if (isMultiStop && task.stops && task.stops.length > 0) {
+          // For multi-stop tasks, show phone from each stop
+          const phones = task.stops
+            .map((stop) => stop.phone)
+            .filter((phone): phone is string => Boolean(phone));
+          const uniquePhones = Array.from(new Set(phones));
+
+          return uniquePhones.map((phone, index) => (
+            <div
+              key={index}
+              className="mb-1.5 flex items-center gap-1 text-xs text-gray-600"
+            >
+              <span className="font-medium">📞</span>
+              <span className="font-mono">{phone}</span>
+            </div>
+          ));
+        } else if (task.phone) {
+          // For regular tasks, show phone from task
+          return (
+            <div className="mb-2 flex items-center gap-1 text-xs text-gray-600">
+              <span className="font-medium">📞</span>
+              <span className="font-mono">{task.phone}</span>
             </div>
           );
         }

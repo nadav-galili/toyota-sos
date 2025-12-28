@@ -6,18 +6,16 @@ ADD COLUMN IF NOT EXISTS phone text;
 
 COMMENT ON COLUMN public.tasks.phone IS 'Phone number for regular (non-multi-stop) tasks. Can be different from the client''s phone.';
 
--- Update get_driver_tasks to include driver role information
--- Drop existing function signatures to avoid conflicts
+-- Update get_driver_tasks to use task phone first, then client phone
+-- Only update the select statement to use coalesce(t.phone, c.phone) instead of c.phone
+
+-- First, drop and recreate the function to include task.phone in the coalesce
 drop function if exists public.get_driver_tasks(text, integer, timestamptz, uuid, uuid);
-drop function if exists public.get_driver_tasks(text, integer, timestamptz, uuid);
-drop function if exists public.get_driver_tasks(text, integer);
-drop function if exists public.get_driver_tasks(text);
-drop function if exists public.get_driver_tasks();
 
 create or replace function public.get_driver_tasks(
   p_tab text default 'today',
   p_limit integer default 10,
-  p_cursor_updated timestamptz default null,
+  p_cursor_start timestamptz default null,
   p_cursor_id uuid default null,
   p_driver_id uuid default null
 )
@@ -31,9 +29,13 @@ returns table (
   estimated_end timestamptz,
   address text,
   client_name text,
+  client_phone text,
   vehicle_license_plate text,
   vehicle_model text,
   updated_at timestamptz,
+  distance_from_garage numeric,
+  advisor_name text,
+  advisor_color public.advisor_color,
   is_lead_driver boolean
 )
 language plpgsql
@@ -50,12 +52,10 @@ begin
   -- Get current driver's profile ID from auth context
   v_driver_id := auth.uid();
 
-  -- If auth.uid() is null, try using the provided p_driver_id parameter
   if v_driver_id is null and p_driver_id is not null then
     v_driver_id := p_driver_id;
   end if;
 
-  -- Verify this is actually a driver profile
   if v_driver_id is not null then
     select p.id into v_driver_id
     from public.profiles p
@@ -68,7 +68,6 @@ begin
     return;
   end if;
 
-  -- Calculate today's range
   v_today_start := date_trunc('day', v_now at time zone 'Asia/Jerusalem') at time zone 'Asia/Jerusalem';
   v_today_end := v_today_start + interval '1 day' - interval '1 second';
 
@@ -83,23 +82,28 @@ begin
     t.estimated_end,
     t.address,
     c.name as client_name,
+    coalesce(t.phone, c.phone) as client_phone,
     v.license_plate as vehicle_license_plate,
     v.model as vehicle_model,
     t.updated_at,
+    t.distance_from_garage,
+    t.advisor_name,
+    t.advisor_color,
     ta.is_lead as is_lead_driver
   from public.tasks t
   inner join public.task_assignees ta on ta.task_id = t.id
   left join public.clients c on c.id = t.client_id
   left join public.vehicles v on v.id = t.vehicle_id
   where ta.driver_id = v_driver_id
+  and t.deleted_at is null
   and (
     case p_tab
       when 'today' then
         (t.estimated_end >= v_today_start and t.estimated_end <= v_today_end)
         or (t.estimated_start >= v_today_start and t.estimated_start <= v_today_end)
-        or (t.status::text = 'in_progress' and t.estimated_end >= v_today_start)
+        or (t.status::text = 'בעבודה' and t.estimated_end >= v_today_start)
       when 'overdue' then
-        t.status::text != 'completed'
+        t.status::text != 'הושלמה'
         and t.estimated_end is not null
         and t.estimated_end < v_now
       when 'all' then
@@ -107,16 +111,41 @@ begin
       else
         (t.estimated_end >= v_today_start and t.estimated_end <= v_today_end)
         or (t.estimated_start >= v_today_start and t.estimated_start <= v_today_end)
-        or (t.status::text = 'in_progress' and t.estimated_end >= v_today_start)
+        or (t.status::text = 'בעבודה' and t.estimated_end >= v_today_start)
     end
   )
   and (
-    p_cursor_updated is null
+    p_cursor_start is null
     or p_cursor_id is null
-    or (t.updated_at > p_cursor_updated)
-    or (t.updated_at = p_cursor_updated and t.id > p_cursor_id)
+    or (
+      case
+        when t.status::text = 'בעבודה' then 1
+        when t.status::text = 'בהמתנה' then 2
+        else 3
+      end,
+      coalesce(t.estimated_start, t.updated_at),
+      t.id
+    ) > (
+      case
+        when (select t2.status::text from tasks t2 where t2.id = p_cursor_id) = 'בעבודה' then 1
+        when (select t2.status::text from tasks t2 where t2.id = p_cursor_id) = 'בהמתנה' then 2
+        else 3
+      end,
+      p_cursor_start,
+      p_cursor_id
+    )
   )
-  order by t.updated_at desc, t.id desc
+  order by
+    -- Status priority: בעבודה (1), בהמתנה (2), others (3)
+    case
+      when t.status::text = 'בעבודה' then 1
+      when t.status::text = 'בהמתנה' then 2
+      else 3
+    end asc,
+    -- Within each status group, order by estimated_start (nulls last)
+    coalesce(t.estimated_start, t.updated_at) asc,
+    -- Tie-breaker
+    t.id asc
   limit p_limit;
 end;
 $$;

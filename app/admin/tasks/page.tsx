@@ -40,6 +40,7 @@ export default async function AdminTasksPage() {
         estimated_end,
         address,
         details,
+        phone,
         client_id,
         vehicle_id,
         created_by,
@@ -63,7 +64,9 @@ export default async function AdminTasksPage() {
         ...task,
         stops: task.task_stops
           ? task.task_stops
-              .sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0))
+              .sort(
+                (a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0)
+              )
               .map((stop: any) => ({
                 id: stop.id,
                 task_id: task.id,
