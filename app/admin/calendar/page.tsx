@@ -3,7 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { CalendarShell } from '@/components/admin/calendar/CalendarShell';
 import type { Task, TaskAssignee } from '@/types/task';
 import type { Driver } from '@/types/user';
-import type { Client, Vehicle } from '@/types/entity';
+import type { Client, Vehicle, ClientVehicle } from '@/types/entity';
 import { CalendarDays } from 'lucide-react';
 
 // Disable caching to ensure fresh data on every page load
@@ -109,13 +109,28 @@ export default async function AdminCalendarPage() {
   try {
     const { data, error } = await admin
       .from('vehicles')
-      .select('id, license_plate, model');
+      .select('id, license_plate, model, is_available, unavailability_reason');
 
     if (!error) {
       vehicles = data || [];
     }
   } catch {
     // silently ignore vehicle fetch errors
+  }
+
+  // Fetch client vehicles
+  let clientVehicles: ClientVehicle[] = [];
+  try {
+    const { data, error } = await admin
+      .from('clients_vehicles')
+      .select('id, client_id, license_plate, model');
+
+    if (!error) {
+      clientVehicles = data || [];
+    }
+  } catch (e) {
+    console.log('🚀 ~ AdminCalendarPage ~ e:', e);
+    // silently ignore client vehicle fetch errors
   }
 
   const navItems = [
@@ -165,6 +180,7 @@ export default async function AdminCalendarPage() {
           taskAssignees={taskAssignees}
           clients={clients}
           vehicles={vehicles}
+          clientVehicles={clientVehicles}
         />
       </div>
     </main>

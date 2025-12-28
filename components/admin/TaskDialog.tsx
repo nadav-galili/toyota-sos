@@ -1790,198 +1790,6 @@ export function TaskDialog(props: TaskDialogProps) {
                   />
                 </label>
 
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium text-primary">
-                    רכב סוכנות
-                    {(type === 'ביצוע טסט' ||
-                      type === 'חילוץ רכב תקוע' ||
-                      type === 'מסירת רכב חלופי' ||
-                      type === 'הסעת לקוח הביתה') && (
-                      <span className="text-red-500"> *</span>
-                    )}
-                  </span>
-                  <div className="flex gap-2">
-                    <div className="grid w-full max-w-sm items-center gap-1">
-                      <Input
-                        type="text"
-                        id="vehicle"
-                        placeholder="רכב סוכנות"
-                        value={vehicleQuery}
-                        onChange={(e) => {
-                          setVehicleQuery(e.target.value);
-                          setVehicleId(''); // Clear vehicleId when typing to show suggestions
-                        }}
-                      />
-                      {vehicleSuggestions.length > 0 && !vehicleId && (
-                        <div className="mt-1 max-h-40 w-full overflow-y-auto rounded border border-gray-300 bg-white text-sm shadow-sm">
-                          {vehicleSuggestions.map((v) => {
-                            // Don't mark as occupied if it's the currently selected vehicle
-                            const isOccupied =
-                              (v.isOccupied || false) && v.id !== vehicleId;
-
-                            // Allow selecting unavailable vehicles IF they are "At Customer" and the task is "Return Vehicle"
-                            const isAtCustomer =
-                              v.unavailabilityReason === 'אצל לקוח';
-                            const isReturnTask = type === 'החזרת רכב/שינוע';
-                            const isUnavailable = v.isUnavailable || false;
-
-                            // A vehicle is disabled if:
-                            // 1. It is occupied by another task at the same time
-                            // 2. It is unavailable for a reason other than being at a customer
-                            // 3. It is at a customer, but the current task is NOT a return task
-                            const isDisabled =
-                              isOccupied ||
-                              (isUnavailable &&
-                                !(isAtCustomer && isReturnTask));
-
-                            return (
-                              <button
-                                key={v.id}
-                                type="button"
-                                disabled={isDisabled}
-                                className={`flex w-full items-center justify-between px-2 py-1 text-right ${
-                                  isDisabled
-                                    ? 'cursor-not-allowed bg-gray-100 text-gray-400 opacity-60'
-                                    : 'hover:bg-blue-50'
-                                }`}
-                                onClick={() => {
-                                  if (isOccupied) {
-                                    toastError(
-                                      'רכב זה כבר משוייך למשימה אחרת באותו יום ובאותו טווח זמן'
-                                    );
-                                    return;
-                                  }
-                                  if (isDisabled && isUnavailable) {
-                                    if (isAtCustomer && !isReturnTask) {
-                                      toastError(
-                                        'רכב זה נמצא אצל לקוח. ניתן לשייך אותו רק למשימת החזרת רכב.'
-                                      );
-                                    } else {
-                                      toastError(
-                                        'רכב זה מושבת ולא זמין לשימוש'
-                                      );
-                                    }
-                                    return;
-                                  }
-                                  setVehicleId(v.id);
-                                  setVehicleQuery(
-                                    `${formatLicensePlate(v.license_plate)}${
-                                      v.model ? ` · ${v.model}` : ''
-                                    }`
-                                  );
-                                }}
-                              >
-                                <span
-                                  className={isDisabled ? 'text-gray-400' : ''}
-                                >
-                                  {formatLicensePlate(v.license_plate)}
-                                  {v.model ? ` · ${v.model}` : ''}
-                                  {isOccupied && (
-                                    <span className="mr-2 text-xs">(תפוס)</span>
-                                  )}
-                                  {isUnavailable && (
-                                    <span className="mr-2 text-xs">
-                                      ({isAtCustomer ? 'אצל לקוח' : 'מושבת'})
-                                    </span>
-                                  )}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      className="rounded border border-gray-300 px-2 text-xs h-9 self-end bg-blue-500 text-white flex items-center justify-center"
-                      onClick={() => setShowAddVehicle((v) => !v)}
-                    >
-                      <PlusIcon className="w-4 h-4" />
-                      חדש
-                    </button>
-                  </div>
-                  {showAddVehicle && (
-                    <div className="mt-2 grid grid-cols-3 gap-2">
-                      <div className="col-span-1 flex flex-col gap-1">
-                        <label className="text-sm font-medium text-primary">
-                          מספר רישוי <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          className="rounded border border-gray-300 p-2"
-                          placeholder="מספר רישוי (7 או 8 ספרות)"
-                          value={newVehiclePlate}
-                          onChange={(e) => {
-                            const input = e.target.value;
-                            // Allow digits and dashes only
-                            const cleaned = input.replace(/[^\d-]/g, '');
-                            // Format as user types
-                            const formatted = formatLicensePlate(cleaned);
-                            setNewVehiclePlate(formatted);
-                            // Clear error when user starts typing
-                            if (error && error.includes('מספר רישוי')) {
-                              setError(null);
-                            }
-                          }}
-                          maxLength={10} // Max length for formatted plate (e.g., "123-45-678")
-                        />
-                        {newVehiclePlate &&
-                          (() => {
-                            const digitsOnly = newVehiclePlate.replace(
-                              /\D/g,
-                              ''
-                            );
-                            const digitCount = digitsOnly.length;
-                            if (digitCount === 0) return null;
-                            if (digitCount < 7) {
-                              return (
-                                <p className="text-xs text-red-600">
-                                  מספר רישוי חייב להכיל לפחות 7 ספרות (נמצאו{' '}
-                                  {digitCount} ספרות)
-                                </p>
-                              );
-                            }
-                            if (digitCount > 8) {
-                              return (
-                                <p className="text-xs text-red-600">
-                                  מספר רישוי חייב להכיל לכל היותר 8 ספרות (נמצאו{' '}
-                                  {digitCount} ספרות)
-                                </p>
-                              );
-                            }
-                            return null;
-                          })()}
-                      </div>
-                      <div className="col-span-1 flex flex-col gap-1">
-                        <label className="text-sm font-medium text-primary">
-                          דגם
-                        </label>
-                        <input
-                          className="rounded border border-gray-300 p-2"
-                          placeholder="דגם"
-                          value={newVehicleModel}
-                          onChange={(e) => setNewVehicleModel(e.target.value)}
-                        />
-                      </div>
-                      <div className="col-span-3 flex justify-end gap-2">
-                        <button
-                          type="button"
-                          className="rounded border border-gray-300 px-2 text-xs"
-                          onClick={() => setShowAddVehicle(false)}
-                        >
-                          בטל
-                        </button>
-                        <button
-                          type="button"
-                          className="rounded bg-blue-600 hover:bg-blue-700 px-2 py-1 text-xs font-semibold text-white transition-colors"
-                          onClick={createVehicle}
-                        >
-                          צור
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </label>
-
                 {(type === 'איסוף רכב/שינוע' || type === 'החזרת רכב/שינוע') && (
                   <label className="flex flex-col gap-1">
                     <span className="text-sm font-medium text-blue-600">
@@ -2408,6 +2216,195 @@ export function TaskDialog(props: TaskDialogProps) {
                 )}
               </div>
             )}
+
+            {/* Agency Vehicle - Visible for both regular and multi-stop tasks */}
+            <div className="col-span-1 md:col-span-2">
+              <label className="flex flex-col gap-1">
+                <span className="text-sm font-medium text-primary">
+                  רכב סוכנות
+                  {(type === 'ביצוע טסט' ||
+                    type === 'חילוץ רכב תקוע' ||
+                    type === 'מסירת רכב חלופי' ||
+                    type === 'הסעת לקוח הביתה') && (
+                    <span className="text-red-500"> *</span>
+                  )}
+                </span>
+                <div className="flex gap-2">
+                  <div className="grid w-full max-w-sm items-center gap-1">
+                    <Input
+                      type="text"
+                      id="vehicle"
+                      placeholder="רכב סוכנות"
+                      value={vehicleQuery}
+                      onChange={(e) => {
+                        setVehicleQuery(e.target.value);
+                        setVehicleId(''); // Clear vehicleId when typing to show suggestions
+                      }}
+                    />
+                    {vehicleSuggestions.length > 0 && !vehicleId && (
+                      <div className="mt-1 max-h-40 w-full overflow-y-auto rounded border border-gray-300 bg-white text-sm shadow-sm">
+                        {vehicleSuggestions.map((v) => {
+                          // Don't mark as occupied if it's the currently selected vehicle
+                          const isOccupied =
+                            (v.isOccupied || false) && v.id !== vehicleId;
+
+                          // Allow selecting unavailable vehicles IF they are "At Customer" and the task is "Return Vehicle"
+                          const isAtCustomer =
+                            v.unavailabilityReason === 'אצל לקוח';
+                          const isReturnTask = type === 'החזרת רכב/שינוע';
+                          const isUnavailable = v.isUnavailable || false;
+
+                          // A vehicle is disabled if:
+                          // 1. It is occupied by another task at the same time
+                          // 2. It is unavailable for a reason other than being at a customer
+                          // 3. It is at a customer, but the current task is NOT a return task
+                          const isDisabled =
+                            isOccupied ||
+                            (isUnavailable && !(isAtCustomer && isReturnTask));
+
+                          return (
+                            <button
+                              key={v.id}
+                              type="button"
+                              disabled={isDisabled}
+                              className={`flex w-full items-center justify-between px-2 py-1 text-right ${
+                                isDisabled
+                                  ? 'cursor-not-allowed bg-gray-100 text-gray-400 opacity-60'
+                                  : 'hover:bg-blue-50'
+                              }`}
+                              onClick={() => {
+                                if (isOccupied) {
+                                  toastError(
+                                    'רכב זה כבר משוייך למשימה אחרת באותו יום ובאותו טווח זמן'
+                                  );
+                                  return;
+                                }
+                                if (isDisabled && isUnavailable) {
+                                  if (isAtCustomer && !isReturnTask) {
+                                    toastError(
+                                      'רכב זה נמצא אצל לקוח. ניתן לשייך אותו רק למשימת החזרת רכב.'
+                                    );
+                                  } else {
+                                    toastError('רכב זה מושבת ולא זמין לשימוש');
+                                  }
+                                  return;
+                                }
+                                setVehicleId(v.id);
+                                setVehicleQuery(
+                                  `${formatLicensePlate(v.license_plate)}${
+                                    v.model ? ` · ${v.model}` : ''
+                                  }`
+                                );
+                              }}
+                            >
+                              <span
+                                className={isDisabled ? 'text-gray-400' : ''}
+                              >
+                                {formatLicensePlate(v.license_plate)}
+                                {v.model ? ` · ${v.model}` : ''}
+                                {isOccupied && (
+                                  <span className="mr-2 text-xs">(תפוס)</span>
+                                )}
+                                {isUnavailable && (
+                                  <span className="mr-2 text-xs">
+                                    ({isAtCustomer ? 'אצל לקוח' : 'מושבת'})
+                                  </span>
+                                )}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    className="rounded border border-gray-300 px-2 text-xs h-9 self-end bg-blue-500 text-white flex items-center justify-center"
+                    onClick={() => setShowAddVehicle((v) => !v)}
+                  >
+                    <PlusIcon className="w-4 h-4" />
+                    חדש
+                  </button>
+                </div>
+                {showAddVehicle && (
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    <div className="col-span-1 flex flex-col gap-1">
+                      <label className="text-sm font-medium text-primary">
+                        מספר רישוי <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        className="rounded border border-gray-300 p-2"
+                        placeholder="מספר רישוי (7 או 8 ספרות)"
+                        value={newVehiclePlate}
+                        onChange={(e) => {
+                          const input = e.target.value;
+                          // Allow digits and dashes only
+                          const cleaned = input.replace(/[^\d-]/g, '');
+                          // Format as user types
+                          const formatted = formatLicensePlate(cleaned);
+                          setNewVehiclePlate(formatted);
+                          // Clear error when user starts typing
+                          if (error && error.includes('מספר רישוי')) {
+                            setError(null);
+                          }
+                        }}
+                        maxLength={10} // Max length for formatted plate (e.g., "123-45-678")
+                      />
+                      {newVehiclePlate &&
+                        (() => {
+                          const digitsOnly = newVehiclePlate.replace(/\D/g, '');
+                          const digitCount = digitsOnly.length;
+                          if (digitCount === 0) return null;
+                          if (digitCount < 7) {
+                            return (
+                              <p className="text-xs text-red-600">
+                                מספר רישוי חייב להכיל לפחות 7 ספרות (נמצאו{' '}
+                                {digitCount} ספרות)
+                              </p>
+                            );
+                          }
+                          if (digitCount > 8) {
+                            return (
+                              <p className="text-xs text-red-600">
+                                מספר רישוי חייב להכיל לכל היותר 8 ספרות (נמצאו{' '}
+                                {digitCount} ספרות)
+                              </p>
+                            );
+                          }
+                          return null;
+                        })()}
+                    </div>
+                    <div className="col-span-1 flex flex-col gap-1">
+                      <label className="text-sm font-medium text-primary">
+                        דגם
+                      </label>
+                      <input
+                        className="rounded border border-gray-300 p-2"
+                        placeholder="דגם"
+                        value={newVehicleModel}
+                        onChange={(e) => setNewVehicleModel(e.target.value)}
+                      />
+                    </div>
+                    <div className="col-span-3 flex justify-end gap-2">
+                      <button
+                        type="button"
+                        className="rounded border border-gray-300 px-2 text-xs"
+                        onClick={() => setShowAddVehicle(false)}
+                      >
+                        בטל
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded bg-blue-600 hover:bg-blue-700 px-2 py-1 text-xs font-semibold text-white transition-colors"
+                        onClick={createVehicle}
+                      >
+                        צור
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </label>
+            </div>
 
             {/* Drivers */}
             <div className="col-span-1 md:col-span-2 grid grid-cols-1 gap-3 md:grid-cols-2">

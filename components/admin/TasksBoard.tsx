@@ -91,6 +91,7 @@ export type {
   Driver,
   Client,
   Vehicle,
+  ClientVehicle,
   GroupBy,
   SortBy,
   SortDir,

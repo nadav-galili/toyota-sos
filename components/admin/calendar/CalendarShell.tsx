@@ -35,7 +35,7 @@ import type {
   CalendarFilters,
 } from '@/types/task';
 import type { Driver } from '@/types/user';
-import type { Client, Vehicle } from '@/types/entity';
+import type { Client, Vehicle, ClientVehicle } from '@/types/entity';
 import { CalendarHeader } from './CalendarHeader';
 import { CalendarFiltersPanel } from './CalendarFilters';
 import { WeekView } from './WeekView';
@@ -55,6 +55,7 @@ interface CalendarShellProps {
   taskAssignees: TaskAssignee[];
   clients: Client[];
   vehicles: Vehicle[];
+  clientVehicles: ClientVehicle[];
 }
 
 export function CalendarShell({
@@ -63,6 +64,7 @@ export function CalendarShell({
   taskAssignees,
   clients,
   vehicles,
+  clientVehicles,
 }: CalendarShellProps) {
   const router = useRouter();
 
@@ -459,6 +461,7 @@ export function CalendarShell({
             drivers={drivers}
             clients={clientsState}
             vehicles={vehiclesState}
+            clientVehicles={clientVehicles}
             assignees={dialogAssignees}
             prefilledDate={prefilledDate}
             onCreated={handleTaskCreated}

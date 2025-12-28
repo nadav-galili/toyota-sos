@@ -4,6 +4,7 @@ import type {
   TaskAssignee,
   Client,
   Vehicle,
+  ClientVehicle,
 } from '@/components/admin/TasksBoard';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { NavBar } from '@/components/ui/tubelight-navbar';
