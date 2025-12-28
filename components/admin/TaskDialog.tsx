@@ -699,6 +699,7 @@ export function TaskDialog(props: TaskDialogProps) {
         ...v,
         isOccupied: occupiedVehicleIds.has(v.id),
         isUnavailable: v.is_available === false,
+        unavailabilityReason: v.unavailability_reason,
       }));
   }, [vehiclesLocal, vehicleQuery, occupiedVehicleIds]);
 
@@ -1698,8 +1699,22 @@ export function TaskDialog(props: TaskDialogProps) {
                             // Don't mark as occupied if it's the currently selected vehicle
                             const isOccupied =
                               (v.isOccupied || false) && v.id !== vehicleId;
+
+                            // Allow selecting unavailable vehicles IF they are "At Customer" and the task is "Return Vehicle"
+                            const isAtCustomer =
+                              v.unavailabilityReason === 'אצל לקוח';
+                            const isReturnTask = type === 'החזרת רכב/שינוע';
                             const isUnavailable = v.isUnavailable || false;
-                            const isDisabled = isOccupied || isUnavailable;
+
+                            // A vehicle is disabled if:
+                            // 1. It is occupied by another task at the same time
+                            // 2. It is unavailable for a reason other than being at a customer
+                            // 3. It is at a customer, but the current task is NOT a return task
+                            const isDisabled =
+                              isOccupied ||
+                              (isUnavailable &&
+                                !(isAtCustomer && isReturnTask));
+
                             return (
                               <button
                                 key={v.id}
@@ -1717,8 +1732,16 @@ export function TaskDialog(props: TaskDialogProps) {
                                     );
                                     return;
                                   }
-                                  if (isUnavailable) {
-                                    toastError('רכב זה מושבת ולא זמין לשימוש');
+                                  if (isDisabled && isUnavailable) {
+                                    if (isAtCustomer && !isReturnTask) {
+                                      toastError(
+                                        'רכב זה נמצא אצל לקוח. ניתן לשייך אותו רק למשימת החזרת רכב.'
+                                      );
+                                    } else {
+                                      toastError(
+                                        'רכב זה מושבת ולא זמין לשימוש'
+                                      );
+                                    }
                                     return;
                                   }
                                   setVehicleId(v.id);
@@ -1739,7 +1762,7 @@ export function TaskDialog(props: TaskDialogProps) {
                                   )}
                                   {isUnavailable && (
                                     <span className="mr-2 text-xs">
-                                      (מושבת)
+                                      ({isAtCustomer ? 'אצל לקוח' : 'מושבת'})
                                     </span>
                                   )}
                                 </span>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { createBrowserClient } from '@/lib/auth';
 
 export type ImageUploadFile = {

@@ -116,8 +116,8 @@ export function VehicleListView({
                           זמין
                         </Badge>
                       ) : (
-                        <Badge className="bg-red-100 text-red-800 border-red-200 hover:bg-red-100">
-                          לא זמין
+                        <Badge className={`${v.unavailability_reason === 'אצל לקוח' ? 'bg-orange-100 text-orange-800 border-orange-200' : 'bg-red-100 text-red-800 border-red-200'} hover:bg-opacity-80`}>
+                          {v.unavailability_reason === 'אצל לקוח' ? 'אצל לקוח' : 'לא זמין'}
                         </Badge>
                       )}
                     </td>
