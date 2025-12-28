@@ -705,6 +705,7 @@ export function TaskDialog(props: TaskDialogProps) {
 
   const clientVehicleSuggestions = useMemo(() => {
     const q = clientVehicleQuery.trim().toLowerCase();
+    if (!q) return []; // Only show when user starts typing
     const normalizedQuery = q.replace(/\D/g, '');
 
     // Filter by selected client if one is selected
@@ -712,8 +713,6 @@ export function TaskDialog(props: TaskDialogProps) {
       .filter((v) => {
         // If a client is selected, only show their vehicles
         if (clientId && v.client_id !== clientId) return false;
-
-        if (!q) return true; // Show all for this client if query is empty
 
         const plate = v.license_plate?.toLowerCase() ?? '';
         const normalizedPlate = plate.replace(/\D/g, '');
@@ -1648,6 +1647,126 @@ export function TaskDialog(props: TaskDialogProps) {
 
             {!isMultiStopType && (
               <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Client Selection */}
+                <label className="flex flex-col gap-1">
+                  <div className="flex gap-2">
+                    <div className="grid w-full max-w-sm items-center gap-1">
+                      <Label htmlFor="client" className="text-blue-600">
+                        לקוח
+                        {(type === 'ביצוע טסט' ||
+                          type === 'חילוץ רכב תקוע' ||
+                          type === 'מסירת רכב חלופי' ||
+                          type === 'הסעת לקוח הביתה' ||
+                          type === 'איסוף רכב/שינוע' ||
+                          type === 'החזרת רכב/שינוע') && (
+                          <span className="text-red-500"> *</span>
+                        )}
+                      </Label>
+                      <Input
+                        type="text"
+                        id="client"
+                        placeholder="לקוח"
+                        value={clientQuery}
+                        onChange={(e) => {
+                          setClientQuery(e.target.value);
+                          setClientId('');
+                          setClientPhone('');
+                        }}
+                      />
+                      {clientSuggestions.length > 0 && !clientId && (
+                        <div className="mt-1 max-h-40 w-full overflow-y-auto rounded border border-gray-300 bg-white text-sm shadow-sm">
+                          {clientSuggestions.map((c) => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              className="flex w-full items-center justify-between px-2 py-1 text-right hover:bg-blue-50"
+                              onClick={() => {
+                                setClientId(c.id);
+                                setClientQuery(c.name);
+                                setClientPhone(c.phone || '');
+                              }}
+                            >
+                              <span>{c.name}</span>
+                              {c.phone && (
+                                <span className="text-xs text-gray-500">
+                                  {c.phone}
+                                </span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      className="rounded border border-gray-300 px-2 text-xs h-9 self-end bg-blue-500 text-white flex items-center justify-center"
+                      onClick={() => setShowAddClient((v) => !v)}
+                    >
+                      <PlusIcon className="w-4 h-4" />
+                      חדש
+                    </button>
+                  </div>
+                  {showAddClient && (
+                    <div className="mt-2 grid grid-cols-3 gap-2">
+                      <input
+                        className="rounded border border-gray-300 p-2 col-span-1"
+                        placeholder="שם"
+                        value={newClientName}
+                        onChange={(e) => setNewClientName(e.target.value)}
+                      />
+                      <input
+                        className="rounded border border-gray-300 p-2 col-span-1"
+                        placeholder="טלפון"
+                        value={newClientPhone}
+                        onChange={(e) => setNewClientPhone(e.target.value)}
+                      />
+                      <input
+                        className="rounded border border-gray-300 p-2 col-span-1"
+                        placeholder="אימייל (אופציונלי)"
+                        value={newClientEmail}
+                        onChange={(e) => setNewClientEmail(e.target.value)}
+                      />
+
+                      <div className="col-span-3 flex justify-end gap-2">
+                        <button
+                          type="button"
+                          className="rounded border border-gray-300 px-2 text-xs"
+                          onClick={() => setShowAddClient(false)}
+                        >
+                          בטל
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded bg-blue-600 hover:bg-blue-700 px-2 py-1 text-xs font-semibold text-white transition-colors"
+                          onClick={createClient}
+                        >
+                          צור
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </label>
+
+                {/* Phone Field */}
+                <label className="flex flex-col gap-1">
+                  <span className="text-sm font-medium text-blue-600">
+                    טלפון
+                    {(type === 'ביצוע טסט' ||
+                      type === 'חילוץ רכב תקוע' ||
+                      type === 'מסירת רכב חלופי' ||
+                      type === 'איסוף רכב/שינוע' ||
+                      type === 'החזרת רכב/שינוע') && (
+                      <span className="text-red-500"> *</span>
+                    )}
+                  </span>
+                  <Input
+                    type="tel"
+                    placeholder="טלפון"
+                    value={clientPhone}
+                    onChange={(e) => setClientPhone(e.target.value)}
+                  />
+                </label>
+
                 <label className="flex flex-col gap-1">
                   <span className="text-sm font-medium text-blue-600">
                     כתובת
@@ -1975,7 +2094,7 @@ export function TaskDialog(props: TaskDialogProps) {
               </div>
             )}
 
-            {isMultiStopType ? (
+            {isMultiStopType && (
               <div className="col-span-1 md:col-span-2 space-y-3 rounded border border-gray-200 bg-gray-50 p-3">
                 <div className="flex items-center justify-between gap-2">
                   <div>
@@ -2288,126 +2407,6 @@ export function TaskDialog(props: TaskDialogProps) {
                   </div>
                 )}
               </div>
-            ) : (
-              <label className="flex flex-col gap-1">
-                <div className="flex gap-2">
-                  <div className="grid w-full max-w-sm items-center gap-1">
-                    <Label htmlFor="client" className="text-blue-600">
-                      לקוח
-                      {(type === 'ביצוע טסט' ||
-                        type === 'חילוץ רכב תקוע' ||
-                        type === 'מסירת רכב חלופי' ||
-                        type === 'הסעת לקוח הביתה' ||
-                        type === 'איסוף רכב/שינוע' ||
-                        type === 'החזרת רכב/שינוע') && (
-                        <span className="text-red-500"> *</span>
-                      )}
-                    </Label>
-                    <Input
-                      type="text"
-                      id="client"
-                      placeholder="לקוח"
-                      value={clientQuery}
-                      onChange={(e) => {
-                        setClientQuery(e.target.value);
-                        setClientId('');
-                        setClientPhone('');
-                      }}
-                    />
-                    {clientSuggestions.length > 0 && !clientId && (
-                      <div className="mt-1 max-h-40 w-full overflow-y-auto rounded border border-gray-300 bg-white text-sm shadow-sm">
-                        {clientSuggestions.map((c) => (
-                          <button
-                            key={c.id}
-                            type="button"
-                            className="flex w-full items-center justify-between px-2 py-1 text-right hover:bg-blue-50"
-                            onClick={() => {
-                              setClientId(c.id);
-                              setClientQuery(c.name);
-                              setClientPhone(c.phone || '');
-                            }}
-                          >
-                            <span>{c.name}</span>
-                            {c.phone && (
-                              <span className="text-xs text-gray-500">
-                                {c.phone}
-                              </span>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    className="rounded border border-gray-300 px-2 text-xs h-9 self-end bg-blue-500 text-white flex items-center justify-center"
-                    onClick={() => setShowAddClient((v) => !v)}
-                  >
-                    <PlusIcon className="w-4 h-4" />
-                    חדש
-                  </button>
-                </div>
-                {showAddClient && (
-                  <div className="mt-2 grid grid-cols-3 gap-2">
-                    <input
-                      className="rounded border border-gray-300 p-2 col-span-1"
-                      placeholder="שם"
-                      value={newClientName}
-                      onChange={(e) => setNewClientName(e.target.value)}
-                    />
-                    <input
-                      className="rounded border border-gray-300 p-2 col-span-1"
-                      placeholder="טלפון"
-                      value={newClientPhone}
-                      onChange={(e) => setNewClientPhone(e.target.value)}
-                    />
-                    <input
-                      className="rounded border border-gray-300 p-2 col-span-1"
-                      placeholder="אימייל (אופציונלי)"
-                      value={newClientEmail}
-                      onChange={(e) => setNewClientEmail(e.target.value)}
-                    />
-
-                    <div className="col-span-3 flex justify-end gap-2">
-                      <button
-                        type="button"
-                        className="rounded border border-gray-300 px-2 text-xs"
-                        onClick={() => setShowAddClient(false)}
-                      >
-                        בטל
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded bg-blue-600 hover:bg-blue-700 px-2 py-1 text-xs font-semibold text-white transition-colors"
-                        onClick={createClient}
-                      >
-                        צור
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </label>
-            )}
-
-            {!isMultiStopType && (
-              <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-blue-600">
-                  טלפון
-                  {(type === 'ביצוע טסט' ||
-                    type === 'חילוץ רכב תקוע' ||
-                    type === 'מסירת רכב חלופי' ||
-                    type === 'איסוף רכב/שינוע' ||
-                    type === 'החזרת רכב/שינוע') && (
-                    <span className="text-red-500"> *</span>
-                  )}
-                </span>
-                <Input
-                  type="tel"
-                  placeholder="טלפון"
-                  value={clientPhone}
-                  onChange={(e) => setClientPhone(e.target.value)}
-                />
-              </label>
             )}
 
             {/* Drivers */}
