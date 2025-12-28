@@ -192,9 +192,37 @@ export function TaskDialog(props: TaskDialogProps) {
     lng: number;
   } | null>(null);
   const [clientId, setClientId] = useState<string>(task?.client_id ?? '');
-  const [clientQuery, setClientQuery] = useState<string>('');
+  const [clientQuery, setClientQuery] = useState<string>(() => {
+    if (task?.client_id && clients.length > 0) {
+      const existing = clients.find((c) => c.id === task.client_id);
+      return existing?.name ?? '';
+    }
+    return '';
+  });
+  const [clientPhone, setClientPhone] = useState<string>(() => {
+    if (task?.phone) return task.phone;
+    if (task?.client_id && clients.length > 0) {
+      const existing = clients.find((c) => c.id === task.client_id);
+      return existing?.phone ?? '';
+    }
+    return '';
+  });
   const [vehicleId, setVehicleId] = useState<string>(task?.vehicle_id ?? '');
-  const [vehicleQuery, setVehicleQuery] = useState<string>('');
+  const [vehicleQuery, setVehicleQuery] = useState<string>(() => {
+    if (task?.vehicle_id && vehicles.length > 0) {
+      const existingVehicle = vehicles.find((v) => v.id === task.vehicle_id);
+      if (existingVehicle) {
+        const plateDisplay = formatLicensePlate(existingVehicle.license_plate);
+        const modelDisplay = existingVehicle.model
+          ? ` · ${existingVehicle.model}`
+          : '';
+        const unavailableDisplay =
+          existingVehicle.is_available === false ? ' (מושבת)' : '';
+        return `${plateDisplay}${modelDisplay}${unavailableDisplay}`;
+      }
+    }
+    return '';
+  });
   const [leadDriverId, setLeadDriverId] = useState<string>('');
   const [coDriverIds, setCoDriverIds] = useState<string[]>([]);
   const [showAddClient, setShowAddClient] = useState(false);
@@ -222,6 +250,38 @@ export function TaskDialog(props: TaskDialogProps) {
   useEffect(() => {
     setVehiclesLocal(vehicles);
   }, [vehicles]);
+
+  // Update client and vehicle details when data loads (for edit mode)
+  useEffect(() => {
+    if (mode === 'edit' && task && open) {
+      // Update client details
+      if (task.client_id && clientsLocal.length > 0) {
+        const existing = clientsLocal.find((c) => c.id === task.client_id);
+        setClientQuery(existing?.name ?? '');
+        setClientPhone(task?.phone || existing?.phone || '');
+      }
+
+      // Update vehicle details
+      if (task.vehicle_id && vehiclesLocal.length > 0) {
+        const existingVehicle = vehiclesLocal.find(
+          (v) => v.id === task.vehicle_id
+        );
+        if (existingVehicle) {
+          const plateDisplay = formatLicensePlate(
+            existingVehicle.license_plate
+          );
+          const modelDisplay = existingVehicle.model
+            ? ` · ${existingVehicle.model}`
+            : '';
+          const unavailableDisplay =
+            existingVehicle.is_available === false ? ' (מושבת)' : '';
+          setVehicleQuery(
+            `${plateDisplay}${modelDisplay}${unavailableDisplay}`
+          );
+        }
+      }
+    }
+  }, [clientsLocal, vehiclesLocal, mode, task, open]);
 
   // Track previous open state to detect when dialog opens
   const prevOpenRef = React.useRef(open);
@@ -269,6 +329,7 @@ export function TaskDialog(props: TaskDialogProps) {
       if (task?.client_id) {
         const existing = clients.find((c) => c.id === task.client_id);
         setClientQuery(existing?.name ?? '');
+        setClientPhone(task?.phone || existing?.phone || '');
         if (isMulti) {
           setStops([
             {
@@ -283,6 +344,7 @@ export function TaskDialog(props: TaskDialogProps) {
         }
       } else {
         setClientQuery('');
+        setClientPhone('');
         if (isMulti) {
           setStops([
             {
@@ -300,10 +362,17 @@ export function TaskDialog(props: TaskDialogProps) {
       if (task?.vehicle_id) {
         const existingVehicle = vehicles.find((v) => v.id === task.vehicle_id);
         if (existingVehicle) {
-          const plateDisplay = formatLicensePlate(existingVehicle.license_plate);
-          const modelDisplay = existingVehicle.model ? ` · ${existingVehicle.model}` : '';
-          const unavailableDisplay = existingVehicle.is_available === false ? ' (מושבת)' : '';
-          setVehicleQuery(`${plateDisplay}${modelDisplay}${unavailableDisplay}`);
+          const plateDisplay = formatLicensePlate(
+            existingVehicle.license_plate
+          );
+          const modelDisplay = existingVehicle.model
+            ? ` · ${existingVehicle.model}`
+            : '';
+          const unavailableDisplay =
+            existingVehicle.is_available === false ? ' (מושבת)' : '';
+          setVehicleQuery(
+            `${plateDisplay}${modelDisplay}${unavailableDisplay}`
+          );
         } else {
           setVehicleQuery('');
         }
@@ -390,9 +459,7 @@ export function TaskDialog(props: TaskDialogProps) {
                 vehicle_id: vehicle.id,
                 estimated_start: startDatetime,
                 estimated_end: endDatetime,
-                ...(mode === 'edit' && task?.id
-                  ? { task_id: task.id }
-                  : {}),
+                ...(mode === 'edit' && task?.id ? { task_id: task.id } : {}),
               });
               const res = await fetch(
                 `/api/admin/tasks/check-vehicle-conflict?${params}`
@@ -618,6 +685,22 @@ export function TaskDialog(props: TaskDialogProps) {
       }
     }
 
+    // Validate client phone for regular tasks (non-multi-stop) when client is required
+    if (!isMultiStopType) {
+      const clientRequiredTypes = [
+        'ביצוע טסט',
+        'חילוץ רכב תקוע',
+        'מסירת רכב חלופי',
+        'איסוף רכב/שינוע',
+        'החזרת רכב/שינוע',
+      ];
+
+      if (clientRequiredTypes.includes(type) && !clientPhone?.trim()) {
+        toastError('חובה להזין טלפון עבור משימה זו');
+        return 'חובה להזין טלפון עבור משימה זו';
+      }
+    }
+
     return null;
   };
 
@@ -671,6 +754,7 @@ export function TaskDialog(props: TaskDialogProps) {
       } else {
         setClientId(created.id);
         setClientQuery(created.name || '');
+        setClientPhone(created.phone || '');
       }
       setShowAddClient(false);
       setNewClientName('');
@@ -733,17 +817,19 @@ export function TaskDialog(props: TaskDialogProps) {
         } catch {
           // If not JSON, use the text as is
         }
-        
+
         // Check for duplicate key error
         if (
-          errorMessage.includes('duplicate key value violates unique constraint') ||
+          errorMessage.includes(
+            'duplicate key value violates unique constraint'
+          ) ||
           errorMessage.includes('vehicles_license_plate_key')
         ) {
           toastError('מספר רישוי זה כבר קיים במערכת');
           setError('מספר רישוי זה כבר קיים במערכת');
           return;
         }
-        
+
         throw new Error(errorMessage);
       }
       const json = await res.json();
@@ -764,9 +850,7 @@ export function TaskDialog(props: TaskDialogProps) {
       const errorMessage = error.message || 'יצירת רכב נכשלה';
       setError(errorMessage);
       // Only show toast if not already shown (duplicate key case)
-      if (
-        !errorMessage.includes('מספר רישוי זה כבר קיים במערכת')
-      ) {
+      if (!errorMessage.includes('מספר רישוי זה כבר קיים במערכת')) {
         toastError(errorMessage);
       }
     }
@@ -1068,6 +1152,7 @@ export function TaskDialog(props: TaskDialogProps) {
           estimated_end: estimatedEndDatetime || null,
           address: addressForTask || '',
           client_id: finalClientId || null,
+          phone: !isMultiStopType && clientPhone ? clientPhone : null,
           vehicle_id: finalVehicleId || null,
           distance_from_garage: finalDistanceFromGarage || null,
           lat: finalLat,
@@ -1139,6 +1224,7 @@ export function TaskDialog(props: TaskDialogProps) {
           estimated_end: estimatedEndDatetime || undefined,
           address: addressForTask || '',
           client_id: finalClientId || null,
+          phone: !isMultiStopType && clientPhone ? clientPhone : undefined,
           vehicle_id: finalVehicleId || null,
           distance_from_garage: finalDistanceFromGarage || null,
           lat: finalLat,
@@ -1198,7 +1284,7 @@ export function TaskDialog(props: TaskDialogProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div
-        className="w-full max-w-2xl rounded-lg bg-white p-4 shadow-xl max-h-[90vh] flex flex-col"
+        className="w-full max-w-4xl rounded-lg bg-white p-4 shadow-xl max-h-[90vh] flex flex-col"
         role="dialog"
         aria-modal="true"
       >
@@ -1277,7 +1363,7 @@ export function TaskDialog(props: TaskDialogProps) {
             {!isMultiStopType && (
               <>
                 <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium text-primary">
+                  <span className="text-sm font-medium text-blue-600">
                     שם יועץ{' '}
                     {(type === 'הסעת לקוח הביתה' ||
                       type === 'איסוף רכב/שינוע') && (
@@ -1292,7 +1378,7 @@ export function TaskDialog(props: TaskDialogProps) {
                   />
                 </label>
                 <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium text-primary">
+                  <span className="text-sm font-medium text-blue-600">
                     צבע יועץ{' '}
                     {(type === 'הסעת לקוח הביתה' ||
                       type === 'איסוף רכב/שינוע') && (
@@ -1335,7 +1421,7 @@ export function TaskDialog(props: TaskDialogProps) {
 
             <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3">
               <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-primary">תאריך</span>
+                <span className="text-sm font-medium text-blue-600">תאריך</span>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -1381,7 +1467,7 @@ export function TaskDialog(props: TaskDialogProps) {
               </label>
 
               <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-primary">
+                <span className="text-sm font-medium text-blue-600">
                   שעת התחלה
                 </span>
                 <input
@@ -1393,7 +1479,7 @@ export function TaskDialog(props: TaskDialogProps) {
               </label>
 
               <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-primary">
+                <span className="text-sm font-medium text-blue-600">
                   שעת סיום
                 </span>
                 <input
@@ -1406,35 +1492,209 @@ export function TaskDialog(props: TaskDialogProps) {
             </div>
 
             {!isMultiStopType && (
-              <label className="col-span-1 md:col-span-2 flex flex-col gap-1">
-                <span className="text-sm font-medium text-primary">
-                  כתובת
-                  {(type === 'חילוץ רכב תקוע' ||
-                    type === 'איסוף רכב/שינוע' ||
-                    type === 'החזרת רכב/שינוע') && (
-                    <span className="text-red-500"> *</span>
+              <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <label className="flex flex-col gap-1">
+                  <span className="text-sm font-medium text-blue-600">
+                    כתובת
+                    {(type === 'חילוץ רכב תקוע' ||
+                      type === 'איסוף רכב/שינוע' ||
+                      type === 'החזרת רכב/שינוע') && (
+                      <span className="text-red-500"> *</span>
+                    )}
+                  </span>
+                  <AddressAutocomplete
+                    value={addressQuery}
+                    onChange={(val) => {
+                      setAddressQuery(val);
+                      setSelectedMainCoords(null);
+                    }}
+                    onSelect={(addr, lat, lng) => {
+                      setAddressQuery(addr);
+                      setSelectedMainCoords({ lat, lng });
+                    }}
+                    className="w-full"
+                  />
+                </label>
+
+                <label className="flex flex-col gap-1">
+                  <span className="text-sm font-medium text-primary">
+                    רכב
+                    {(type === 'ביצוע טסט' ||
+                      type === 'חילוץ רכב תקוע' ||
+                      type === 'מסירת רכב חלופי' ||
+                      type === 'הסעת לקוח הביתה' ||
+                      type === 'איסוף רכב/שינוע' ||
+                      type === 'החזרת רכב/שינוע') && (
+                      <span className="text-red-500"> *</span>
+                    )}
+                  </span>
+                  <div className="flex gap-2">
+                    <div className="grid w-full max-w-sm items-center gap-1">
+                      <Input
+                        type="text"
+                        id="vehicle"
+                        placeholder="רכב"
+                        value={vehicleQuery}
+                        onChange={(e) => {
+                          setVehicleQuery(e.target.value);
+                          setVehicleId(''); // Clear vehicleId when typing to show suggestions
+                        }}
+                      />
+                      {vehicleSuggestions.length > 0 && !vehicleId && (
+                        <div className="mt-1 max-h-40 w-full overflow-y-auto rounded border border-gray-300 bg-white text-sm shadow-sm">
+                          {vehicleSuggestions.map((v) => {
+                            // Don't mark as occupied if it's the currently selected vehicle
+                            const isOccupied =
+                              (v.isOccupied || false) && v.id !== vehicleId;
+                            const isUnavailable = v.isUnavailable || false;
+                            const isDisabled = isOccupied || isUnavailable;
+                            return (
+                              <button
+                                key={v.id}
+                                type="button"
+                                disabled={isDisabled}
+                                className={`flex w-full items-center justify-between px-2 py-1 text-right ${
+                                  isDisabled
+                                    ? 'cursor-not-allowed bg-gray-100 text-gray-400 opacity-60'
+                                    : 'hover:bg-blue-50'
+                                }`}
+                                onClick={() => {
+                                  if (isOccupied) {
+                                    toastError(
+                                      'רכב זה כבר משוייך למשימה אחרת באותו יום ובאותו טווח זמן'
+                                    );
+                                    return;
+                                  }
+                                  if (isUnavailable) {
+                                    toastError('רכב זה מושבת ולא זמין לשימוש');
+                                    return;
+                                  }
+                                  setVehicleId(v.id);
+                                  setVehicleQuery(
+                                    `${formatLicensePlate(v.license_plate)}${
+                                      v.model ? ` · ${v.model}` : ''
+                                    }`
+                                  );
+                                }}
+                              >
+                                <span
+                                  className={isDisabled ? 'text-gray-400' : ''}
+                                >
+                                  {formatLicensePlate(v.license_plate)}
+                                  {v.model ? ` · ${v.model}` : ''}
+                                  {isOccupied && (
+                                    <span className="mr-2 text-xs">(תפוס)</span>
+                                  )}
+                                  {isUnavailable && (
+                                    <span className="mr-2 text-xs">
+                                      (מושבת)
+                                    </span>
+                                  )}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      className="rounded border border-gray-300 px-2 text-xs h-9 self-end bg-blue-500 text-white flex items-center justify-center"
+                      onClick={() => setShowAddVehicle((v) => !v)}
+                    >
+                      <PlusIcon className="w-4 h-4" />
+                      חדש
+                    </button>
+                  </div>
+                  {showAddVehicle && (
+                    <div className="mt-2 grid grid-cols-3 gap-2">
+                      <div className="col-span-1 flex flex-col gap-1">
+                        <label className="text-sm font-medium text-primary">
+                          מספר רישוי <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          className="rounded border border-gray-300 p-2"
+                          placeholder="מספר רישוי (7 או 8 ספרות)"
+                          value={newVehiclePlate}
+                          onChange={(e) => {
+                            const input = e.target.value;
+                            // Allow digits and dashes only
+                            const cleaned = input.replace(/[^\d-]/g, '');
+                            // Format as user types
+                            const formatted = formatLicensePlate(cleaned);
+                            setNewVehiclePlate(formatted);
+                            // Clear error when user starts typing
+                            if (error && error.includes('מספר רישוי')) {
+                              setError(null);
+                            }
+                          }}
+                          maxLength={10} // Max length for formatted plate (e.g., "123-45-678")
+                        />
+                        {newVehiclePlate &&
+                          (() => {
+                            const digitsOnly = newVehiclePlate.replace(
+                              /\D/g,
+                              ''
+                            );
+                            const digitCount = digitsOnly.length;
+                            if (digitCount === 0) return null;
+                            if (digitCount < 7) {
+                              return (
+                                <p className="text-xs text-red-600">
+                                  מספר רישוי חייב להכיל לפחות 7 ספרות (נמצאו{' '}
+                                  {digitCount} ספרות)
+                                </p>
+                              );
+                            }
+                            if (digitCount > 8) {
+                              return (
+                                <p className="text-xs text-red-600">
+                                  מספר רישוי חייב להכיל לכל היותר 8 ספרות (נמצאו{' '}
+                                  {digitCount} ספרות)
+                                </p>
+                              );
+                            }
+                            return null;
+                          })()}
+                      </div>
+                      <div className="col-span-1 flex flex-col gap-1">
+                        <label className="text-sm font-medium text-primary">
+                          דגם
+                        </label>
+                        <input
+                          className="rounded border border-gray-300 p-2"
+                          placeholder="דגם"
+                          value={newVehicleModel}
+                          onChange={(e) => setNewVehicleModel(e.target.value)}
+                        />
+                      </div>
+                      <div className="col-span-3 flex justify-end gap-2">
+                        <button
+                          type="button"
+                          className="rounded border border-gray-300 px-2 text-xs"
+                          onClick={() => setShowAddVehicle(false)}
+                        >
+                          בטל
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded bg-blue-600 hover:bg-blue-700 px-2 py-1 text-xs font-semibold text-white transition-colors"
+                          onClick={createVehicle}
+                        >
+                          צור
+                        </button>
+                      </div>
+                    </div>
                   )}
-                </span>
-                <AddressAutocomplete
-                  value={addressQuery}
-                  onChange={(val) => {
-                    setAddressQuery(val);
-                    setSelectedMainCoords(null);
-                  }}
-                  onSelect={(addr, lat, lng) => {
-                    setAddressQuery(addr);
-                    setSelectedMainCoords({ lat, lng });
-                  }}
-                  className="w-full"
-                />
-              </label>
+                </label>
+              </div>
             )}
 
             {isMultiStopType ? (
               <div className="col-span-1 md:col-span-2 space-y-3 rounded border border-gray-200 bg-gray-50 p-3">
                 <div className="flex items-center justify-between gap-2">
                   <div>
-                    <p className="text-sm font-semibold text-primary">
+                    <p className="text-sm font-semibold text-blue-600">
                       לקוחות / כתובות / יועצים
                     </p>
                     <p className="text-xs text-gray-600">
@@ -1480,7 +1740,7 @@ export function TaskDialog(props: TaskDialogProps) {
                       key={`stop-${idx}`}
                       className="space-y-3 rounded border border-gray-200 bg-white p-3 shadow-sm"
                     >
-                      <div className="flex items-center justify-between text-sm font-semibold text-primary">
+                      <div className="flex items-center justify-between text-sm font-semibold text-blue-600">
                         <span>עצירה {idx + 1}</span>
                         {stops.length > 1 && (
                           <button
@@ -1502,7 +1762,7 @@ export function TaskDialog(props: TaskDialogProps) {
                       <div className="space-y-3">
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                           <div className="flex flex-col gap-1">
-                            <Label className="text-primary">
+                            <Label className="text-blue-600">
                               לקוח
                               {(type === 'הסעת לקוח הביתה' ||
                                 type === 'הסעת לקוח למוסך') && (
@@ -1562,7 +1822,7 @@ export function TaskDialog(props: TaskDialogProps) {
                             )}
                           </div>
                           <div className="flex flex-col gap-1">
-                            <Label className="text-primary">
+                            <Label className="text-blue-600">
                               טלפון
                               {(type === 'הסעת לקוח הביתה' ||
                                 type === 'הסעת לקוח למוסך') && (
@@ -1576,14 +1836,16 @@ export function TaskDialog(props: TaskDialogProps) {
                               onChange={(e) =>
                                 setStops((prev) =>
                                   prev.map((s, i) =>
-                                    i === idx ? { ...s, phone: e.target.value } : s
+                                    i === idx
+                                      ? { ...s, phone: e.target.value }
+                                      : s
                                   )
                                 )
                               }
                             />
                           </div>
                           <div className="flex flex-col gap-1">
-                            <Label className="text-primary">
+                            <Label className="text-blue-600">
                               כתובת
                               {(type === 'הסעת לקוח הביתה' ||
                                 type === 'הסעת לקוח למוסך') && (
@@ -1631,7 +1893,7 @@ export function TaskDialog(props: TaskDialogProps) {
                         </div>
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                           <div className="flex flex-col gap-1">
-                            <Label className="text-primary">
+                            <Label className="text-blue-600">
                               שם יועץ <span className="text-red-500">*</span>
                             </Label>
                             <Input
@@ -1650,7 +1912,7 @@ export function TaskDialog(props: TaskDialogProps) {
                             />
                           </div>
                           <div className="flex flex-col gap-1">
-                            <Label className="text-primary">
+                            <Label className="text-blue-600">
                               צבע יועץ <span className="text-red-500">*</span>
                             </Label>
                             <RtlSelectDropdown
@@ -1745,7 +2007,7 @@ export function TaskDialog(props: TaskDialogProps) {
               <label className="flex flex-col gap-1">
                 <div className="flex gap-2">
                   <div className="grid w-full max-w-sm items-center gap-1">
-                    <Label htmlFor="client" className="text-primary">
+                    <Label htmlFor="client" className="text-blue-600">
                       לקוח
                       {(type === 'ביצוע טסט' ||
                         type === 'חילוץ רכב תקוע' ||
@@ -1764,6 +2026,7 @@ export function TaskDialog(props: TaskDialogProps) {
                       onChange={(e) => {
                         setClientQuery(e.target.value);
                         setClientId('');
+                        setClientPhone('');
                       }}
                     />
                     {clientSuggestions.length > 0 && !clientId && (
@@ -1776,6 +2039,7 @@ export function TaskDialog(props: TaskDialogProps) {
                             onClick={() => {
                               setClientId(c.id);
                               setClientQuery(c.name);
+                              setClientPhone(c.phone || '');
                             }}
                           >
                             <span>{c.name}</span>
@@ -1840,181 +2104,31 @@ export function TaskDialog(props: TaskDialogProps) {
               </label>
             )}
 
-            <label className="flex flex-col gap-1">
-              <div className="flex gap-2">
-                <div className="grid w-full max-w-sm items-center gap-1">
-                  <Label htmlFor="vehicle" className="text-primary">
-                    רכב
-                    {(type === 'ביצוע טסט' ||
-                      type === 'חילוץ רכב תקוע' ||
-                      type === 'מסירת רכב חלופי' ||
-                      type === 'הסעת לקוח הביתה' ||
-                      type === 'איסוף רכב/שינוע' ||
-                      type === 'החזרת רכב/שינוע') && (
-                      <span className="text-red-500"> *</span>
-                    )}
-                  </Label>
-                  <Input
-                    type="text"
-                    id="vehicle"
-                    placeholder="רכב"
-                    value={vehicleQuery}
-                    onChange={(e) => {
-                      setVehicleQuery(e.target.value);
-                      setVehicleId(''); // Clear vehicleId when typing to show suggestions
-                    }}
-                  />
-                  {vehicleSuggestions.length > 0 && !vehicleId && (
-                    <div className="mt-1 max-h-40 w-full overflow-y-auto rounded border border-gray-300 bg-white text-sm shadow-sm">
-                      {vehicleSuggestions.map((v) => {
-                        // Don't mark as occupied if it's the currently selected vehicle
-                        const isOccupied =
-                          (v.isOccupied || false) && v.id !== vehicleId;
-                        const isUnavailable = v.isUnavailable || false;
-                        const isDisabled = isOccupied || isUnavailable;
-                        return (
-                          <button
-                            key={v.id}
-                            type="button"
-                            disabled={isDisabled}
-                            className={`flex w-full items-center justify-between px-2 py-1 text-right ${
-                              isDisabled
-                                ? 'cursor-not-allowed bg-gray-100 text-gray-400 opacity-60'
-                                : 'hover:bg-blue-50'
-                            }`}
-                            onClick={() => {
-                              if (isOccupied) {
-                                toastError(
-                                  'רכב זה כבר משוייך למשימה אחרת באותו יום ובאותו טווח זמן'
-                                );
-                                return;
-                              }
-                              if (isUnavailable) {
-                                toastError('רכב זה מושבת ולא זמין לשימוש');
-                                return;
-                              }
-                              setVehicleId(v.id);
-                              setVehicleQuery(
-                                `${formatLicensePlate(v.license_plate)}${
-                                  v.model ? ` · ${v.model}` : ''
-                                }`
-                              );
-                            }}
-                          >
-                            <span
-                              className={isDisabled ? 'text-gray-400' : ''}
-                            >
-                              {formatLicensePlate(v.license_plate)}
-                              {v.model ? ` · ${v.model}` : ''}
-                              {isOccupied && (
-                                <span className="mr-2 text-xs">
-                                  (תפוס)
-                                </span>
-                              )}
-                              {isUnavailable && (
-                                <span className="mr-2 text-xs">
-                                  (מושבת)
-                                </span>
-                              )}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
+            {!isMultiStopType && (
+              <label className="flex flex-col gap-1">
+                <span className="text-sm font-medium text-blue-600">
+                  טלפון
+                  {(type === 'ביצוע טסט' ||
+                    type === 'חילוץ רכב תקוע' ||
+                    type === 'מסירת רכב חלופי' ||
+                    type === 'איסוף רכב/שינוע' ||
+                    type === 'החזרת רכב/שינוע') && (
+                    <span className="text-red-500"> *</span>
                   )}
-                </div>
-                <button
-                  type="button"
-                  className="rounded border border-gray-300 px-2 text-xs h-9 self-end bg-blue-500 text-white flex items-center justify-center"
-                  onClick={() => setShowAddVehicle((v) => !v)}
-                >
-                  <PlusIcon className="w-4 h-4" />
-                  חדש
-                </button>
-              </div>
-              {showAddVehicle && (
-                <div className="mt-2 grid grid-cols-3 gap-2">
-                  <div className="col-span-1 flex flex-col gap-1">
-                    <label className="text-sm font-medium text-primary">
-                      מספר רישוי <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      className="rounded border border-gray-300 p-2"
-                      placeholder="מספר רישוי (7 או 8 ספרות)"
-                      value={newVehiclePlate}
-                      onChange={(e) => {
-                        const input = e.target.value;
-                        // Allow digits and dashes only
-                        const cleaned = input.replace(/[^\d-]/g, '');
-                        // Format as user types
-                        const formatted = formatLicensePlate(cleaned);
-                        setNewVehiclePlate(formatted);
-                        // Clear error when user starts typing
-                        if (error && error.includes('מספר רישוי')) {
-                          setError(null);
-                        }
-                      }}
-                      maxLength={10} // Max length for formatted plate (e.g., "123-45-678")
-                    />
-                    {newVehiclePlate &&
-                      (() => {
-                        const digitsOnly = newVehiclePlate.replace(/\D/g, '');
-                        const digitCount = digitsOnly.length;
-                        if (digitCount === 0) return null;
-                        if (digitCount < 7) {
-                          return (
-                            <p className="text-xs text-red-600">
-                              מספר רישוי חייב להכיל לפחות 7 ספרות (נמצאו{' '}
-                              {digitCount} ספרות)
-                            </p>
-                          );
-                        }
-                        if (digitCount > 8) {
-                          return (
-                            <p className="text-xs text-red-600">
-                              מספר רישוי חייב להכיל לכל היותר 8 ספרות (נמצאו{' '}
-                              {digitCount} ספרות)
-                            </p>
-                          );
-                        }
-                        return null;
-                      })()}
-                  </div>
-                  <div className="col-span-1 flex flex-col gap-1">
-                    <label className="text-sm font-medium text-primary">
-                      דגם
-                    </label>
-                    <input
-                      className="rounded border border-gray-300 p-2"
-                      placeholder="דגם"
-                      value={newVehicleModel}
-                      onChange={(e) => setNewVehicleModel(e.target.value)}
-                    />
-                  </div>
-                  <div className="col-span-3 flex justify-end gap-2">
-                    <button
-                      type="button"
-                      className="rounded border border-gray-300 px-2 text-xs"
-                      onClick={() => setShowAddVehicle(false)}
-                    >
-                      בטל
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded bg-blue-600 hover:bg-blue-700 px-2 py-1 text-xs font-semibold text-white transition-colors"
-                      onClick={createVehicle}
-                    >
-                      צור
-                    </button>
-                  </div>
-                </div>
-              )}
-            </label>
+                </span>
+                <Input
+                  type="tel"
+                  placeholder="טלפון"
+                  value={clientPhone}
+                  onChange={(e) => setClientPhone(e.target.value)}
+                />
+              </label>
+            )}
 
             {/* Drivers */}
             <div className="col-span-1 md:col-span-2 grid grid-cols-1 gap-3 md:grid-cols-2">
               <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-primary">
+                <span className="text-sm font-medium text-blue-600">
                   נהג מוביל
                 </span>
                 <RtlSelectDropdown
@@ -2029,7 +2143,7 @@ export function TaskDialog(props: TaskDialogProps) {
 
               {multiDriverEnabled && (
                 <div className="flex flex-col gap-1">
-                  <span className="text-sm font-medium text-primary">
+                  <span className="text-sm font-medium text-blue-600">
                     נהגי משנה
                   </span>
                   <RtlSelectDropdown

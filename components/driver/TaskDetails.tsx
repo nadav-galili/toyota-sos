@@ -133,8 +133,8 @@ export function TaskDetails({ taskId }: { taskId: string }) {
           </p>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
-          {/* Details Block - only show for 'אחר' task type */}
-          {task.type === 'אחר' && task.details && (
+          {/* Details Block - show for any task type if details exist */}
+          {task.details && task.details.trim() && (
             <div className="bg-gray-50 p-3 rounded-md whitespace-pre-wrap text-gray-700">
               <div className="text-xs font-semibold text-gray-600 mb-2">
                 תיאור המשימה:

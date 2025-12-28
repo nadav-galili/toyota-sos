@@ -40,51 +40,25 @@ describe('TaskDetails a11y and collapsible behavior', () => {
     });
   });
 
-  test('sections have role=region and are labelled by their toggle button', async () => {
+  test('details section is displayed when details exist', async () => {
     const { container } = render(<TaskDetails taskId={taskId} />);
     // Wait for header text
     expect(await screen.findByText('תיקון צמיג')).toBeInTheDocument();
 
-    // Pick the "פרטים" section toggle button
-    const detailsButton = screen.getByRole('button', { name: /פרטים/ });
-    const section = detailsButton.closest('section');
-    expect(section).toBeTruthy();
-    if (section) {
-      expect(section.getAttribute('role')).toBe('region');
-      const labelledBy = section.getAttribute('aria-labelledby');
-      expect(labelledBy).toBe(detailsButton.id);
-    }
+    // Details section should be displayed directly (not collapsible)
+    expect(screen.getByText('תיאור המשימה:')).toBeInTheDocument();
+    expect(screen.getByText('פרטי עבודה')).toBeInTheDocument();
   });
 
-  test('aria-expanded toggles and panel hides/shows content', async () => {
+  test('details are always visible when present', async () => {
     render(<TaskDetails taskId={taskId} />);
-    // Wait for header to ensure data loaded
+
+    // Wait for content to load
     expect(await screen.findByText('תיקון צמיג')).toBeInTheDocument();
 
-    let detailsButton = screen.getByRole('button', { name: /פרטים/ });
-    const initiallyVisible = !!screen.queryByText('פרטי עבודה');
-    // Toggle once
-    await userEvent.click(detailsButton);
-    if (initiallyVisible) {
-      await waitFor(() => expect(screen.queryByText('פרטי עבודה')).toBeNull());
-      detailsButton = screen.getByRole('button', { name: /פרטים/ });
-      expect(detailsButton).toHaveAttribute('aria-expanded', 'false');
-    } else {
-      await screen.findByText('פרטי עבודה');
-      detailsButton = screen.getByRole('button', { name: /פרטים/ });
-      expect(detailsButton).toHaveAttribute('aria-expanded', 'true');
-    }
-    // Toggle back
-    await userEvent.click(detailsButton);
-    if (initiallyVisible) {
-      await screen.findByText('פרטי עבודה');
-      detailsButton = screen.getByRole('button', { name: /פרטים/ });
-      expect(detailsButton).toHaveAttribute('aria-expanded', 'true');
-    } else {
-      await waitFor(() => expect(screen.queryByText('פרטי עבודה')).toBeNull());
-      detailsButton = screen.getByRole('button', { name: /פרטים/ });
-      expect(detailsButton).toHaveAttribute('aria-expanded', 'false');
-    }
+    // Details should always be visible (not collapsible)
+    expect(screen.getByText('תיאור המשימה:')).toBeInTheDocument();
+    expect(screen.getByText('פרטי עבודה')).toBeInTheDocument();
   });
 });
 

@@ -134,6 +134,7 @@ export async function PATCH(
       'estimated_end',
       'address',
       'client_id',
+      'phone',
       'vehicle_id',
       'advisor_name',
       'advisor_color',
@@ -219,6 +220,12 @@ export async function PATCH(
       updatePayload.advisor_color = firstStop.advisor_color;
       updatePayload.lat = firstStop.lat;
       updatePayload.lng = firstStop.lng;
+
+      // Clear phone for multi-stop tasks (phone is stored in stops)
+      updatePayload.phone = null;
+    } else if (updatePayload.phone && typeof updatePayload.phone === 'string') {
+      // For regular tasks, trim phone if provided
+      updatePayload.phone = updatePayload.phone.trim() || null;
     }
     
     // Validation for "Drive Client Home" - must have advisor name or color

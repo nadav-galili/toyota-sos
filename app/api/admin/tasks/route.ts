@@ -20,7 +20,7 @@ const isMultiStopType = (val: string | null | undefined) => {
  * Create a new task and optional driver assignments
  * Body: {
  *   title, type, priority, status, details?, estimated_start?, estimated_end?, address?,
- *   client_id?, vehicle_id?, lead_driver_id?, co_driver_ids?: string[]
+ *   client_id?, vehicle_id?, phone?, lead_driver_id?, co_driver_ids?: string[]
  * }
  */
 export async function POST(request: NextRequest) {
@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
       estimated_end,
       address,
       client_id,
+      phone,
       vehicle_id,
       distance_from_garage,
       lat,
@@ -187,6 +188,7 @@ export async function POST(request: NextRequest) {
         estimated_end: estimated_end ?? null,
         address: effectiveAddress ?? '',
         client_id: effectiveClientId ?? null,
+        phone: !isMulti && phone ? phone.trim() : null,
         vehicle_id: vehicle_id ?? null,
         distance_from_garage: distance_from_garage ?? null,
         lat: effectiveLat,

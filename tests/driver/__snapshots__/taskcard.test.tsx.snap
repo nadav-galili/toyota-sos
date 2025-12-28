@@ -3,46 +3,121 @@
 exports[`TaskCard matches snapshot 1`] = `
 <div>
   <div
-    class="rounded-lg border border-gray-200 p-4 shadow-sm bg-white"
+    class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
   >
     <div
-      class="flex items-center justify-between gap-2"
+      class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
     >
-      <span
-        class="inline-flex px-2 py-1 rounded text-xs text-white bg-red-600"
+      <div
+        class="flex items-center gap-4"
       >
-        high
-      </span>
-      <span
-        class="inline-flex px-2 py-1 rounded text-xs text-white bg-gray-500"
+        <div
+          class="flex flex-col items-center gap-1"
+        >
+          <span
+            class="text-xs text-gray-500"
+          >
+            עדיפות
+          </span>
+          <span
+            class="inline-flex rounded px-2 py-1 text-xs text-white bg-red-600"
+          >
+            גבוהה
+          </span>
+        </div>
+      </div>
+      <div
+        class="flex flex-col gap-1"
       >
-        pending
-      </span>
+        <span
+          class="text-center text-xs text-gray-500 sm:text-right"
+        >
+          סטטוס
+        </span>
+        <div
+          aria-label="עדכון סטטוס משימה"
+          class="inline-flex gap-1 rtl:flex-row-reverse w-full justify-between"
+          dir="ltr"
+          role="group"
+          style="outline: none;"
+          tabindex="0"
+        >
+          <button
+            aria-checked="true"
+            class="inline-flex items-center justify-center font-medium data-[state=on]:text-white hover:bg-gray-100 data-[state=on]:hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-600 flex-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-1 text-[11px] text-gray-700 sm:text-xs data-[state=on]:bg-gray-700 data-[state=on]:border-gray-700"
+            data-radix-collection-item=""
+            data-state="on"
+            role="radio"
+            tabindex="-1"
+            type="button"
+          >
+            בהמתנה
+          </button>
+          <button
+            aria-checked="false"
+            class="inline-flex items-center justify-center font-medium data-[state=on]:text-white hover:bg-gray-100 data-[state=on]:hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-600 flex-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-1 text-[11px] text-gray-700 sm:text-xs data-[state=on]:bg-blue-600 data-[state=on]:border-blue-600"
+            data-radix-collection-item=""
+            data-state="off"
+            role="radio"
+            tabindex="-1"
+            type="button"
+          >
+            בעבודה
+          </button>
+          <button
+            aria-checked="false"
+            class="inline-flex items-center justify-center font-medium data-[state=on]:text-white hover:bg-gray-100 data-[state=on]:hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-600 flex-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-1 text-[11px] text-gray-700 sm:text-xs data-[state=on]:bg-emerald-600 data-[state=on]:border-emerald-600"
+            data-radix-collection-item=""
+            data-state="off"
+            role="radio"
+            tabindex="-1"
+            type="button"
+          >
+            הושלמה
+          </button>
+          <button
+            aria-checked="false"
+            class="inline-flex items-center justify-center font-medium data-[state=on]:text-white hover:bg-gray-100 data-[state=on]:hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-600 flex-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-1 text-[11px] text-gray-700 sm:text-xs data-[state=on]:bg-amber-500 data-[state=on]:border-amber-500"
+            data-radix-collection-item=""
+            data-state="off"
+            role="radio"
+            tabindex="-1"
+            type="button"
+          >
+            חסומה
+          </button>
+        </div>
+      </div>
     </div>
-    <h3
-      class="mt-2 text-lg font-semibold"
-    >
-      מסירת רכב ללקוח
-    </h3>
     <p
-      class="text-sm text-gray-600"
+      class="text-md py-2 text-black font-bold"
     >
       pickup_or_dropoff_car
     </p>
     <div
-      class="mt-3 space-y-1 text-sm text-gray-700"
+      class="mt-3 space-y-2 text-sm text-gray-700"
     >
       <div>
         חלון זמן: 
-        01/01/2025 12:00 – 01/01/2025 14:30
+        12:00 – 14:30
       </div>
-      <div>
-        כתובת: 
-        תל אביב, דיזנגוף 100
+      <div
+        class="flex items-center justify-between gap-2"
+      >
+        <div
+          class="flex-1"
+        >
+          כתובת: 
+          תל אביב, דיזנגוף 100
+        </div>
       </div>
-      <div>
-        לקוח: 
-        לקוח א
+      <div
+        class="flex items-center gap-2"
+      >
+        <span>
+          לקוח: 
+          לקוח א
+        </span>
       </div>
       <div>
         רכב: 
@@ -51,13 +126,60 @@ exports[`TaskCard matches snapshot 1`] = `
       </div>
     </div>
     <div
-      class="mt-3 flex gap-2"
+      class="mt-3 flex flex-wrap gap-2"
     >
       <a
-        class="inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-sm text-white hover:bg-red-700"
+        class="inline-flex items-center justify-center rounded-md bg-[#33CCFF] px-3 py-2 text-sm font-medium text-white hover:bg-[#2BB5E0]"
         href="waze://?navigate=yes&q=%D7%AA%D7%9C%20%D7%90%D7%91%D7%99%D7%91%2C%20%D7%93%D7%99%D7%96%D7%A0%D7%92%D7%95%D7%A3%20100"
       >
-        פתיחה ב-Waze
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-map-pin w-4 h-4 mr-2"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"
+          />
+          <circle
+            cx="12"
+            cy="10"
+            r="3"
+          />
+        </svg>
+        Waze 
+      </a>
+      <a
+        class="inline-flex items-center justify-center rounded-md bg-[#4285F4] px-3 py-2 text-sm font-medium text-white hover:bg-[#357ABD]"
+        href="https://www.google.com/maps/search/?api=1&query=%D7%AA%D7%9C%20%D7%90%D7%91%D7%99%D7%91%2C%20%D7%93%D7%99%D7%96%D7%A0%D7%92%D7%95%D7%A3%20100"
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-navigation w-4 h-4 mr-2"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <polygon
+            points="3 11 22 2 13 21 11 13 3 11"
+          />
+        </svg>
+        Google Maps 
       </a>
     </div>
   </div>

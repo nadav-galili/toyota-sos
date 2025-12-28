@@ -46,7 +46,7 @@ describe('TaskDetails - Waze deeplink and sections', () => {
     // Header title
     expect(await screen.findByText('מסירת רכב')).toBeInTheDocument();
     // Waze link
-    const wazeLink = await screen.findByRole('link', { name: 'פתיחה ב‑Waze' });
+    const wazeLink = await screen.findByRole('link', { name: 'ניווט עם Waze' });
     expect(wazeLink).toHaveAttribute(
       'href',
       `waze://?navigate=yes&q=${encodeURIComponent('תל אביב, דיזנגוף 100')}`

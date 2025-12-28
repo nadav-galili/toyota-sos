@@ -3,7 +3,12 @@
  */
 
 export type TaskStatus = 'בהמתנה' | 'בעבודה' | 'חסומה' | 'הושלמה';
-export type TaskPriority = 'ללא עדיפות' | 'מיידי' | 'נמוכה' | 'בינונית' | 'גבוהה';
+export type TaskPriority =
+  | 'ללא עדיפות'
+  | 'מיידי'
+  | 'נמוכה'
+  | 'בינונית'
+  | 'גבוהה';
 export type TaskType =
   | 'איסוף רכב/שינוע'
   | 'החזרת רכב/שינוע'
@@ -31,6 +36,7 @@ export interface Task {
   updated_by: string | null;
   advisor_name?: string | null;
   advisor_color?: AdvisorColor | null;
+  phone?: string | null;
   created_at: string;
   updated_at: string;
   admin_notified_late_start?: boolean;

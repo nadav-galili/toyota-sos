@@ -316,7 +316,7 @@ export function TaskCard(props: TaskCardProps) {
             {vehicle.model ? ` • ${vehicle.model}` : ''}
           </div>
         ) : null}
-        {type === 'אחר' && details && details.trim() ? (
+        {details && details.trim() ? (
           <div className="mt-2 rounded border border-gray-200 bg-gray-50 p-3">
             <div className="text-xs font-semibold text-gray-600 mb-1">
               תיאור המשימה:
