@@ -34,6 +34,10 @@ const heebo = Heebo({
 export const metadata: Metadata = {
   title: 'Toyota SOS -ניהול נהגים',
   description: 'מערכת ניהול משימות ושינוע רכבים',
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export const viewport: Viewport = {
