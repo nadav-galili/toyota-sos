@@ -4,12 +4,12 @@
 
 Transfer Next.js + Supabase app from work accounts to client's accounts.
 
-| Service | Current | Target |
-|---------|---------|--------|
-| GitHub | Work account (you're a collaborator) | Your personal account (via transfer) |
-| Vercel | Work account (free) | Client's account (Pro) |
-| Supabase | Your account (Pro) | Client's account (Pro) |
-| Domain | N/A | Client's Namecheap account |
+| Service  | Current                              | Target                               |
+| -------- | ------------------------------------ | ------------------------------------ |
+| GitHub   | Work account (you're a collaborator) | Your personal account (via transfer) |
+| Vercel   | Work account (free)                  | Client's account (Pro)               |
+| Supabase | Your account (Pro)                   | Client's account (Pro)               |
+| Domain   | N/A                                  | Client's Namecheap account           |
 
 ---
 
@@ -52,7 +52,7 @@ List any external services your app uses that may need API keys updated:
 - [ ] SendGrid / Resend / Postmark (email)
 - [ ] Cloudinary / Uploadthing (file uploads)
 - [ ] Analytics (Vercel Analytics, PostHog, etc.)
-- [ ] Other: _______________
+- [ ] Other: **\*\***\_\_\_**\*\***
 
 ---
 
@@ -62,7 +62,7 @@ List any external services your app uses that may need API keys updated:
 
 Since you're already a collaborator on the work repo, you can transfer ownership directly.
 
-### 1.1 Request Transfer (Work Account Owner Does This)
+### 1.1 Request Transfer (Work Account Owner Does This)- DONE
 
 The owner of the work GitHub account needs to:
 
@@ -74,13 +74,13 @@ The owner of the work GitHub account needs to:
 6. Type the repo name to confirm
 7. Click **"I understand, transfer this repository"**
 
-### 1.2 Accept Transfer (You Do This)
+### 1.2 Accept Transfer (You Do This)- DONE
 
 1. Check your personal email for the transfer invitation
 2. Click the link to accept
 3. Repository is now under your personal account
 
-### 1.3 Update Local Git Remote
+### 1.3 Update Local Git Remote -DONE
 
 ```bash
 # In your local project folder
@@ -95,10 +95,10 @@ git remote -v
 
 ### 1.4 Verify
 
-- [ ] Repo appears in your personal GitHub account
-- [ ] All branches are present
-- [ ] All commit history is intact
-- [ ] You can push changes
+- [ v] Repo appears in your personal GitHub account
+- [v ] All branches are present
+- [v ] All commit history is intact
+- [v ] You can push changes
 
 ---
 
@@ -127,10 +127,10 @@ git remote -v
 
 Copy and save these values (you'll need them for Vercel):
 
-| Credential | Location |
-|------------|----------|
-| Project URL | Settings → API → Project URL |
-| Anon Key | Settings → API → anon public |
+| Credential       | Location                                     |
+| ---------------- | -------------------------------------------- |
+| Project URL      | Settings → API → Project URL                 |
+| Anon Key         | Settings → API → anon public                 |
 | Service Role Key | Settings → API → service_role (keep secret!) |
 
 ### 2.4 Add Yourself as Team Member
@@ -168,10 +168,10 @@ supabase db push
 
 Go to Authentication → URL Configuration:
 
-| Setting | Value |
-|---------|-------|
-| Site URL | `https://your-app.vercel.app` (update after Vercel setup) |
-| Redirect URLs | Add: `https://your-app.vercel.app/**` |
+| Setting       | Value                                                     |
+| ------------- | --------------------------------------------------------- |
+| Site URL      | `https://your-app.vercel.app` (update after Vercel setup) |
+| Redirect URLs | Add: `https://your-app.vercel.app/**`                     |
 
 Go to Authentication → Providers and enable the same providers you had before:
 
@@ -319,10 +319,10 @@ Namecheap allows sharing domain management access with other users.
 2. Delete any existing A or CNAME records for @ and www
 3. Add these records:
 
-| Type | Host | Value | TTL |
-|------|------|-------|-----|
-| A | @ | 76.76.21.21 | Automatic |
-| CNAME | www | cname.vercel-dns.com | Automatic |
+| Type  | Host | Value                | TTL       |
+| ----- | ---- | -------------------- | --------- |
+| A     | @    | 76.76.21.21          | Automatic |
+| CNAME | www  | cname.vercel-dns.com | Automatic |
 
 **In Vercel:**
 
@@ -373,11 +373,13 @@ If your app uses a `NEXT_PUBLIC_SITE_URL` or similar:
 Test everything works:
 
 ### App Loads
+
 - [ ] Homepage loads without errors
 - [ ] No console errors in browser dev tools
 - [ ] All pages/routes work
 
 ### Authentication
+
 - [ ] Sign up with new account works
 - [ ] Sign in works
 - [ ] Sign out works
@@ -385,16 +387,19 @@ Test everything works:
 - [ ] Password reset works (if applicable)
 
 ### Database
+
 - [ ] Data can be read from database
 - [ ] Data can be written to database
 - [ ] RLS policies are working (test with different user roles)
 
 ### Storage (If Used)
+
 - [ ] File uploads work
 - [ ] Files can be retrieved/displayed
 - [ ] Access policies are correct
 
 ### Other Features
+
 - [ ] Email sending works (if applicable)
 - [ ] Payments work (if applicable)
 - [ ] All API routes function correctly
@@ -406,13 +411,16 @@ Test everything works:
 After verifying everything works (wait 1-2 weeks):
 
 ### Old Supabase Project
+
 - [ ] Export any data you want to keep
 - [ ] Delete project or downgrade plan
 
 ### Old Vercel Project
+
 - [ ] Delete project from work Vercel
 
 ### Old GitHub Repo
+
 - [ ] Already transferred - nothing to do here
 
 ---
@@ -495,26 +503,31 @@ supabase db push
 ## Troubleshooting
 
 ### Build fails on Vercel
+
 - Check environment variables are all set
 - Check build logs for specific errors
 - Verify Node.js version matches your local
 
 ### Auth not working
+
 - Verify Site URL in Supabase matches your domain exactly
 - Check Redirect URLs include the correct domain
 - Verify API keys are correct in Vercel env vars
 
 ### Database connection fails
+
 - Verify SUPABASE_URL and keys are correct
 - Check if RLS policies are blocking access
 - Verify the database schema was pushed correctly
 
 ### Storage not working
+
 - Verify bucket names match your code
 - Check storage policies are configured
 - Verify bucket is public/private as expected
 
 ### Domain not working
+
 - DNS propagation can take up to 48 hours (usually 10-30 minutes)
 - Use [dnschecker.org](https://dnschecker.org) to verify DNS records
 - Verify A record points to `76.76.21.21`
@@ -522,6 +535,7 @@ supabase db push
 - In Vercel, check domain status shows ✅ not ⚠️
 
 ### SSL certificate issues
+
 - Vercel auto-provisions SSL, wait a few minutes after DNS propagates
 - If stuck, try removing and re-adding the domain in Vercel
 - Ensure no conflicting CAA records in DNS
