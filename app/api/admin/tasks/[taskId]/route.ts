@@ -175,7 +175,7 @@ export async function PATCH(
     const admin = getSupabaseAdmin();
     const { data: currentTask, error: existingError } = await admin
       .from('tasks')
-      .select('type, client_id, address, advisor_name, advisor_color')
+      .select('type, client_id, address, advisor_name, advisor_color, status')
       .eq('id', taskId)
       .is('deleted_at', null)
       .single();
