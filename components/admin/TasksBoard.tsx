@@ -1022,7 +1022,24 @@ export function TasksBoard({
               setAssignees((prev) => {
                 if (payload.eventType === 'INSERT') {
                   const row = payload.new as TaskAssignee;
-                  if (prev.find((a) => a.id === row.id)) return prev;
+                  // Deduplicate: check if we already have this record (by ID or by task+driver combo)
+                  const existingIndex = prev.findIndex(
+                    (a) =>
+                      a.id === row.id ||
+                      (a.task_id === row.task_id &&
+                        a.driver_id === row.driver_id &&
+                        a.is_lead === row.is_lead)
+                  );
+
+                  if (existingIndex !== -1) {
+                    // If it's a local placeholder, replace it with the real data
+                    if (prev[existingIndex].id.startsWith('local-')) {
+                      const next = [...prev];
+                      next[existingIndex] = row;
+                      return next;
+                    }
+                    return prev;
+                  }
                   return [...prev, row];
                 }
                 if (payload.eventType === 'UPDATE') {
@@ -1494,7 +1511,7 @@ export function TasksBoard({
           <div className="rounded-lg border-2 border-primary bg-white p-3 shadow-xl opacity-95 w-80">
             <div className="mb-2 flex items-start justify-between gap-2">
               {/* <h4 className="flex-1 line-clamp-2 font-semibold text-gray-900 text-sm">
-                {draggedTask.title}
+                {typeLabel(draggedTask.type)}
               </h4> */}
               <span
                 className={`shrink-0 inline-block rounded-full px-1.5 py-0.5 text-xs font-bold text-white ${priorityColor(

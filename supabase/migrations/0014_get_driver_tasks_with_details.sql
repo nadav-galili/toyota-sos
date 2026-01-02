@@ -15,7 +15,6 @@ create or replace function public.get_driver_tasks(
 )
 returns table (
   id uuid,
-  title text,
   type public.task_type,
   priority public.task_priority,
   status public.task_status,
@@ -66,7 +65,6 @@ begin
   return query
   select
     t.id,
-    t.title,
     t.type,
     t.priority,
     t.status,

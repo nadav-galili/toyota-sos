@@ -36,9 +36,9 @@ describe('AuditFeed', () => {
         actor_id: 'u1',
         action: 'updated',
         changed_at: '2025-01-01T00:00:00.000Z',
-        before: { title: 'Old' },
-        after: { title: 'New' },
-        diff: { title: { from: 'Old', to: 'New' } },
+        before: { details: 'Old' },
+        after: { details: 'New' },
+        diff: { details: { from: 'Old', to: 'New' } },
       },
     ];
     mockAuditResponse(rows);
@@ -49,7 +49,7 @@ describe('AuditFeed', () => {
     expect(region).toHaveAttribute('dir', 'rtl');
     // Row fields
     expect(await screen.findByText('עודכן')).toBeInTheDocument();
-    expect(screen.getByText(/title/i)).toBeInTheDocument();
+    expect(screen.getByText(/details/i)).toBeInTheDocument();
     // Pagination buttons visible
     expect(screen.getByRole('button', { name: 'דף הבא' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'דף קודם' })).toBeInTheDocument();
@@ -64,8 +64,8 @@ describe('AuditFeed', () => {
         action: 'created',
         changed_at: '2025-01-01T00:00:00.000Z',
         before: null,
-        after: { title: 'Hello' },
-        diff: { title: { from: null, to: 'Hello' } },
+        after: { details: 'Hello' },
+        diff: { details: { from: null, to: 'Hello' } },
       },
       {
         id: '2',
@@ -73,9 +73,9 @@ describe('AuditFeed', () => {
         actor_id: 'u2',
         action: 'updated',
         changed_at: '2025-01-02T00:00:00.000Z',
-        before: { title: 'Hello' },
-        after: { title: 'World' },
-        diff: { title: { from: 'Hello', to: 'World' } },
+        before: { details: 'Hello' },
+        after: { details: 'World' },
+        diff: { details: { from: 'Hello', to: 'World' } },
       },
     ];
     mockAuditResponse(rows);

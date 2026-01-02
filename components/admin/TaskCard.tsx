@@ -66,7 +66,7 @@ export function TaskCard({
       className={`relative cursor-grab active:cursor-grabbing select-none rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-all hover:shadow-md hover:border-gray-300 max-w-full ${
         isActive ? 'opacity-50 ring-2 ring-primary' : ''
       } ${isDragging ? 'opacity-50' : ''}`}
-      aria-label={`משימה: ${task.title}`}
+      aria-label={`משימה: ${typeLabel(task.type)}`}
       data-draggable-id={task.id}
       {...attributes}
       {...listeners}
@@ -90,9 +90,6 @@ export function TaskCard({
               aria-label="בחר משימה"
             />
           )}
-          {/* <h4 className="flex-1 line-clamp-2 font-semibold text-gray-900 text-sm">
-            {task.title}
-          </h4> */}
         </div>
         {task.priority === 'מיידי' && (
           <span

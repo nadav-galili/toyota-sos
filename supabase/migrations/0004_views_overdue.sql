@@ -1,10 +1,11 @@
 -- Task 3.4: overdue_tasks view
 -- Shows tasks past their estimated_end and not completed, with seconds overdue
 
-create or replace view public.overdue_tasks as
+create or replace view public.overdue_tasks 
+with (security_invoker = true)
+as
 select
   t.id,
-  t.title,
   t.type,
   t.priority,
   t.status,
@@ -20,7 +21,7 @@ select
 from public.tasks t
 where
   t.estimated_end is not null
-  and t.status <> 'completed'
+  and t.status <> 'הושלמה'::task_status
   and t.estimated_end < now();
 
 

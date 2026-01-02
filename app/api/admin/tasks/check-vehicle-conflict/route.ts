@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     // Also check that they're on the same day
     let query = admin
       .from('tasks')
-      .select('id, title, type, estimated_start, estimated_end, status')
+      .select('id, type, estimated_start, estimated_end, status')
       .eq('vehicle_id', vehicleId)
       .not('status', 'eq', 'הושלמה') // Only check non-completed tasks
       .lt('estimated_start', estimatedEnd)

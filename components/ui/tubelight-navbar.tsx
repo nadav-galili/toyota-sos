@@ -32,6 +32,8 @@ const iconMap: Record<
   FileText: Icons.FileText,
   ShieldCheck: Icons.ShieldCheck,
   Users: Icons.Users,
+  History: Icons.History,
+  Car: Icons.Car,
 };
 
 export function NavBar({ items, className }: NavBarProps) {
@@ -58,7 +60,7 @@ export function NavBar({ items, className }: NavBarProps) {
                 isActive && 'bg-muted text-primary'
               )}
             >
-              <span className="hidden md:inline text-lg">{item.name}</span>
+              <span className="hidden md:inline text-sm lg:text-base">{item.name}</span>
               <span className="md:hidden">
                 <Icon size={18} strokeWidth={2.5} />
               </span>

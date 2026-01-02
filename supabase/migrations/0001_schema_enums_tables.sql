@@ -68,7 +68,6 @@ create table if not exists public.vehicles (
 -- Tasks
 create table if not exists public.tasks (
   id uuid primary key default gen_random_uuid(),
-  title text not null,
   type task_type not null,
   priority task_priority not null default 'medium',
   status task_status not null default 'pending',
@@ -80,7 +79,6 @@ create table if not exists public.tasks (
   vehicle_id uuid references public.vehicles(id) on delete set null,
   created_by uuid references public.profiles(id) on delete set null,
   updated_by uuid references public.profiles(id) on delete set null,
-  checklist_schema jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

@@ -1,13 +1,20 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { TasksBoard, Task, Driver, TaskAssignee, Client, Vehicle } from '@/components/admin/TasksBoard';
+import {
+  TasksBoard,
+  Task,
+  Driver,
+  TaskAssignee,
+  Client,
+  Vehicle,
+} from '@/components/admin/TasksBoard';
 
 describe('TasksBoard DnD Setup (7.1.3)', () => {
   const mockTasks: Task[] = [
     {
       id: 'task-1',
-      title: 'משימה 1',
+
       type: 'pickup_or_dropoff_car',
       priority: 'high',
       status: 'pending',
@@ -24,7 +31,7 @@ describe('TasksBoard DnD Setup (7.1.3)', () => {
     },
     {
       id: 'task-2',
-      title: 'משימה 2',
+
       type: 'drive_client_home',
       priority: 'medium',
       status: 'in_progress',
@@ -42,8 +49,18 @@ describe('TasksBoard DnD Setup (7.1.3)', () => {
   ];
 
   const mockDrivers: Driver[] = [
-    { id: 'driver-1', name: 'דוד כהן', email: 'driver1@example.com', role: 'driver' },
-    { id: 'driver-2', name: 'שרה לוי', email: 'driver2@example.com', role: 'driver' },
+    {
+      id: 'driver-1',
+      name: 'דוד כהן',
+      email: 'driver1@example.com',
+      role: 'driver',
+    },
+    {
+      id: 'driver-2',
+      name: 'שרה לוי',
+      email: 'driver2@example.com',
+      role: 'driver',
+    },
   ];
 
   const mockTaskAssignees: TaskAssignee[] = [
@@ -64,8 +81,18 @@ describe('TasksBoard DnD Setup (7.1.3)', () => {
   ];
 
   const mockClients: Client[] = [
-    { id: 'client-1', name: 'אחי אבו קנו', phone: '050-1234567', email: 'client1@example.com' },
-    { id: 'client-2', name: 'רוני גם אני', phone: '050-7654321', email: 'client2@example.com' },
+    {
+      id: 'client-1',
+      name: 'אחי אבו קנו',
+      phone: '050-1234567',
+      email: 'client1@example.com',
+    },
+    {
+      id: 'client-2',
+      name: 'רוני גם אני',
+      phone: '050-7654321',
+      email: 'client2@example.com',
+    },
   ];
 
   const mockVehicles: Vehicle[] = [
@@ -85,7 +112,9 @@ describe('TasksBoard DnD Setup (7.1.3)', () => {
     );
 
     // Check that the main board is rendered
-    expect(screen.getByRole('main', { name: /לוח משימות/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('main', { name: /לוח משימות/i })
+    ).toBeInTheDocument();
   });
 
   test('initializes drag and drop sensors', () => {
@@ -188,7 +217,9 @@ describe('TasksBoard DnD Setup (7.1.3)', () => {
       />
     );
 
-    const taskCard = container.querySelector('[data-draggable-id="task-1"]') as HTMLElement;
+    const taskCard = container.querySelector(
+      '[data-draggable-id="task-1"]'
+    ) as HTMLElement;
     expect(taskCard).toHaveClass('cursor-grab');
     expect(taskCard).toHaveClass('active:cursor-grabbing');
   });
@@ -204,13 +235,12 @@ describe('TasksBoard DnD Setup (7.1.3)', () => {
       />
     );
 
-    // Verify cards render
-    expect(screen.getByText('משימה 1')).toBeInTheDocument();
-    expect(screen.getByText('משימה 2')).toBeInTheDocument();
+    // Verify cards render (using type label)
+    expect(screen.getByText('איסוף רכב/שינוע')).toBeInTheDocument();
+    expect(screen.getByText('הסעת לקוח הביתה')).toBeInTheDocument();
 
     // Verify column regions exist
     const regions = screen.getAllByRole('region', { name: /עמודה:/ });
     expect(regions.length).toBeGreaterThan(0);
   });
 });
-

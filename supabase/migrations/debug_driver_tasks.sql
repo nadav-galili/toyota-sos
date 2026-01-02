@@ -29,7 +29,6 @@ where p.employee_id = '33333' or p.employee_id = 'D33333' or p.employee_id like 
 -- 3. Check tasks assigned to driver with employee_id 33333
 select 
   t.id as task_id,
-  t.title,
   t.status,
   ta.driver_id,
   p.employee_id,
@@ -45,8 +44,7 @@ select
   ta.task_id,
   ta.driver_id,
   p.employee_id,
-  p.name as driver_name,
-  t.title as task_title
+  p.name as driver_name
 from public.task_assignees ta
 left join public.profiles p on p.id = ta.driver_id
 left join public.tasks t on t.id = ta.task_id

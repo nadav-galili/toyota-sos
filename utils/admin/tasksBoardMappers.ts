@@ -81,7 +81,7 @@ export function computeColumns(params: {
     return columns;
   }
 
-  const statuses: TaskStatus[] = ['בהמתנה', 'בעבודה', 'חסומה', 'הושלמה'];
+  const statuses: TaskStatus[] = ['בהמתנה', 'בעבודה', 'הושלמה', 'חסומה'];
   return statuses.map((status) => ({
     id: status,
     label: statusLabel ? statusLabel(status) : status,
@@ -130,10 +130,14 @@ export function filterTasks(params: {
       const vehiclePlate = t.vehicle_id
         ? formatLicensePlate(vehicleMap.get(t.vehicle_id)?.license_plate || '')
         : '';
-      const clientVehiclePlate = (t.client_vehicle_id && clientVehicleMap)
-        ? formatLicensePlate(clientVehicleMap.get(t.client_vehicle_id)?.license_plate || '')
-        : '';
-      const hay = `${t.title} ${clientName} ${vehiclePlate} ${clientVehiclePlate}`.toLowerCase();
+      const clientVehiclePlate =
+        t.client_vehicle_id && clientVehicleMap
+          ? formatLicensePlate(
+              clientVehicleMap.get(t.client_vehicle_id)?.license_plate || ''
+            )
+          : '';
+      const hay =
+        `${t.type} ${clientName} ${vehiclePlate} ${clientVehiclePlate}`.toLowerCase();
       if (!hay.includes(normalized)) return false;
     }
     return true;
@@ -151,7 +155,7 @@ export function sortTasks(params: {
 
   const priorityRank: Record<TaskPriority, number> = {
     'ללא עדיפות': 1,
-    'מיידי': 5,
+    מיידי: 5,
     נמוכה: 2,
     בינונית: 3,
     גבוהה: 4,
@@ -160,7 +164,7 @@ export function sortTasks(params: {
   const list = tasks.slice().sort((a, b) => {
     if (sortBy === 'עדיפות') {
       const diff = priorityRank[b.priority] - priorityRank[a.priority];
-      return diff === 0 ? (a.title || '').localeCompare(b.title || '') : diff;
+      return diff === 0 ? (a.type || '').localeCompare(b.type || '') : diff;
     }
     if (sortBy === 'נהג') {
       const la =
@@ -175,7 +179,7 @@ export function sortTasks(params: {
     const tb = b.estimated_start ? dayjs(b.estimated_start).valueOf() : 0;
     return (
       (sortDir === 'asc' ? ta - tb : tb - ta) ||
-      (a.title || '').localeCompare(b.title || '')
+      (a.type || '').localeCompare(b.type || '')
     );
   });
 
@@ -196,7 +200,7 @@ export function getColumnTasks(params: {
       const assignedTaskIds = new Set(assignees.map((ta) => ta.task_id));
       return filteredSortedTasks.filter((t) => !assignedTaskIds.has(t.id));
     }
-    
+
     const assignedTaskIds = assignees
       .filter((ta) => ta.driver_id === columnId)
       .map((ta) => ta.task_id);

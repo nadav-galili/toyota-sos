@@ -24,7 +24,6 @@ describe('TaskDetails - Waze deeplink and sections', () => {
       data: [
         {
           id: taskId,
-          title: 'מסירת רכב',
           type: 'pickup_or_dropoff_car',
           priority: 'high',
           status: 'pending',
@@ -43,8 +42,10 @@ describe('TaskDetails - Waze deeplink and sections', () => {
 
     render(<TaskDetails taskId={taskId} />);
 
-    // Header title
-    expect(await screen.findByText('מסירת רכב')).toBeInTheDocument();
+    // Header type label
+    expect(
+      await screen.findByText('pickup_or_dropoff_car')
+    ).toBeInTheDocument();
     // Waze link
     const wazeLink = await screen.findByRole('link', { name: 'ניווט עם Waze' });
     expect(wazeLink).toHaveAttribute(
@@ -58,7 +59,6 @@ describe('TaskDetails - Waze deeplink and sections', () => {
       data: [
         {
           id: taskId,
-          title: 'בדיקה ללא כתובת',
           type: 'other',
           priority: 'low',
           status: 'pending',
@@ -76,9 +76,7 @@ describe('TaskDetails - Waze deeplink and sections', () => {
     });
 
     render(<TaskDetails taskId={taskId} />);
-    expect(await screen.findByText('בדיקה ללא כתובת')).toBeInTheDocument();
+    expect(await screen.findByText('other')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'פתיחה ב‑Waze' })).toBeNull();
   });
 });
-
-

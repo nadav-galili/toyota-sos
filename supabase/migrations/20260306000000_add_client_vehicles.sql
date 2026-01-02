@@ -33,7 +33,6 @@ DROP FUNCTION IF EXISTS public.get_task_details(uuid);
 CREATE OR REPLACE FUNCTION public.get_task_details(task_id uuid)
 RETURNS TABLE (
   id uuid,
-  title text,
   type public.task_type,
   priority public.task_priority,
   status public.task_status,
@@ -53,7 +52,6 @@ STABLE
 AS $$
   SELECT
     t.id,
-    t.title,
     t.type,
     t.priority,
     t.status,
@@ -67,7 +65,7 @@ AS $$
     cv.license_plate AS client_vehicle_plate,
     cv.model AS client_vehicle_model,
     t.updated_at
-  FROM public.tasks t
+  from public.tasks t
   LEFT JOIN public.clients c ON c.id = t.client_id
   LEFT JOIN public.vehicles v ON v.id = t.vehicle_id
   LEFT JOIN public.clients_vehicles cv ON cv.id = t.client_vehicle_id
@@ -87,7 +85,6 @@ CREATE OR REPLACE FUNCTION public.get_driver_tasks(
 )
 RETURNS TABLE (
   id uuid,
-  title text,
   type public.task_type,
   priority public.task_priority,
   status public.task_status,
@@ -142,7 +139,6 @@ BEGIN
   RETURN QUERY
   SELECT
     t.id,
-    t.title,
     t.type,
     t.priority,
     t.status,

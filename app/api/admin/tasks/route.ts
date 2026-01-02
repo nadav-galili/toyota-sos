@@ -30,6 +30,8 @@ export async function POST(request: NextRequest) {
   try {
     const cookieStore = await cookies();
     const roleCookie = cookieStore.get('toyota_role')?.value;
+    const userIdCookie = cookieStore.get('toyota_user_id')?.value;
+
     if (
       !roleCookie ||
       (roleCookie !== 'admin' &&
@@ -41,7 +43,6 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const {
-      title,
       type,
       priority,
       status,
@@ -193,7 +194,6 @@ export async function POST(request: NextRequest) {
     const { data: created, error } = await admin
       .from('tasks')
       .insert({
-        title,
         type,
         priority,
         status,
@@ -210,6 +210,8 @@ export async function POST(request: NextRequest) {
         distance_from_garage: distance_from_garage ?? null,
         lat: effectiveLat,
         lng: effectiveLng,
+        created_by: userIdCookie ?? null,
+        updated_by: userIdCookie ?? null,
       })
       .select('*')
       .single();
@@ -244,6 +246,8 @@ export async function POST(request: NextRequest) {
 
     // Insert assignments if provided
     const inserts: TaskAssignee[] = [];
+    const seenDriverIds = new Set<string>();
+
     if (lead_driver_id) {
       inserts.push({
         id: crypto.randomUUID(),
@@ -252,11 +256,12 @@ export async function POST(request: NextRequest) {
         is_lead: true,
         assigned_at: new Date().toISOString(),
       });
+      seenDriverIds.add(lead_driver_id);
     }
+
     if (Array.isArray(co_driver_ids) && co_driver_ids.length > 0) {
       for (const id of co_driver_ids) {
-        // skip if same as lead
-        if (id && id !== lead_driver_id) {
+        if (id && !seenDriverIds.has(id)) {
           inserts.push({
             id: crypto.randomUUID(),
             task_id: created.id,
@@ -264,11 +269,26 @@ export async function POST(request: NextRequest) {
             is_lead: false,
             assigned_at: new Date().toISOString(),
           });
+          seenDriverIds.add(id);
         }
       }
     }
+
     if (inserts.length > 0) {
-      await admin.from('task_assignees').insert(inserts);
+      const { error: insertError } = await admin
+        .from('task_assignees')
+        .insert(inserts);
+
+      if (insertError) {
+        console.error('Error inserting assignments:', insertError);
+        // Best-effort cleanup: if task was created but assignees failed, we might want to delete the task
+        // or just return success with a warning. Given the current structure, we'll return an error.
+        await admin.from('tasks').delete().eq('id', created.id);
+        return NextResponse.json(
+          { error: insertError.message },
+          { status: 400 }
+        );
+      }
 
       // Notify assigned drivers
       try {
@@ -286,9 +306,7 @@ export async function POST(request: NextRequest) {
           recipients,
           payload: {
             title: 'משימה חדשה',
-            body: `הוקצתה לך משימה חדשה: ${
-              created.type || created.title || 'ללא כותרת'
-            }`,
+            body: `הוקצתה לך משימה חדשה: ${created.type || 'ללא כותרת'}`,
             taskId: created.id,
             taskType: created.type,
             url: `/driver/tasks/${created.id}`,

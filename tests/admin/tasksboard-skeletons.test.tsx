@@ -1,12 +1,19 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
-import { TasksBoard, Task, Driver, TaskAssignee, Client, Vehicle } from '@/components/admin/TasksBoard';
+import {
+  TasksBoard,
+  Task,
+  Driver,
+  TaskAssignee,
+  Client,
+  Vehicle,
+} from '@/components/admin/TasksBoard';
 
 describe('TasksBoard Loading Skeletons and Empty States (7.1.6)', () => {
   const mockTasks: Task[] = [
     {
       id: 'task-1',
-      title: 'משימה 1',
+
       type: 'pickup_or_dropoff_car',
       priority: 'high',
       status: 'pending',
@@ -24,7 +31,12 @@ describe('TasksBoard Loading Skeletons and Empty States (7.1.6)', () => {
   ];
 
   const mockDrivers: Driver[] = [
-    { id: 'driver-1', name: 'דוד כהן', email: 'driver1@example.com', role: 'driver' },
+    {
+      id: 'driver-1',
+      name: 'דוד כהן',
+      email: 'driver1@example.com',
+      role: 'driver',
+    },
   ];
 
   const mockTaskAssignees: TaskAssignee[] = [
@@ -38,7 +50,12 @@ describe('TasksBoard Loading Skeletons and Empty States (7.1.6)', () => {
   ];
 
   const mockClients: Client[] = [
-    { id: 'client-1', name: 'אחי אבו קנו', phone: '050-1234567', email: 'client1@example.com' },
+    {
+      id: 'client-1',
+      name: 'אחי אבו קנו',
+      phone: '050-1234567',
+      email: 'client1@example.com',
+    },
   ];
 
   const mockVehicles: Vehicle[] = [
@@ -56,9 +73,11 @@ describe('TasksBoard Loading Skeletons and Empty States (7.1.6)', () => {
       />
     );
 
-    // Should show the board and tasks, not loading state
-    expect(screen.getByRole('main', { name: /לוח משימות/i })).toBeInTheDocument();
-    expect(screen.getByText('משימה 1')).toBeInTheDocument();
+    // Should show the board and tasks, not loading state (using type label)
+    expect(
+      screen.getByRole('main', { name: /לוח משימות/i })
+    ).toBeInTheDocument();
+    expect(screen.getByText('איסוף רכב/שינוע')).toBeInTheDocument();
   });
 
   test('shows empty state when no tasks exist', () => {
@@ -75,7 +94,7 @@ describe('TasksBoard Loading Skeletons and Empty States (7.1.6)', () => {
     // Should show columns but with empty state messages
     const regions = screen.getAllByRole('region', { name: /עמודה:/ });
     expect(regions.length).toBeGreaterThan(0);
-    
+
     // All columns should show empty state
     expect(screen.getAllByText('אין משימות').length).toBeGreaterThan(0);
   });
@@ -146,8 +165,8 @@ describe('TasksBoard Loading Skeletons and Empty States (7.1.6)', () => {
       />
     );
 
-    // Task card should display with all parts
-    expect(screen.getByText('משימה 1')).toBeInTheDocument();
+    // Task card should display with all parts (using type label)
+    expect(screen.getByText('איסוף רכב/שינוע')).toBeInTheDocument();
     expect(screen.getByText('דוד כהן')).toBeInTheDocument(); // Driver name
   });
 
@@ -300,4 +319,3 @@ describe('TasksBoard Loading Skeletons and Empty States (7.1.6)', () => {
     });
   });
 });
-

@@ -1,7 +1,7 @@
 import { createServiceRoleClient } from '@/lib/auth';
 
 export type ListTaskAuditParams = {
-  taskId: string;
+  taskId?: string | null;
   limit?: number;
   offset?: number;
   role?: string | null;
@@ -19,17 +19,32 @@ export async function listTaskAudit(params: ListTaskAuditParams) {
   }
 
   const supa = params.supaOverride ?? createServiceRoleClient();
-  const { data, error } = await supa
+  let query = supa
     .from('task_audit_log')
-    .select('id, task_id, actor_id, action, changed_at, before, after, diff')
-    .eq('task_id', taskId)
+    .select(
+      `
+      id, 
+      task_id, 
+      actor_id, 
+      action, 
+      changed_at, 
+      before, 
+      after, 
+      diff,
+      actor:profiles!actor_id (name, email)
+    `
+    )
     .order('changed_at', { ascending: false })
     .range(offset, offset + limit - 1);
+
+  if (taskId) {
+    query = query.eq('task_id', taskId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return { status: 500, body: { error: error.message } };
   }
   return { status: 200, body: { data: data ?? [] } };
 }
-
-

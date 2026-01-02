@@ -16,6 +16,7 @@ export async function PATCH(
     // Check authentication via cookie
     const cookieStore = await cookies();
     const roleCookie = cookieStore.get('toyota_role')?.value;
+    const userIdCookie = cookieStore.get('toyota_user_id')?.value;
 
     if (
       !roleCookie ||
@@ -76,6 +77,7 @@ export async function PATCH(
       .from('tasks')
       .update({
         updated_at: new Date().toISOString(),
+        updated_by: userIdCookie ?? null,
       })
       .eq('id', taskId)
       .is('deleted_at', null);
@@ -83,7 +85,7 @@ export async function PATCH(
     // Get task details for notification (only if not deleted)
     const { data: taskData } = await admin
       .from('tasks')
-      .select('id, type, title, estimated_start')
+      .select('id, type, estimated_start')
       .eq('id', taskId)
       .is('deleted_at', null)
       .single();
@@ -111,7 +113,7 @@ export async function PATCH(
             payload: {
               title: 'משימה חדשה',
               body: `הוקצתה לך משימה חדשה: ${
-                taskData.type || taskData.title || 'ללא כותרת'
+                taskData.type || 'ללא כותרת'
               }`,
               taskId: taskId,
               taskType: taskData.type,

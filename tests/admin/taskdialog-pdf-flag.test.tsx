@@ -29,7 +29,7 @@ describe('TaskDialog PDF export flag', () => {
         mode="edit"
         task={{
           id: 't99',
-          title: 'Hello',
+          type: 'אחר',
           type: 'other',
           priority: 'medium',
           status: 'pending',

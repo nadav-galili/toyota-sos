@@ -36,7 +36,6 @@ describe('DriverHome filtering and tabs', () => {
   const todayItems = [
     {
       id: 't1',
-      title: 'מסירת רכב ללקוח',
       type: 'pickup_or_dropoff_car',
       priority: 'high' as const,
       status: 'pending' as const,
@@ -46,7 +45,6 @@ describe('DriverHome filtering and tabs', () => {
     },
     {
       id: 't2',
-      title: 'הסעת לקוח למוסך',
       type: 'drive_client_to_dealership',
       priority: 'medium' as const,
       status: 'in_progress' as const,
@@ -58,7 +56,6 @@ describe('DriverHome filtering and tabs', () => {
   const overdueItems = [
     {
       id: 't3',
-      title: 'מסירת רכב חלופי',
       type: 'replacement_car_delivery',
       priority: 'low' as const,
       status: 'pending' as const,
@@ -83,9 +80,9 @@ describe('DriverHome filtering and tabs', () => {
   test('default tab today shows only tasks intersecting today', async () => {
     render(<DriverHome tasks={[]} />);
     // There are 3 today-intersecting tasks by the provided dates (all within today).
-    // But overdue is also today intersecting; we assert count >= 2 and contains titles.
-    expect(await screen.findByText('מסירת רכב ללקוח')).toBeInTheDocument();
-    expect(await screen.findByText('הסעת לקוח למוסך')).toBeInTheDocument();
+    // But overdue is also today intersecting; we assert count >= 2 and contains types.
+    expect(await screen.findByText(/איסוף רכב\/שינוע|pickup_or_dropoff_car/)).toBeInTheDocument();
+    expect(await screen.findByText(/הסעת לקוח למוסך|drive_client_to_dealership/)).toBeInTheDocument();
   });
 
   test('switch to Overdue tab shows only overdue item', async () => {
@@ -94,9 +91,9 @@ describe('DriverHome filtering and tabs', () => {
     rpcMock.mockResolvedValueOnce({ data: overdueItems, error: null }); // after tab change
     render(<DriverHome tasks={[]} />);
     await userEvent.click(screen.getByRole('button', { name: 'איחורים' }));
-    expect(await screen.findByText('מסירת רכב חלופי')).toBeInTheDocument();
+    expect(await screen.findByText(/מסירת רכב חלופי|replacement_car_delivery/)).toBeInTheDocument();
     // And hide a non-overdue one
-    expect(screen.queryByText('הסעת לקוח למוסך')).not.toBeInTheDocument();
+    expect(screen.queryByText(/הסעת לקוח למוסך|drive_client_to_dealership/)).not.toBeInTheDocument();
   });
 
   test('switch to All tab shows all items', async () => {
@@ -105,9 +102,9 @@ describe('DriverHome filtering and tabs', () => {
     rpcMock.mockResolvedValueOnce({ data: [...todayItems, ...overdueItems], error: null });
     render(<DriverHome tasks={[]} />);
     await userEvent.click(screen.getByRole('button', { name: 'הכל' }));
-    expect(await screen.findByText('מסירת רכב ללקוח')).toBeInTheDocument();
-    expect(await screen.findByText('הסעת לקוח למוסך')).toBeInTheDocument();
-    expect(await screen.findByText('מסירת רכב חלופי')).toBeInTheDocument();
+    expect(await screen.findByText(/איסוף רכב\/שינוע|pickup_or_dropoff_car/)).toBeInTheDocument();
+    expect(await screen.findByText(/הסעת לקוח למוסך|drive_client_to_dealership/)).toBeInTheDocument();
+    expect(await screen.findByText(/מסירת רכב חלופי|replacement_car_delivery/)).toBeInTheDocument();
   });
 });
 
@@ -115,7 +112,6 @@ describe('pagination de-duplication', () => {
   const now = Date.now();
   const page1 = Array.from({ length: 10 }).map((_, i) => ({
     id: `p1-${i}`,
-    title: `p1-${i}`,
     type: 'pickup_or_dropoff_car',
     priority: 'low' as const,
     status: 'pending' as const,
@@ -128,7 +124,6 @@ describe('pagination de-duplication', () => {
     page1[2],
     {
       id: 'p2-new',
-      title: 'p2-new',
       type: 'drive_client_to_dealership',
       priority: 'medium' as const,
       status: 'in_progress' as const,
@@ -154,14 +149,11 @@ describe('pagination de-duplication', () => {
     rpcMock.mockResolvedValueOnce({ data: page2, error: null }); // load more
     render(<DriverHome tasks={[]} />);
     // initial render (one of the items)
-    expect(await screen.findByText('p1-0')).toBeInTheDocument();
+    expect(await screen.findAllByText(/איסוף רכב\/שינוע|pickup_or_dropoff_car/)).toHaveLength(10);
     // click Load more
     await userEvent.click(screen.getByRole('button', { name: 'טען עוד' }));
-    // still only 4 unique titles
-    expect(screen.getByText('p1-0')).toBeInTheDocument();
-    expect(screen.getByText('p1-1')).toBeInTheDocument();
-    expect(screen.getByText('p1-2')).toBeInTheDocument();
-    expect(screen.getByText('p2-new')).toBeInTheDocument();
+    // still only unique types/tasks
+    expect(screen.queryAllByText(/הסעת לקוח למוסך|drive_client_to_dealership/)).toHaveLength(1);
   });
 });
 
@@ -170,7 +162,6 @@ describe('pull-to-refresh', () => {
   const initialItems = [
     {
       id: 'a1',
-      title: 'initial-1',
       type: 'pickup_or_dropoff_car',
       priority: 'low' as const,
       status: 'pending' as const,
@@ -182,7 +173,6 @@ describe('pull-to-refresh', () => {
   const refreshedItems = [
     {
       id: 'r1',
-      title: 'refreshed-1',
       type: 'drive_client_to_dealership',
       priority: 'medium' as const,
       status: 'in_progress' as const,
@@ -210,7 +200,7 @@ describe('pull-to-refresh', () => {
 
     const { container } = render(<DriverHome tasks={[]} />);
     // wait initial
-    expect(await screen.findByText('initial-1')).toBeInTheDocument();
+    expect(await screen.findByText(/איסוף רכב\/שינוע|pickup_or_dropoff_car/)).toBeInTheDocument();
 
     const root = container.querySelector('div.space-y-4') as HTMLElement;
     expect(root).toBeTruthy();
@@ -229,7 +219,7 @@ describe('pull-to-refresh', () => {
     // Expect a refresh call (second RPC)
     await waitFor(() => expect(rpcMock).toHaveBeenCalledTimes(2));
     // And new item rendered
-    expect(await screen.findByText('refreshed-1')).toBeInTheDocument();
+    expect(await screen.findByText(/הסעת לקוח למוסך|drive_client_to_dealership/)).toBeInTheDocument();
   });
 });
 
@@ -240,7 +230,6 @@ describe('date helpers', () => {
     expect(
       isOverdue({
         id: 'x',
-        title: 't',
         type: 'x',
         priority: 'low',
         status: 'pending',
@@ -253,7 +242,6 @@ describe('date helpers', () => {
     expect(
       isOverdue({
         id: 'x',
-        title: 't',
         type: 'x',
         priority: 'low',
         status: 'completed',

@@ -22,7 +22,6 @@ describe('TaskDetails a11y and collapsible behavior', () => {
       data: [
         {
           id: taskId,
-          title: 'תיקון צמיג',
           type: 'other',
           priority: 'medium',
           status: 'pending',
@@ -43,7 +42,7 @@ describe('TaskDetails a11y and collapsible behavior', () => {
   test('details section is displayed when details exist', async () => {
     const { container } = render(<TaskDetails taskId={taskId} />);
     // Wait for header text
-    expect(await screen.findByText('תיקון צמיג')).toBeInTheDocument();
+    expect(await screen.findByText('other')).toBeInTheDocument();
 
     // Details section should be displayed directly (not collapsible)
     expect(screen.getByText('תיאור המשימה:')).toBeInTheDocument();
@@ -54,12 +53,10 @@ describe('TaskDetails a11y and collapsible behavior', () => {
     render(<TaskDetails taskId={taskId} />);
 
     // Wait for content to load
-    expect(await screen.findByText('תיקון צמיג')).toBeInTheDocument();
+    expect(await screen.findByText('other')).toBeInTheDocument();
 
     // Details should always be visible (not collapsible)
     expect(screen.getByText('תיאור המשימה:')).toBeInTheDocument();
     expect(screen.getByText('פרטי עבודה')).toBeInTheDocument();
   });
 });
-
-

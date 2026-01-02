@@ -121,6 +121,7 @@ export async function PATCH(
     // Check authentication via cookie
     const cookieStore = await cookies();
     const roleCookie = cookieStore.get('toyota_role')?.value;
+    const userIdCookie = cookieStore.get('toyota_user_id')?.value;
 
     if (
       !roleCookie ||
@@ -136,7 +137,6 @@ export async function PATCH(
 
     // Fields that can be updated in the tasks table
     const allowedFields = [
-      'title',
       'type',
       'priority',
       'status',
@@ -265,7 +265,9 @@ export async function PATCH(
 
     // Add metadata
     updatePayload.updated_at = new Date().toISOString();
-    // Note: updated_by would require extracting user ID from auth context
+    if (userIdCookie) {
+      updatePayload.updated_by = userIdCookie;
+    }
 
     // Update in Supabase - explicitly select all fields including advisor_color
     const { data, error } = await admin
@@ -322,10 +324,23 @@ export async function PATCH(
     // Update assignments if provided
     if (hasDriverUpdate) {
       // 1. Remove old assignments
-      await admin.from('task_assignees').delete().eq('task_id', taskId);
+      const { error: deleteError } = await admin
+        .from('task_assignees')
+        .delete()
+        .eq('task_id', taskId);
+
+      if (deleteError) {
+        console.error('Error deleting old assignments:', deleteError);
+        return NextResponse.json(
+          { error: deleteError.message },
+          { status: 400 }
+        );
+      }
 
       // 2. Insert new ones
       const inserts: any[] = [];
+      const seenDriverIds = new Set<string>();
+
       if (lead_driver_id) {
         inserts.push({
           task_id: taskId,
@@ -333,21 +348,35 @@ export async function PATCH(
           is_lead: true,
           assigned_at: new Date().toISOString(),
         });
+        seenDriverIds.add(lead_driver_id);
       }
+
       if (Array.isArray(co_driver_ids) && co_driver_ids.length > 0) {
         for (const id of co_driver_ids) {
-          if (id && id !== lead_driver_id) {
+          if (id && !seenDriverIds.has(id)) {
             inserts.push({
               task_id: taskId,
               driver_id: id,
               is_lead: false,
               assigned_at: new Date().toISOString(),
             });
+            seenDriverIds.add(id);
           }
         }
       }
+
       if (inserts.length > 0) {
-        await admin.from('task_assignees').insert(inserts);
+        const { error: insertError } = await admin
+          .from('task_assignees')
+          .insert(inserts);
+
+        if (insertError) {
+          console.error('Error inserting new assignments:', insertError);
+          return NextResponse.json(
+            { error: insertError.message },
+            { status: 400 }
+          );
+        }
       }
     }
 
@@ -365,19 +394,22 @@ export async function PATCH(
           subscription: undefined,
         }));
 
+        const isCancelled =
+          updatePayload.status === 'חסומה' && currentTask?.status !== 'חסומה';
+
         await notify({
-          type: 'updated',
+          type: isCancelled ? 'cancelled' : 'updated',
           task_id: taskId,
           task_date: data.estimated_start,
           recipients,
           payload: {
-            title: 'עדכון משימה',
-            body: `עודכנו פרטי משימה: ${
-              data.type || data.title || 'ללא כותרת'
-            }`,
+            title: isCancelled ? 'משימה בוטלה' : 'עדכון משימה',
+            body: isCancelled
+              ? `המשימה "${data.type || 'ללא כותרת'}" בוטלה על ידי המערכת`
+              : `עודכנו פרטי משימה: ${data.type || 'ללא כותרת'}`,
             taskId: taskId,
             taskType: data.type,
-            url: `/driver/tasks/${taskId}`,
+            url: isCancelled ? '/driver' : `/driver/tasks/${taskId}`,
             changes: Object.keys(updatePayload),
           },
         });
@@ -438,14 +470,58 @@ export async function DELETE(
 
     const { taskId } = await params;
     const admin = getSupabaseAdmin();
+
+    // 1. Fetch task and assignees before soft-deletion for notification
+    const { data: taskData, error: fetchErr } = await admin
+      .from('tasks')
+      .select('type, estimated_start')
+      .eq('id', taskId)
+      .is('deleted_at', null)
+      .single();
+
+    const { data: assignees } = await admin
+      .from('task_assignees')
+      .select('driver_id')
+      .eq('task_id', taskId);
+
     // Soft-delete: mark task as deleted instead of hard delete
     const { error } = await admin
       .from('tasks')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', taskId);
+
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
+
+    // 2. Notify assigned drivers about the cancellation
+    if (!fetchErr && taskData && assignees && assignees.length > 0) {
+      try {
+        const recipients = assignees.map((a: any) => ({
+          user_id: a.driver_id,
+          subscription: undefined,
+        }));
+
+        await notify({
+          type: 'cancelled',
+          task_id: taskId,
+          task_date: taskData.estimated_start,
+          recipients,
+          payload: {
+            title: 'משימה בוטלה',
+            body: `המשימה "${
+              taskData.type || 'ללא כותרת'
+            }" בוטלה על ידי המערכת`,
+            taskId: taskId,
+            taskType: taskData.type,
+            url: '/driver', // Task is gone, send to board
+          },
+        });
+      } catch (notifyErr) {
+        console.error('Failed to notify drivers on delete:', notifyErr);
+      }
+    }
+
     return NextResponse.json(
       { ok: true },
       {

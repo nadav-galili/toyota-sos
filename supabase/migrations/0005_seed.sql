@@ -33,38 +33,23 @@ with
   c1 as (select id from public.clients where name = 'לקוח א' limit 1),
   c2 as (select id from public.clients where name = 'לקוח ב' limit 1),
   v1 as (select id from public.vehicles where license_plate = '12-345-67' limit 1),
-  v2 as (select id from public.vehicles where license_plate = '89-012-34' limit 1),
-  sample_checklist as (
-    select '{
-      "type": "object",
-      "title": "בדיקת משימה לפני יציאה",
-      "required": ["car_license", "client_license"],
-      "properties": {
-        "car_license": { "type": "boolean", "title": "לקחת רישיון רכב" },
-        "client_license": { "type": "boolean", "title": "לקחת רישיון לקוח" },
-        "notes": { "type": "string", "title": "הערות" }
-      }
-    }'::jsonb as schema
-  )
+  v2 as (select id from public.vehicles where license_plate = '89-012-34' limit 1)
 insert into public.tasks (
-  title, type, priority, status,
+  type, priority, status,
   estimated_start, estimated_end,
   address, details,
   client_id, vehicle_id,
-  created_by, updated_by,
-  checklist_schema
+  created_by, updated_by
 )
 select
-  x.title, x.type, x.priority, x.status,
+  x.type, x.priority, x.status,
   x.estimated_start, x.estimated_end,
   x.address, x.details,
   x.client_id, x.vehicle_id,
-  null::uuid as created_by, null::uuid as updated_by,
-  (select schema from sample_checklist)
+  null::uuid as created_by, null::uuid as updated_by
 from (
   -- Overdue pending task
   select
-    'מסירת רכב ללקוח'::text as title,
     'pickup_or_dropoff_car'::task_type as type,
     'high'::task_priority as priority,
     'pending'::task_status as status,
@@ -77,7 +62,6 @@ from (
   union all
   -- In-progress (not overdue)
   select
-    'הסעת לקוח למוסך',
     'drive_client_to_dealership'::task_type,
     'medium'::task_priority,
     'in_progress'::task_status,
@@ -90,7 +74,6 @@ from (
   union all
   -- Completed (past)
   select
-    'מסירת רכב חלופי',
     'replacement_car_delivery'::task_type,
     'low'::task_priority,
     'completed'::task_status,
@@ -101,7 +84,7 @@ from (
     (select id from c1),
     (select id from v2)
 ) x
--- crude idempotency: avoid duplicating by same title if already exists
-where not exists (select 1 from public.tasks t where t.title = x.title);
+-- crude idempotency: avoid duplicating by same details if already exists
+where not exists (select 1 from public.tasks t where t.details = x.details);
 
 

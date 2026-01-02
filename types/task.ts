@@ -22,7 +22,6 @@ export type AdvisorColor = 'צהוב' | 'ירוק' | 'כתום' | 'סגול בה
 
 export interface Task {
   id: string;
-  title: string;
   type: TaskType;
   priority: TaskPriority;
   status: TaskStatus;
@@ -44,6 +43,7 @@ export interface Task {
   distance_from_garage?: number | null;
   lat?: number | null;
   lng?: number | null;
+  deleted_at?: string | null;
   stops?: TaskStop[];
 }
 

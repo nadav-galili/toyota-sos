@@ -81,7 +81,6 @@ jest.mock('@/lib/events', () => ({
 describe('ReplacementCarDeliveryForm', () => {
   const mockTask: any = {
     id: 'task-1',
-    title: 'Test Task',
     vehicle: { licensePlate: '11-222-33', model: 'Toyota' },
     clientName: 'John Doe',
   };

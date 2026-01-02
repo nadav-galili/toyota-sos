@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     let q = admin
       .from('tasks')
       .select(
-        'id,title,type,status,priority,created_at,updated_at,estimated_end,task_assignees!left(driver_id,profiles!task_assignees_driver_id_fkey(name))'
+        'id,type,status,priority,created_at,updated_at,estimated_end,task_assignees!left(driver_id,profiles!task_assignees_driver_id_fkey(name))'
       )
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
@@ -120,7 +120,6 @@ export async function GET(request: NextRequest) {
       const driver_name = lead?.profiles?.name || null;
       return {
         id: t.id,
-        title: t.title,
         type: t.type,
         status: t.status,
         priority: t.priority,

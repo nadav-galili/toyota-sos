@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/components/AuthProvider';
@@ -203,6 +204,20 @@ function LoginContent() {
             </Button>
           </form>
         )}
+
+        {/* Privacy Notice */}
+        <div className="text-center px-4">
+          <p className="text-xs text-gray-500 leading-relaxed">
+            בהתחברות למערכת, הנך מאשר כי קראת והסכמת לתנאי{' '}
+            <Link
+              href="/privacy"
+              className="text-primary hover:underline font-medium"
+            >
+              מדיניות הפרטיות
+            </Link>{' '}
+            של Toyota S.O.S.
+          </p>
+        </div>
 
         {/* Footer */}
         <div className="text-center text-sm text-gray-600">

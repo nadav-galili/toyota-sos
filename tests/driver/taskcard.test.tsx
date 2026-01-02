@@ -5,7 +5,6 @@ import { TaskCard } from '@/components/driver/TaskCard';
 describe('TaskCard', () => {
   const baseProps = {
     id: 't-1',
-    title: 'מסירת רכב ללקוח',
     type: 'pickup_or_dropoff_car',
     priority: 'גבוהה' as const,
     status: 'בהמתנה' as const,

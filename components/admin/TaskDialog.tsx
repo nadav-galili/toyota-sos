@@ -32,7 +32,18 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { Calendar, PlusIcon, SaveIcon, XIcon } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Calendar, PlusIcon, SaveIcon, XIcon, Trash2Icon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RtlSelectDropdown } from './RtlSelectDropdown';
@@ -48,6 +59,9 @@ import {
   isValidLicensePlate,
   normalizeLicensePlate,
 } from '@/lib/vehicleLicensePlate';
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AuditFeed } from './AuditFeed';
 
 type Mode = 'create' | 'edit';
 type StopForm = {
@@ -122,7 +136,7 @@ const types: TaskType[] = [
   'אחר',
 ];
 const priorities: TaskPriority[] = ['ללא עדיפות', 'מיידי'];
-const statuses: TaskStatus[] = ['בהמתנה', 'בעבודה', 'חסומה', 'הושלמה'];
+const statuses: TaskStatus[] = ['בהמתנה', 'בעבודה', 'הושלמה', 'חסומה'];
 const multiStopTypes: TaskType[] = ['הסעת לקוח הביתה', 'הסעת לקוח למוסך'];
 const multiStopAliases = ['drive_client_home', 'drive_client_to_dealership'];
 const isMultiStopTaskType = (val: string | null | undefined) => {
@@ -169,7 +183,6 @@ export function TaskDialog(props: TaskDialogProps) {
   const [vehiclesLocal, setVehiclesLocal] = useState<Vehicle[]>(vehicles);
   const [clientVehiclesLocal, setClientVehiclesLocal] =
     useState<ClientVehicle[]>(clientVehicles);
-  const [title, setTitle] = useState(task?.title ?? '');
   const [type, setType] = useState<TaskType>(task?.type ?? 'אחר');
   const [priority, setPriority] = useState<TaskPriority>(
     task?.priority ?? 'ללא עדיפות'
@@ -338,7 +351,6 @@ export function TaskDialog(props: TaskDialogProps) {
     if (isNewlyOpened) {
       // Reset on open to initial values
       setError(null);
-      setTitle(task?.title ?? '');
       setType(task?.type ?? 'אחר');
       setPriority(task?.priority ?? 'ללא עדיפות');
       setStatus(task?.status ?? 'בהמתנה');
@@ -450,9 +462,12 @@ export function TaskDialog(props: TaskDialogProps) {
 
         if (taskAssignees.length > 0) {
           const lead = taskAssignees.find((a) => a.is_lead);
-          const co = taskAssignees
-            .filter((a) => !a.is_lead)
-            .map((a) => a.driver_id);
+          // Use a Set to ensure unique driver IDs
+          const co = Array.from(
+            new Set(
+              taskAssignees.filter((a) => !a.is_lead).map((a) => a.driver_id)
+            )
+          );
           setLeadDriverId(lead?.driver_id ?? '');
           setCoDriverIds(co);
         } else {
@@ -489,9 +504,12 @@ export function TaskDialog(props: TaskDialogProps) {
       const taskAssignees = assignees.filter((a) => a.task_id === task.id);
       if (taskAssignees.length > 0) {
         const lead = taskAssignees.find((a) => a.is_lead);
-        const co = taskAssignees
-          .filter((a) => !a.is_lead)
-          .map((a) => a.driver_id);
+        // Use a Set to ensure unique driver IDs
+        const co = Array.from(
+          new Set(
+            taskAssignees.filter((a) => !a.is_lead).map((a) => a.driver_id)
+          )
+        );
         setLeadDriverId(lead?.driver_id ?? '');
         setCoDriverIds(co);
       }
@@ -1259,13 +1277,15 @@ export function TaskDialog(props: TaskDialogProps) {
         }
       }
 
-      // Validation for "Test Execution" (ביצוע טסט) - must have client and vehicle
+      // Validation for "Test Execution" (ביצוע טסט) - must have client and vehicle (either agency or client)
       if (type === 'ביצוע טסט') {
         if (!finalClientId) {
           throw new Error('חובה לבחור לקוח עבור משימת ביצוע טסט');
         }
-        if (!finalVehicleId) {
-          throw new Error('חובה לבחור רכב עבור משימת ביצוע טסט');
+        if (!finalVehicleId && !clientVehicleId) {
+          throw new Error(
+            'חובה לבחור רכב (סוכנות או לקוח) עבור משימת ביצוע טסט'
+          );
         }
       }
 
@@ -1293,7 +1313,6 @@ export function TaskDialog(props: TaskDialogProps) {
           .toISOString();
 
         const body = {
-          title: title.trim() || null,
           type,
           priority,
           status,
@@ -1366,7 +1385,6 @@ export function TaskDialog(props: TaskDialogProps) {
             distance_from_garage: number | null;
           }[];
         } = {
-          title: title.trim() || 'משימה ללא כותרת',
           type,
           priority,
           status,
@@ -1462,250 +1480,1878 @@ export function TaskDialog(props: TaskDialogProps) {
             </div>
           )}
 
-          <form
-            onSubmit={handleSubmit}
-            className="grid grid-cols-1 gap-3 md:grid-cols-2"
-          >
-            <label className="flex flex-col gap-1 ">
-              <span className="text-md underline font-medium text-blue-500">
-                סוג
-              </span>
-              <RtlSelectDropdown
-                value={type}
-                options={types.map((t) => ({ value: t, label: t }))}
-                onChange={(value) => setType(value as TaskType)}
-              />
-            </label>
+          {mode === 'edit' && task ? (
+            <Tabs defaultValue="details" dir="rtl" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-4">
+                <TabsTrigger value="details">פרטי משימה</TabsTrigger>
+                <TabsTrigger value="audit">היסטוריית שינויים</TabsTrigger>
+              </TabsList>
 
-            <label className="flex flex-col gap-1">
-              <span className="text-md underline font-medium text-blue-500">
-                עדיפות
-              </span>
-              <RtlSelectDropdown
-                value={priority}
-                options={priorities.map((p) => ({ value: p, label: p }))}
-                onChange={(value) => setPriority(value as TaskPriority)}
-              />
-            </label>
+              <TabsContent value="details" className="mt-0">
+                <form
+                  onSubmit={handleSubmit}
+                  className="grid grid-cols-1 gap-3 md:grid-cols-2"
+                >
+                  {/* Form Content starts here */}
+                  <label className="flex flex-col gap-1 ">
+                    <span className="text-md underline font-medium text-blue-500">
+                      סוג
+                    </span>
+                    <RtlSelectDropdown
+                      value={type}
+                      options={types.map((t) => ({ value: t, label: t }))}
+                      onChange={(value) => setType(value as TaskType)}
+                    />
+                  </label>
 
-            <label className="flex flex-col gap-1">
-              <span className="text-md underline font-medium text-blue-500">
-                סטטוס
-              </span>
-              <RtlSelectDropdown
-                value={status}
-                options={statuses.map((s) => ({
-                  value: s,
-                  label: statusLabels[s] || s,
-                }))}
-                onChange={(value) => setStatus(value as TaskStatus)}
-              />
-            </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-md underline font-medium text-blue-500">
+                      עדיפות
+                    </span>
+                    <RtlSelectDropdown
+                      value={priority}
+                      options={priorities.map((p) => ({ value: p, label: p }))}
+                      onChange={(value) => setPriority(value as TaskPriority)}
+                    />
+                  </label>
 
-            <label className="col-span-1 md:col-span-2 flex flex-col gap-1">
-              <span className="text-md underline font-medium text-blue-500">
-                תיאור
-              </span>
-              <textarea
-                className="rounded border border-gray-300 p-2"
-                rows={2}
-                value={details}
-                onChange={(e) => setDetails(e.target.value)}
-              />
-            </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-md underline font-medium text-blue-500">
+                      סטטוס
+                    </span>
+                    <RtlSelectDropdown
+                      value={status}
+                      options={statuses.map((s) => ({
+                        value: s,
+                        label: statusLabels[s] || s,
+                      }))}
+                      onChange={(value) => setStatus(value as TaskStatus)}
+                    />
+                  </label>
 
-            {!isMultiStopType && (
-              <>
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium text-blue-600">
-                    שם יועץ{' '}
-                    {(type === 'הסעת לקוח הביתה' ||
-                      type === 'איסוף רכב/שינוע') && (
-                      <span className="text-red-500">*</span>
-                    )}
-                  </span>
-                  <input
-                    className="rounded border border-gray-300 p-2"
-                    value={advisorName}
-                    onChange={(e) => setAdvisorName(e.target.value)}
-                    placeholder="הזן שם יועץ"
-                  />
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium text-blue-600">
-                    צבע יועץ{' '}
-                    {(type === 'הסעת לקוח הביתה' ||
-                      type === 'איסוף רכב/שינוע') && (
-                      <span className="text-red-500">*</span>
-                    )}
-                  </span>
-                  <RtlSelectDropdown
-                    value={advisorColor || ''}
-                    options={[
-                      { value: '', label: '—' },
-                      ...getAdvisorColorOptions().map((color) => ({
-                        value: color,
-                        label: color,
-                        bgClass: getAdvisorColorBgClass(color),
-                        textClass: getAdvisorColorTextClass(color),
-                        color: getAdvisorColorHex(color),
-                      })),
-                    ]}
-                    onChange={(value) =>
-                      setAdvisorColor(
-                        value === '' ? null : (value as AdvisorColor)
-                      )
-                    }
-                    placeholder="בחר צבע"
-                  />
-                  {advisorColor && (
-                    <div className="mt-1 flex items-center gap-2">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getAdvisorColorBgClass(
-                          advisorColor
-                        )} ${getAdvisorColorTextClass(advisorColor)}`}
-                      >
-                        {advisorColor}
+                  <label className="col-span-1 md:col-span-2 flex flex-col gap-1">
+                    <span className="text-md underline font-medium text-blue-500">
+                      תיאור
+                    </span>
+                    <textarea
+                      className="rounded border border-gray-300 p-2"
+                      rows={2}
+                      value={details}
+                      onChange={(e) => setDetails(e.target.value)}
+                    />
+                  </label>
+
+                  {!isMultiStopType && (
+                    <>
+                      <label className="flex flex-col gap-1">
+                        <span className="text-sm font-medium text-blue-600">
+                          שם יועץ{' '}
+                          {(type === 'הסעת לקוח הביתה' ||
+                            type === 'איסוף רכב/שינוע') && (
+                            <span className="text-red-500">*</span>
+                          )}
+                        </span>
+                        <input
+                          className="rounded border border-gray-300 p-2"
+                          value={advisorName}
+                          onChange={(e) => setAdvisorName(e.target.value)}
+                          placeholder="הזן שם יועץ"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1">
+                        <span className="text-sm font-medium text-blue-600">
+                          צבע יועץ{' '}
+                          {(type === 'הסעת לקוח הביתה' ||
+                            type === 'איסוף רכב/שינוע') && (
+                            <span className="text-red-500">*</span>
+                          )}
+                        </span>
+                        <RtlSelectDropdown
+                          value={advisorColor || ''}
+                          options={[
+                            { value: '', label: '—' },
+                            ...getAdvisorColorOptions().map((color) => ({
+                              value: color,
+                              label: color,
+                              bgClass: getAdvisorColorBgClass(color),
+                              textClass: getAdvisorColorTextClass(color),
+                              color: getAdvisorColorHex(color),
+                            })),
+                          ]}
+                          onChange={(value) =>
+                            setAdvisorColor(
+                              value === '' ? null : (value as AdvisorColor)
+                            )
+                          }
+                          placeholder="בחר צבע"
+                        />
+                        {advisorColor && (
+                          <div className="mt-1 flex items-center gap-2">
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getAdvisorColorBgClass(
+                                advisorColor
+                              )} ${getAdvisorColorTextClass(advisorColor)}`}
+                            >
+                              {advisorColor}
+                            </span>
+                          </div>
+                        )}
+                      </label>
+                    </>
+                  )}
+
+                  <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <label className="flex flex-col gap-1">
+                      <span className="text-sm font-medium text-blue-600">
+                        תאריך
                       </span>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={`w-full justify-start text-right font-normal ${
+                              estimatedDateError ? 'border-red-500' : ''
+                            }`}
+                          >
+                            <Calendar className="ml-2 h-4 w-4" />
+                            {dayjs(estimatedDate).format('DD/MM/YYYY')}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="end">
+                          <CalendarComponent
+                            mode="single"
+                            selected={estimatedDate}
+                            className="min-w-56 [--cell-size:2.6rem] bg-white"
+                            onSelect={(date) => {
+                              if (date) {
+                                const result =
+                                  estimatedDateSchema.safeParse(date);
+                                if (result.success) {
+                                  setEstimatedDate(date);
+                                  setEstimatedDateError(null);
+                                } else {
+                                  setEstimatedDateError(
+                                    result.error.issues[0].message
+                                  );
+                                }
+                              }
+                            }}
+                            autoFocus={true}
+                            disabled={(date) => {
+                              const today = dayjs().startOf('day');
+                              const selectedDay = dayjs(date).startOf('day');
+                              return selectedDay.isBefore(today);
+                            }}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      {estimatedDateError && (
+                        <p className="text-sm text-red-600">
+                          {estimatedDateError}
+                        </p>
+                      )}
+                    </label>
+
+                    <label className="flex flex-col gap-1">
+                      <span className="text-sm font-medium text-blue-600">
+                        שעת התחלה
+                      </span>
+                      <input
+                        type="time"
+                        className="rounded border border-gray-300 p-2"
+                        value={estimatedStartTime}
+                        onChange={(e) => setEstimatedStartTime(e.target.value)}
+                      />
+                    </label>
+
+                    <label className="flex flex-col gap-1">
+                      <span className="text-sm font-medium text-blue-600">
+                        שעת סיום
+                      </span>
+                      <input
+                        type="time"
+                        className="rounded border border-gray-300 p-2"
+                        value={estimatedEndTime}
+                        onChange={(e) => setEstimatedEndTime(e.target.value)}
+                      />
+                    </label>
+                  </div>
+
+                  {!isMultiStopType && (
+                    <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {/* Client Selection */}
+                      <label className="flex flex-col gap-1">
+                        <div className="flex gap-2">
+                          <div className="grid w-full max-w-sm items-center gap-1">
+                            <Label htmlFor="client" className="text-blue-600">
+                              לקוח
+                              {(type === 'ביצוע טסט' ||
+                                type === 'חילוץ רכב תקוע' ||
+                                type === 'מסירת רכב חלופי' ||
+                                type === 'הסעת לקוח הביתה' ||
+                                type === 'איסוף רכב/שינוע' ||
+                                type === 'החזרת רכב/שינוע') && (
+                                <span className="text-red-500"> *</span>
+                              )}
+                            </Label>
+                            <Input
+                              type="text"
+                              id="client"
+                              placeholder="לקוח"
+                              value={clientQuery}
+                              onChange={(e) => {
+                                setClientQuery(e.target.value);
+                                setClientId('');
+                                setClientPhone('');
+                              }}
+                            />
+                            {clientSuggestions.length > 0 && !clientId && (
+                              <div className="mt-1 max-h-40 w-full overflow-y-auto rounded border border-gray-300 bg-white text-sm shadow-sm">
+                                {clientSuggestions.map((c) => (
+                                  <button
+                                    key={c.id}
+                                    type="button"
+                                    className="flex w-full items-center justify-between px-2 py-1 text-right hover:bg-blue-50"
+                                    onClick={() => {
+                                      setClientId(c.id);
+                                      setClientQuery(c.name);
+                                      setClientPhone(c.phone || '');
+                                    }}
+                                  >
+                                    <span>{c.name}</span>
+                                    {c.phone && (
+                                      <span className="text-xs text-gray-500">
+                                        {c.phone}
+                                      </span>
+                                    )}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            className="rounded border border-gray-300 px-2 text-xs h-9 self-end bg-blue-500 text-white flex items-center justify-center"
+                            onClick={() => setShowAddClient((v) => !v)}
+                          >
+                            <PlusIcon className="w-4 h-4" />
+                            חדש
+                          </button>
+                        </div>
+                        {showAddClient && (
+                          <div className="mt-2 grid grid-cols-3 gap-2">
+                            <input
+                              className="rounded border border-gray-300 p-2 col-span-1"
+                              placeholder="שם"
+                              value={newClientName}
+                              onChange={(e) => setNewClientName(e.target.value)}
+                            />
+                            <input
+                              className="rounded border border-gray-300 p-2 col-span-1"
+                              placeholder="טלפון"
+                              value={newClientPhone}
+                              onChange={(e) =>
+                                setNewClientPhone(e.target.value)
+                              }
+                            />
+                            <input
+                              className="rounded border border-gray-300 p-2 col-span-1"
+                              placeholder="אימייל (אופציונלי)"
+                              value={newClientEmail}
+                              onChange={(e) =>
+                                setNewClientEmail(e.target.value)
+                              }
+                            />
+
+                            <div className="col-span-3 flex justify-end gap-2">
+                              <button
+                                type="button"
+                                className="rounded border border-gray-300 px-2 text-xs"
+                                onClick={() => setShowAddClient(false)}
+                              >
+                                בטל
+                              </button>
+                              <button
+                                type="button"
+                                className="rounded bg-blue-600 hover:bg-blue-700 px-2 py-1 text-xs font-semibold text-white transition-colors"
+                                onClick={createClient}
+                              >
+                                צור
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </label>
+
+                      {/* Phone Field */}
+                      <label className="flex flex-col gap-1">
+                        <span className="text-sm font-medium text-blue-600">
+                          טלפון
+                          {(type === 'ביצוע טסט' ||
+                            type === 'חילוץ רכב תקוע' ||
+                            type === 'מסירת רכב חלופי' ||
+                            type === 'איסוף רכב/שינוע' ||
+                            type === 'החזרת רכב/שינוע') && (
+                            <span className="text-red-500"> *</span>
+                          )}
+                        </span>
+                        <Input
+                          type="tel"
+                          placeholder="טלפון"
+                          value={clientPhone}
+                          onChange={(e) => setClientPhone(e.target.value)}
+                        />
+                      </label>
+
+                      <label className="flex flex-col gap-1">
+                        <span className="text-sm font-medium text-blue-600">
+                          כתובת
+                          {(type === 'חילוץ רכב תקוע' ||
+                            type === 'איסוף רכב/שינוע' ||
+                            type === 'החזרת רכב/שינוע') && (
+                            <span className="text-red-500"> *</span>
+                          )}
+                        </span>
+                        <AddressAutocomplete
+                          value={addressQuery}
+                          onChange={(val) => {
+                            setAddressQuery(val);
+                            setSelectedMainCoords(null);
+                          }}
+                          onSelect={(addr, lat, lng) => {
+                            setAddressQuery(addr);
+                            setSelectedMainCoords({ lat, lng });
+                          }}
+                          className="w-full"
+                        />
+                      </label>
+
+                      {(type === 'איסוף רכב/שינוע' ||
+                        type === 'החזרת רכב/שינוע' ||
+                        type === 'ביצוע טסט') && (
+                        <label className="flex flex-col gap-1">
+                          <span className="text-sm font-medium text-blue-600">
+                            רכב לקוח{' '}
+                            {(type === 'איסוף רכב/שינוע' ||
+                              type === 'החזרת רכב/שינוע') && (
+                              <span className="text-red-500"> *</span>
+                            )}
+                          </span>
+                          <div className="flex gap-2">
+                            <div className="grid w-full max-w-sm items-center gap-1">
+                              <Input
+                                type="text"
+                                placeholder="רכב לקוח (חפש לפי מספר רישוי או דגם)"
+                                value={clientVehicleQuery}
+                                onChange={(e) => {
+                                  setClientVehicleQuery(e.target.value);
+                                  setClientVehicleId('');
+                                }}
+                              />
+                              {clientVehicleSuggestions.length > 0 &&
+                                !clientVehicleId && (
+                                  <div className="mt-1 max-h-40 w-full overflow-y-auto rounded border border-gray-300 bg-white text-sm shadow-sm">
+                                    {clientVehicleSuggestions.map((v) => (
+                                      <button
+                                        key={v.id}
+                                        type="button"
+                                        className="flex w-full items-center justify-between px-2 py-1 text-right hover:bg-blue-50"
+                                        onClick={() => {
+                                          setClientVehicleId(v.id);
+                                          setClientVehicleQuery(
+                                            `${formatLicensePlate(
+                                              v.license_plate
+                                            )}${v.model ? ` · ${v.model}` : ''}`
+                                          );
+                                        }}
+                                      >
+                                        <span>
+                                          {formatLicensePlate(v.license_plate)}
+                                          {v.model ? ` · ${v.model}` : ''}
+                                        </span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                            </div>
+                            <button
+                              type="button"
+                              className="rounded border border-gray-300 px-2 text-xs h-9 self-end bg-blue-500 text-white flex items-center justify-center"
+                              onClick={() => setShowAddClientVehicle((v) => !v)}
+                            >
+                              <PlusIcon className="w-4 h-4" />
+                              חדש
+                            </button>
+                          </div>
+                          {showAddClientVehicle && (
+                            <div className="mt-2 grid grid-cols-3 gap-2 p-2 border rounded bg-slate-50">
+                              {!clientId && (
+                                <div className="col-span-3 mb-1 text-[11px] font-bold text-red-600 bg-red-50 p-1 rounded border border-red-100">
+                                  ⚠️ חובה לבחור לקוח לפני הוספת רכב
+                                </div>
+                              )}
+                              <div className="col-span-1 flex flex-col gap-1">
+                                <label className="text-xs font-medium text-blue-600">
+                                  מספר רישוי
+                                </label>
+                                <input
+                                  className="rounded border border-gray-300 p-1 text-sm"
+                                  placeholder="7 או 8 ספרות"
+                                  value={newClientVehiclePlate}
+                                  onChange={(e) => {
+                                    const input = e.target.value;
+                                    const cleaned = input.replace(
+                                      /[^\d-]/g,
+                                      ''
+                                    );
+                                    setNewClientVehiclePlate(
+                                      formatLicensePlate(cleaned)
+                                    );
+                                  }}
+                                />
+                              </div>
+                              <div className="col-span-1 flex flex-col gap-1">
+                                <label className="text-xs font-medium text-blue-600">
+                                  דגם
+                                </label>
+                                <input
+                                  className="rounded border border-gray-300 p-1 text-sm"
+                                  placeholder="דגם"
+                                  value={newClientVehicleModel}
+                                  onChange={(e) =>
+                                    setNewClientVehicleModel(e.target.value)
+                                  }
+                                />
+                              </div>
+                              <div className="col-span-1 flex items-end gap-1">
+                                <button
+                                  type="button"
+                                  disabled={!clientId}
+                                  className="rounded bg-blue-600 px-2 py-1 text-xs text-white disabled:opacity-50"
+                                  onClick={createClientVehicle}
+                                >
+                                  הוסף
+                                </button>
+                                <button
+                                  type="button"
+                                  className="rounded border border-gray-300 px-2 py-1 text-xs"
+                                  onClick={() => setShowAddClientVehicle(false)}
+                                >
+                                  בטל
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </label>
+                      )}
                     </div>
                   )}
-                </label>
-              </>
-            )}
 
-            <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3">
-              <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-blue-600">תאריך</span>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={`w-full justify-start text-right font-normal ${
-                        estimatedDateError ? 'border-red-500' : ''
-                      }`}
-                    >
-                      <Calendar className="ml-2 h-4 w-4" />
-                      {dayjs(estimatedDate).format('DD/MM/YYYY')}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="end">
-                    <CalendarComponent
-                      mode="single"
-                      selected={estimatedDate}
-                      className="min-w-56 [--cell-size:2.6rem] bg-white"
-                      onSelect={(date) => {
-                        if (date) {
-                          const result = estimatedDateSchema.safeParse(date);
-                          if (result.success) {
-                            setEstimatedDate(date);
-                            setEstimatedDateError(null);
-                          } else {
-                            setEstimatedDateError(
-                              result.error.issues[0].message
-                            );
-                          }
-                        }
-                      }}
-                      autoFocus={true}
-                      disabled={(date) => {
-                        const today = dayjs().startOf('day');
-                        const selectedDay = dayjs(date).startOf('day');
-                        return selectedDay.isBefore(today);
-                      }}
-                    />
-                  </PopoverContent>
-                </Popover>
-                {estimatedDateError && (
-                  <p className="text-sm text-red-600">{estimatedDateError}</p>
-                )}
-              </label>
+                  {isMultiStopType && (
+                    <div className="col-span-1 md:col-span-2 space-y-3 rounded border border-gray-200 bg-gray-50 p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-semibold text-blue-600">
+                            לקוחות / כתובות / יועצים
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            קבע התאמה בין לקוח, כתובת ויועץ לכל עצירה.
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            className="rounded border border-gray-300 px-2 text-xs h-9 bg-blue-500 text-white flex items-center justify-center"
+                            onClick={() =>
+                              setStops((prev) => [
+                                ...prev,
+                                {
+                                  clientId: '',
+                                  clientQuery: '',
+                                  address: '',
+                                  advisorName: '',
+                                  advisorColor: null,
+                                  phone: '',
+                                },
+                              ])
+                            }
+                          >
+                            <PlusIcon className="w-4 h-4" />
+                            הוסף לקוח
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded border border-gray-300 px-2 text-xs h-9 bg-white text-primary flex items-center justify-center"
+                            onClick={() => setShowAddClient((v) => !v)}
+                          >
+                            <PlusIcon className="w-4 h-4" />
+                            לקוח חדש
+                          </button>
+                        </div>
+                      </div>
 
-              <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-blue-600">
-                  שעת התחלה
-                </span>
-                <input
-                  type="time"
-                  className="rounded border border-gray-300 p-2"
-                  value={estimatedStartTime}
-                  onChange={(e) => setEstimatedStartTime(e.target.value)}
-                />
-              </label>
-
-              <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-blue-600">
-                  שעת סיום
-                </span>
-                <input
-                  type="time"
-                  className="rounded border border-gray-300 p-2"
-                  value={estimatedEndTime}
-                  onChange={(e) => setEstimatedEndTime(e.target.value)}
-                />
-              </label>
-            </div>
-
-            {!isMultiStopType && (
-              <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3">
-                {/* Client Selection */}
-                <label className="flex flex-col gap-1">
-                  <div className="flex gap-2">
-                    <div className="grid w-full max-w-sm items-center gap-1">
-                      <Label htmlFor="client" className="text-blue-600">
-                        לקוח
-                        {(type === 'ביצוע טסט' ||
-                          type === 'חילוץ רכב תקוע' ||
-                          type === 'מסירת רכב חלופי' ||
-                          type === 'הסעת לקוח הביתה' ||
-                          type === 'איסוף רכב/שינוע' ||
-                          type === 'החזרת רכב/שינוע') && (
-                          <span className="text-red-500"> *</span>
-                        )}
-                      </Label>
-                      <Input
-                        type="text"
-                        id="client"
-                        placeholder="לקוח"
-                        value={clientQuery}
-                        onChange={(e) => {
-                          setClientQuery(e.target.value);
-                          setClientId('');
-                          setClientPhone('');
-                        }}
-                      />
-                      {clientSuggestions.length > 0 && !clientId && (
-                        <div className="mt-1 max-h-40 w-full overflow-y-auto rounded border border-gray-300 bg-white text-sm shadow-sm">
-                          {clientSuggestions.map((c) => (
-                            <button
-                              key={c.id}
-                              type="button"
-                              className="flex w-full items-center justify-between px-2 py-1 text-right hover:bg-blue-50"
-                              onClick={() => {
-                                setClientId(c.id);
-                                setClientQuery(c.name);
-                                setClientPhone(c.phone || '');
-                              }}
-                            >
-                              <span>{c.name}</span>
-                              {c.phone && (
-                                <span className="text-xs text-gray-500">
-                                  {c.phone}
-                                </span>
+                      {stops.map((stop, idx) => {
+                        const suggestions = getClientSuggestions(
+                          stop.clientQuery
+                        );
+                        return (
+                          <div
+                            key={`stop-${idx}`}
+                            className="space-y-3 rounded border border-gray-200 bg-white p-3 shadow-sm"
+                          >
+                            <div className="flex items-center justify-between text-sm font-semibold text-blue-600">
+                              <span>עצירה {idx + 1}</span>
+                              {stops.length > 1 && (
+                                <button
+                                  type="button"
+                                  className="text-xs text-red-600 hover:underline flex items-center gap-1"
+                                  onClick={() =>
+                                    setStops((prev) =>
+                                      prev.length > 1
+                                        ? prev.filter((_, i) => i !== idx)
+                                        : prev
+                                    )
+                                  }
+                                >
+                                  <XIcon className="w-4 h-4" />
+                                  הסר
+                                </button>
                               )}
+                            </div>
+                            <div className="space-y-3">
+                              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                                <div className="flex flex-col gap-1">
+                                  <Label className="text-blue-600">
+                                    לקוח
+                                    {(type === 'הסעת לקוח הביתה' ||
+                                      type === 'הסעת לקוח למוסך') && (
+                                      <span className="text-red-500"> *</span>
+                                    )}
+                                  </Label>
+                                  <Input
+                                    type="text"
+                                    placeholder="שם לקוח"
+                                    value={stop.clientQuery}
+                                    onFocus={() => setActiveStopIndex(idx)}
+                                    onChange={(e) =>
+                                      setStops((prev) =>
+                                        prev.map((s, i) =>
+                                          i === idx
+                                            ? {
+                                                ...s,
+                                                clientQuery: e.target.value,
+                                                clientId: '',
+                                              }
+                                            : s
+                                        )
+                                      )
+                                    }
+                                  />
+                                  {suggestions.length > 0 && !stop.clientId && (
+                                    <div className="mt-1 max-h-40 w-full overflow-y-auto rounded border border-gray-300 bg-white text-sm shadow-sm">
+                                      {suggestions.map((c) => (
+                                        <button
+                                          key={c.id}
+                                          type="button"
+                                          className="flex w-full items-center justify-between px-2 py-1 text-right hover:bg-blue-50"
+                                          onClick={() =>
+                                            setStops((prev) =>
+                                              prev.map((s, i) =>
+                                                i === idx
+                                                  ? {
+                                                      ...s,
+                                                      clientId: c.id,
+                                                      clientQuery: c.name,
+                                                      phone: c.phone || '',
+                                                    }
+                                                  : s
+                                              )
+                                            )
+                                          }
+                                        >
+                                          <span>{c.name}</span>
+                                          {c.phone && (
+                                            <span className="text-xs text-gray-500">
+                                              {c.phone}
+                                            </span>
+                                          )}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <Label className="text-blue-600">
+                                    טלפון
+                                    {(type === 'הסעת לקוח הביתה' ||
+                                      type === 'הסעת לקוח למוסך') && (
+                                      <span className="text-red-500"> *</span>
+                                    )}
+                                  </Label>
+                                  <Input
+                                    type="tel"
+                                    placeholder="טלפון"
+                                    value={stop.phone}
+                                    onChange={(e) =>
+                                      setStops((prev) =>
+                                        prev.map((s, i) =>
+                                          i === idx
+                                            ? { ...s, phone: e.target.value }
+                                            : s
+                                        )
+                                      )
+                                    }
+                                  />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <Label className="text-blue-600">
+                                    כתובת
+                                    {(type === 'הסעת לקוח הביתה' ||
+                                      type === 'הסעת לקוח למוסך') && (
+                                      <span className="text-red-500"> *</span>
+                                    )}
+                                  </Label>
+                                  <AddressAutocomplete
+                                    value={stop.address}
+                                    onChange={(val) =>
+                                      setStops((prev) =>
+                                        prev.map((s, i) =>
+                                          i === idx
+                                            ? {
+                                                ...s,
+                                                address: val,
+                                                lat: null,
+                                                lng: null,
+                                                distanceFromGarage: null,
+                                              }
+                                            : s
+                                        )
+                                      )
+                                    }
+                                    onSelect={(addr, lat, lng) =>
+                                      setStops((prev) =>
+                                        prev.map((s, i) =>
+                                          i === idx
+                                            ? {
+                                                ...s,
+                                                address: addr,
+                                                lat,
+                                                lng,
+                                                distanceFromGarage:
+                                                  calculateDistance(
+                                                    GARAGE_LOCATION,
+                                                    { lat, lng }
+                                                  ),
+                                              }
+                                            : s
+                                        )
+                                      )
+                                    }
+                                    placeholder="כתובת"
+                                  />
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                <div className="flex flex-col gap-1">
+                                  <Label className="text-blue-600">
+                                    שם יועץ{' '}
+                                    <span className="text-red-500">*</span>
+                                  </Label>
+                                  <Input
+                                    type="text"
+                                    placeholder="שם יועץ"
+                                    value={stop.advisorName}
+                                    onChange={(e) =>
+                                      setStops((prev) =>
+                                        prev.map((s, i) =>
+                                          i === idx
+                                            ? {
+                                                ...s,
+                                                advisorName: e.target.value,
+                                              }
+                                            : s
+                                        )
+                                      )
+                                    }
+                                  />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <Label className="text-blue-600">
+                                    צבע יועץ{' '}
+                                    <span className="text-red-500">*</span>
+                                  </Label>
+                                  <RtlSelectDropdown
+                                    value={stop.advisorColor || ''}
+                                    options={[
+                                      { value: '', label: '—' },
+                                      ...getAdvisorColorOptions().map(
+                                        (color) => ({
+                                          value: color,
+                                          label: color,
+                                          bgClass:
+                                            getAdvisorColorBgClass(color),
+                                          textClass:
+                                            getAdvisorColorTextClass(color),
+                                          color: getAdvisorColorHex(color),
+                                        })
+                                      ),
+                                    ]}
+                                    onChange={(value) =>
+                                      setStops((prev) =>
+                                        prev.map((s, i) =>
+                                          i === idx
+                                            ? {
+                                                ...s,
+                                                advisorColor:
+                                                  value === ''
+                                                    ? null
+                                                    : (value as AdvisorColor),
+                                              }
+                                            : s
+                                        )
+                                      )
+                                    }
+                                    placeholder="בחר צבע"
+                                  />
+                                  {stop.advisorColor && (
+                                    <div className="mt-1 flex items-center gap-2">
+                                      <span
+                                        className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getAdvisorColorBgClass(
+                                          stop.advisorColor
+                                        )} ${getAdvisorColorTextClass(
+                                          stop.advisorColor
+                                        )}`}
+                                      >
+                                        {stop.advisorColor}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {showAddClient && (
+                        <div className="mt-2 grid grid-cols-3 gap-2">
+                          <input
+                            className="rounded border border-gray-300 p-2 col-span-1"
+                            placeholder="שם"
+                            value={newClientName}
+                            onChange={(e) => setNewClientName(e.target.value)}
+                          />
+                          <input
+                            className="rounded border border-gray-300 p-2 col-span-1"
+                            placeholder="טלפון"
+                            value={newClientPhone}
+                            onChange={(e) => setNewClientPhone(e.target.value)}
+                          />
+                          <input
+                            className="rounded border border-gray-300 p-2 col-span-1"
+                            placeholder="אימייל (אופציונלי)"
+                            value={newClientEmail}
+                            onChange={(e) => setNewClientEmail(e.target.value)}
+                          />
+                          <div className="col-span-3 flex justify-end gap-2">
+                            <button
+                              type="button"
+                              className="rounded border border-gray-300 px-2 text-xs"
+                              onClick={() => setShowAddClient(false)}
+                            >
+                              בטל
                             </button>
-                          ))}
+                            <button
+                              type="button"
+                              className="rounded bg-blue-600 hover:bg-blue-700 px-2 py-1 text-xs font-semibold text-white transition-colors"
+                              onClick={createClient}
+                            >
+                              צור ושייך לעצירה {activeStopIndex + 1}
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
-                    <button
-                      type="button"
-                      className="rounded border border-gray-300 px-2 text-xs h-9 self-end bg-blue-500 text-white flex items-center justify-center"
-                      onClick={() => setShowAddClient((v) => !v)}
-                    >
-                      <PlusIcon className="w-4 h-4" />
-                      חדש
-                    </button>
+                  )}
+
+                  {/* Agency Vehicle - Visible for both regular and multi-stop tasks */}
+                  <div className="col-span-1 md:col-span-2">
+                    <label className="flex flex-col gap-1">
+                      <span className="text-sm font-medium text-primary">
+                        רכב סוכנות
+                        {(type === 'חילוץ רכב תקוע' ||
+                          type === 'מסירת רכב חלופי' ||
+                          type === 'הסעת לקוח הביתה') && (
+                          <span className="text-red-500"> *</span>
+                        )}
+                      </span>
+                      <div className="flex gap-2">
+                        <div className="grid w-full max-w-sm items-center gap-1">
+                          <Input
+                            type="text"
+                            id="vehicle"
+                            placeholder="רכב סוכנות"
+                            value={vehicleQuery}
+                            onChange={(e) => {
+                              setVehicleQuery(e.target.value);
+                              setVehicleId(''); // Clear vehicleId when typing to show suggestions
+                            }}
+                          />
+                          {vehicleSuggestions.length > 0 && !vehicleId && (
+                            <div className="mt-1 max-h-40 w-full overflow-y-auto rounded border border-gray-300 bg-white text-sm shadow-sm">
+                              {vehicleSuggestions.map((v) => {
+                                // Don't mark as occupied if it's the currently selected vehicle
+                                const isOccupied =
+                                  (v.isOccupied || false) && v.id !== vehicleId;
+
+                                // Allow selecting unavailable vehicles IF they are "At Customer" and the task is "Return Vehicle"
+                                const isAtCustomer =
+                                  v.unavailabilityReason === 'אצל לקוח';
+                                const isReturnTask = type === 'החזרת רכב/שינוע';
+                                const isUnavailable = v.isUnavailable || false;
+
+                                // A vehicle is disabled if:
+                                // 1. It is occupied by another task at the same time
+                                // 2. It is unavailable for a reason other than being at a customer
+                                // 3. It is at a customer, but the current task is NOT a return task
+                                const isDisabled =
+                                  isOccupied ||
+                                  (isUnavailable &&
+                                    !(isAtCustomer && isReturnTask));
+
+                                return (
+                                  <button
+                                    key={v.id}
+                                    type="button"
+                                    disabled={isDisabled}
+                                    className={`flex w-full items-center justify-between px-2 py-1 text-right ${
+                                      isDisabled
+                                        ? 'cursor-not-allowed bg-gray-100 text-gray-400 opacity-60'
+                                        : 'hover:bg-blue-50'
+                                    }`}
+                                    onClick={() => {
+                                      if (isOccupied) {
+                                        toastError(
+                                          'רכב זה כבר משוייך למשימה אחרת באותו יום ובאותו טווח זמן'
+                                        );
+                                        return;
+                                      }
+                                      if (isDisabled && isUnavailable) {
+                                        if (isAtCustomer && !isReturnTask) {
+                                          toastError(
+                                            'רכב זה נמצא אצל לקוח. ניתן לשייך אותו רק למשימת החזרת רכב.'
+                                          );
+                                        } else {
+                                          toastError(
+                                            'רכב זה מושבת ולא זמין לשימוש'
+                                          );
+                                        }
+                                        return;
+                                      }
+                                      setVehicleId(v.id);
+                                      setVehicleQuery(
+                                        `${formatLicensePlate(
+                                          v.license_plate
+                                        )}${v.model ? ` · ${v.model}` : ''}`
+                                      );
+                                    }}
+                                  >
+                                    <span
+                                      className={
+                                        isDisabled ? 'text-gray-400' : ''
+                                      }
+                                    >
+                                      {formatLicensePlate(v.license_plate)}
+                                      {v.model ? ` · ${v.model}` : ''}
+                                      {isOccupied && (
+                                        <span className="mr-2 text-xs">
+                                          (תפוס)
+                                        </span>
+                                      )}
+                                      {isUnavailable && (
+                                        <span className="mr-2 text-xs">
+                                          ({isAtCustomer ? 'אצל לקוח' : 'מושבת'}
+                                          )
+                                        </span>
+                                      )}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          className="rounded border border-gray-300 px-2 text-xs h-9 self-end bg-blue-500 text-white flex items-center justify-center"
+                          onClick={() => setShowAddVehicle((v) => !v)}
+                        >
+                          <PlusIcon className="w-4 h-4" />
+                          חדש
+                        </button>
+                      </div>
+                      {showAddVehicle && (
+                        <div className="mt-2 grid grid-cols-3 gap-2">
+                          <div className="col-span-1 flex flex-col gap-1">
+                            <label className="text-sm font-medium text-primary">
+                              מספר רישוי <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              className="rounded border border-gray-300 p-2"
+                              placeholder="מספר רישוי (7 או 8 ספרות)"
+                              value={newVehiclePlate}
+                              onChange={(e) => {
+                                const input = e.target.value;
+                                // Allow digits and dashes only
+                                const cleaned = input.replace(/[^\d-]/g, '');
+                                // Format as user types
+                                const formatted = formatLicensePlate(cleaned);
+                                setNewVehiclePlate(formatted);
+                                // Clear error when user starts typing
+                                if (error && error.includes('מספר רישוי')) {
+                                  setError(null);
+                                }
+                              }}
+                              maxLength={10} // Max length for formatted plate (e.g., "123-45-678")
+                            />
+                            {newVehiclePlate &&
+                              (() => {
+                                const digitsOnly = newVehiclePlate.replace(
+                                  /\D/g,
+                                  ''
+                                );
+                                const digitCount = digitsOnly.length;
+                                if (digitCount === 0) return null;
+                                if (digitCount < 7) {
+                                  return (
+                                    <p className="text-xs text-red-600">
+                                      מספר רישוי חייב להכיל לפחות 7 ספרות (נמצאו{' '}
+                                      {digitCount} ספרות)
+                                    </p>
+                                  );
+                                }
+                                if (digitCount > 8) {
+                                  return (
+                                    <p className="text-xs text-red-600">
+                                      מספר רישוי חייב להכיל לכל היותר 8 ספרות
+                                      (נמצאו {digitCount} ספרות)
+                                    </p>
+                                  );
+                                }
+                                return null;
+                              })()}
+                          </div>
+                          <div className="col-span-1 flex flex-col gap-1">
+                            <label className="text-sm font-medium text-primary">
+                              דגם
+                            </label>
+                            <input
+                              className="rounded border border-gray-300 p-2"
+                              placeholder="דגם"
+                              value={newVehicleModel}
+                              onChange={(e) =>
+                                setNewVehicleModel(e.target.value)
+                              }
+                            />
+                          </div>
+                          <div className="col-span-3 flex justify-end gap-2">
+                            <button
+                              type="button"
+                              className="rounded border border-gray-300 px-2 text-xs"
+                              onClick={() => setShowAddVehicle(false)}
+                            >
+                              בטל
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded bg-blue-600 hover:bg-blue-700 px-2 py-1 text-xs font-semibold text-white transition-colors"
+                              onClick={createVehicle}
+                            >
+                              צור
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </label>
                   </div>
+
+                  {/* Drivers */}
+                  <div className="col-span-1 md:col-span-2 grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <label className="flex flex-col gap-1">
+                      <span className="text-sm font-medium text-blue-600">
+                        נהג מוביל
+                      </span>
+                      <RtlSelectDropdown
+                        value={leadDriverId}
+                        options={[
+                          { value: '', label: 'ללא (לא משוייך)' },
+                          ...drivers.map((d) => ({
+                            value: d.id,
+                            label: d.name || d.email || '',
+                          })),
+                        ]}
+                        onChange={(value) => {
+                          setLeadDriverId(value);
+                          // Auto-remove new lead driver from co-drivers if they were there
+                          if (value && coDriverIds.includes(value)) {
+                            setCoDriverIds((prev) =>
+                              prev.filter((id) => id !== value)
+                            );
+                          }
+                        }}
+                      />
+                    </label>
+
+                    {multiDriverEnabled && (
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-blue-600">
+                            נהגי משנה
+                          </span>
+                          {coDriverIds.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setCoDriverIds([])}
+                              className="text-xs text-red-500 hover:text-red-700 underline"
+                            >
+                              נקה הכל
+                            </button>
+                          )}
+                        </div>
+                        <RtlSelectDropdown
+                          value={coDriverIds}
+                          options={drivers
+                            .filter((d) => d.id !== leadDriverId)
+                            .map((d) => ({
+                              value: d.id,
+                              label: d.name || d.email || '',
+                            }))}
+                          onChange={(val) => setCoDriverIds(val as string[])}
+                          multiple
+                          placeholder="בחר נהגי משנה"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="col-span-1 md:col-span-2 mt-2 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      {mode === 'edit' && task && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <button
+                              type="button"
+                              className="rounded flex items-center justify-center gap-2 border border-red-200 text-red-600 hover:bg-red-50 px-3 py-2 text-sm transition-colors"
+                              disabled={submitting}
+                            >
+                              <Trash2Icon className="w-4 h-4 mr-2" />
+                              מחק משימה
+                            </button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                למחוק את המשימה?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                פעולה זו תסמן את המשימה כמחוקה. הנהגים המשויכים
+                                יקבלו התראה על ביטול המשימה.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>בטל</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={async () => {
+                                  if (!task?.id) return;
+                                  setSubmitting(true);
+                                  try {
+                                    const res = await fetch(
+                                      `/api/admin/tasks/${task.id}`,
+                                      {
+                                        method: 'DELETE',
+                                      }
+                                    );
+                                    if (!res.ok)
+                                      throw new Error('Delete failed');
+                                    toastSuccess('המשימה נמחקה בהצלחה');
+                                    onOpenChange(false);
+                                    if (onUpdated) {
+                                      // Trigger refresh in parent
+                                      onUpdated({
+                                        ...task,
+                                        deleted_at: new Date().toISOString(),
+                                      } as Task);
+                                    }
+                                  } catch {
+                                    toastError('שגיאה במחיקת המשימה');
+                                  } finally {
+                                    setSubmitting(false);
+                                  }
+                                }}
+                                className="bg-red-600 hover:bg-red-700 text-white"
+                              >
+                                מחק
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        className="rounded flex items-center justify-center gap-2 border border-gray-300 px-3 py-2 text-sm"
+                        onClick={() => onOpenChange(false)}
+                        disabled={submitting}
+                      >
+                        <XIcon className="w-4 h-4 mr-2" />
+                        ביטול
+                      </button>
+                      <button
+                        type="submit"
+                        className="rounded flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50 transition-colors"
+                        disabled={submitting}
+                      >
+                        <SaveIcon className="w-4 h-4 mr-2" />
+                        שמור שינויים
+                      </button>
+                    </div>
+                  </div>
+                  {/* Form Content ends here */}
+                </form>
+              </TabsContent>
+
+              <TabsContent value="audit" className="mt-0">
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <AuditFeed taskId={task.id} />
+                </div>
+              </TabsContent>
+            </Tabs>
+          ) : (
+            <form
+              onSubmit={handleSubmit}
+              className="grid grid-cols-1 gap-3 md:grid-cols-2"
+            >
+              {/* Form Content starts here */}
+              <label className="flex flex-col gap-1 ">
+                <span className="text-md underline font-medium text-blue-500">
+                  סוג
+                </span>
+                <RtlSelectDropdown
+                  value={type}
+                  options={types.map((t) => ({ value: t, label: t }))}
+                  onChange={(value) => setType(value as TaskType)}
+                />
+              </label>
+
+              <label className="flex flex-col gap-1">
+                <span className="text-md underline font-medium text-blue-500">
+                  עדיפות
+                </span>
+                <RtlSelectDropdown
+                  value={priority}
+                  options={priorities.map((p) => ({ value: p, label: p }))}
+                  onChange={(value) => setPriority(value as TaskPriority)}
+                />
+              </label>
+
+              <label className="flex flex-col gap-1">
+                <span className="text-md underline font-medium text-blue-500">
+                  סטטוס
+                </span>
+                <RtlSelectDropdown
+                  value={status}
+                  options={statuses.map((s) => ({
+                    value: s,
+                    label: statusLabels[s] || s,
+                  }))}
+                  onChange={(value) => setStatus(value as TaskStatus)}
+                />
+              </label>
+
+              <label className="col-span-1 md:col-span-2 flex flex-col gap-1">
+                <span className="text-md underline font-medium text-blue-500">
+                  תיאור
+                </span>
+                <textarea
+                  className="rounded border border-gray-300 p-2"
+                  rows={2}
+                  value={details}
+                  onChange={(e) => setDetails(e.target.value)}
+                />
+              </label>
+
+              {!isMultiStopType && (
+                <>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-sm font-medium text-blue-600">
+                      שם יועץ{' '}
+                      {(type === 'הסעת לקוח הביתה' ||
+                        type === 'איסוף רכב/שינוע') && (
+                        <span className="text-red-500">*</span>
+                      )}
+                    </span>
+                    <input
+                      className="rounded border border-gray-300 p-2"
+                      value={advisorName}
+                      onChange={(e) => setAdvisorName(e.target.value)}
+                      placeholder="הזן שם יועץ"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-sm font-medium text-blue-600">
+                      צבע יועץ{' '}
+                      {(type === 'הסעת לקוח הביתה' ||
+                        type === 'איסוף רכב/שינוע') && (
+                        <span className="text-red-500">*</span>
+                      )}
+                    </span>
+                    <RtlSelectDropdown
+                      value={advisorColor || ''}
+                      options={[
+                        { value: '', label: '—' },
+                        ...getAdvisorColorOptions().map((color) => ({
+                          value: color,
+                          label: color,
+                          bgClass: getAdvisorColorBgClass(color),
+                          textClass: getAdvisorColorTextClass(color),
+                          color: getAdvisorColorHex(color),
+                        })),
+                      ]}
+                      onChange={(value) =>
+                        setAdvisorColor(
+                          value === '' ? null : (value as AdvisorColor)
+                        )
+                      }
+                      placeholder="בחר צבע"
+                    />
+                    {advisorColor && (
+                      <div className="mt-1 flex items-center gap-2">
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getAdvisorColorBgClass(
+                            advisorColor
+                          )} ${getAdvisorColorTextClass(advisorColor)}`}
+                        >
+                          {advisorColor}
+                        </span>
+                      </div>
+                    )}
+                  </label>
+                </>
+              )}
+
+              <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3">
+                <label className="flex flex-col gap-1">
+                  <span className="text-sm font-medium text-blue-600">
+                    תאריך
+                  </span>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={`w-full justify-start text-right font-normal ${
+                          estimatedDateError ? 'border-red-500' : ''
+                        }`}
+                      >
+                        <Calendar className="ml-2 h-4 w-4" />
+                        {dayjs(estimatedDate).format('DD/MM/YYYY')}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                      <CalendarComponent
+                        mode="single"
+                        selected={estimatedDate}
+                        className="min-w-56 [--cell-size:2.6rem] bg-white"
+                        onSelect={(date) => {
+                          if (date) {
+                            const result = estimatedDateSchema.safeParse(date);
+                            if (result.success) {
+                              setEstimatedDate(date);
+                              setEstimatedDateError(null);
+                            } else {
+                              setEstimatedDateError(
+                                result.error.issues[0].message
+                              );
+                            }
+                          }
+                        }}
+                        autoFocus={true}
+                        disabled={(date) => {
+                          const today = dayjs().startOf('day');
+                          const selectedDay = dayjs(date).startOf('day');
+                          return selectedDay.isBefore(today);
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  {estimatedDateError && (
+                    <p className="text-sm text-red-600">{estimatedDateError}</p>
+                  )}
+                </label>
+
+                <label className="flex flex-col gap-1">
+                  <span className="text-sm font-medium text-blue-600">
+                    שעת התחלה
+                  </span>
+                  <input
+                    type="time"
+                    className="rounded border border-gray-300 p-2"
+                    value={estimatedStartTime}
+                    onChange={(e) => setEstimatedStartTime(e.target.value)}
+                  />
+                </label>
+
+                <label className="flex flex-col gap-1">
+                  <span className="text-sm font-medium text-blue-600">
+                    שעת סיום
+                  </span>
+                  <input
+                    type="time"
+                    className="rounded border border-gray-300 p-2"
+                    value={estimatedEndTime}
+                    onChange={(e) => setEstimatedEndTime(e.target.value)}
+                  />
+                </label>
+              </div>
+
+              {!isMultiStopType && (
+                <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Client Selection */}
+                  <label className="flex flex-col gap-1">
+                    <div className="flex gap-2">
+                      <div className="grid w-full max-w-sm items-center gap-1">
+                        <Label htmlFor="client" className="text-blue-600">
+                          לקוח
+                          {(type === 'ביצוע טסט' ||
+                            type === 'חילוץ רכב תקוע' ||
+                            type === 'מסירת רכב חלופי' ||
+                            type === 'הסעת לקוח הביתה' ||
+                            type === 'איסוף רכב/שינוע' ||
+                            type === 'החזרת רכב/שינוע') && (
+                            <span className="text-red-500"> *</span>
+                          )}
+                        </Label>
+                        <Input
+                          type="text"
+                          id="client"
+                          placeholder="לקוח"
+                          value={clientQuery}
+                          onChange={(e) => {
+                            setClientQuery(e.target.value);
+                            setClientId('');
+                            setClientPhone('');
+                          }}
+                        />
+                        {clientSuggestions.length > 0 && !clientId && (
+                          <div className="mt-1 max-h-40 w-full overflow-y-auto rounded border border-gray-300 bg-white text-sm shadow-sm">
+                            {clientSuggestions.map((c) => (
+                              <button
+                                key={c.id}
+                                type="button"
+                                className="flex w-full items-center justify-between px-2 py-1 text-right hover:bg-blue-50"
+                                onClick={() => {
+                                  setClientId(c.id);
+                                  setClientQuery(c.name);
+                                  setClientPhone(c.phone || '');
+                                }}
+                              >
+                                <span>{c.name}</span>
+                                {c.phone && (
+                                  <span className="text-xs text-gray-500">
+                                    {c.phone}
+                                  </span>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        className="rounded border border-gray-300 px-2 text-xs h-9 self-end bg-blue-500 text-white flex items-center justify-center"
+                        onClick={() => setShowAddClient((v) => !v)}
+                      >
+                        <PlusIcon className="w-4 h-4" />
+                        חדש
+                      </button>
+                    </div>
+                    {showAddClient && (
+                      <div className="mt-2 grid grid-cols-3 gap-2">
+                        <input
+                          className="rounded border border-gray-300 p-2 col-span-1"
+                          placeholder="שם"
+                          value={newClientName}
+                          onChange={(e) => setNewClientName(e.target.value)}
+                        />
+                        <input
+                          className="rounded border border-gray-300 p-2 col-span-1"
+                          placeholder="טלפון"
+                          value={newClientPhone}
+                          onChange={(e) => setNewClientPhone(e.target.value)}
+                        />
+                        <input
+                          className="rounded border border-gray-300 p-2 col-span-1"
+                          placeholder="אימייל (אופציונלי)"
+                          value={newClientEmail}
+                          onChange={(e) => setNewClientEmail(e.target.value)}
+                        />
+
+                        <div className="col-span-3 flex justify-end gap-2">
+                          <button
+                            type="button"
+                            className="rounded border border-gray-300 px-2 text-xs"
+                            onClick={() => setShowAddClient(false)}
+                          >
+                            בטל
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded bg-blue-600 hover:bg-blue-700 px-2 py-1 text-xs font-semibold text-white transition-colors"
+                            onClick={createClient}
+                          >
+                            צור
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </label>
+
+                  {/* Phone Field */}
+                  <label className="flex flex-col gap-1">
+                    <span className="text-sm font-medium text-blue-600">
+                      טלפון
+                      {(type === 'ביצוע טסט' ||
+                        type === 'חילוץ רכב תקוע' ||
+                        type === 'מסירת רכב חלופי' ||
+                        type === 'איסוף רכב/שינוע' ||
+                        type === 'החזרת רכב/שינוע') && (
+                        <span className="text-red-500"> *</span>
+                      )}
+                    </span>
+                    <Input
+                      type="tel"
+                      placeholder="טלפון"
+                      value={clientPhone}
+                      onChange={(e) => setClientPhone(e.target.value)}
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-1">
+                    <span className="text-sm font-medium text-blue-600">
+                      כתובת
+                      {(type === 'חילוץ רכב תקוע' ||
+                        type === 'איסוף רכב/שינוע' ||
+                        type === 'החזרת רכב/שינוע') && (
+                        <span className="text-red-500"> *</span>
+                      )}
+                    </span>
+                    <AddressAutocomplete
+                      value={addressQuery}
+                      onChange={(val) => {
+                        setAddressQuery(val);
+                        setSelectedMainCoords(null);
+                      }}
+                      onSelect={(addr, lat, lng) => {
+                        setAddressQuery(addr);
+                        setSelectedMainCoords({ lat, lng });
+                      }}
+                      className="w-full"
+                    />
+                  </label>
+
+                  {(type === 'איסוף רכב/שינוע' ||
+                    type === 'החזרת רכב/שינוע' ||
+                    type === 'ביצוע טסט') && (
+                    <label className="flex flex-col gap-1">
+                      <span className="text-sm font-medium text-blue-600">
+                        רכב לקוח{' '}
+                        {(type === 'איסוף רכב/שינוע' ||
+                          type === 'החזרת רכב/שינוע') && (
+                          <span className="text-red-500"> *</span>
+                        )}
+                      </span>
+                      <div className="flex gap-2">
+                        <div className="grid w-full max-w-sm items-center gap-1">
+                          <Input
+                            type="text"
+                            placeholder="רכב לקוח (חפש לפי מספר רישוי או דגם)"
+                            value={clientVehicleQuery}
+                            onChange={(e) => {
+                              setClientVehicleQuery(e.target.value);
+                              setClientVehicleId('');
+                            }}
+                          />
+                          {clientVehicleSuggestions.length > 0 &&
+                            !clientVehicleId && (
+                              <div className="mt-1 max-h-40 w-full overflow-y-auto rounded border border-gray-300 bg-white text-sm shadow-sm">
+                                {clientVehicleSuggestions.map((v) => (
+                                  <button
+                                    key={v.id}
+                                    type="button"
+                                    className="flex w-full items-center justify-between px-2 py-1 text-right hover:bg-blue-50"
+                                    onClick={() => {
+                                      setClientVehicleId(v.id);
+                                      setClientVehicleQuery(
+                                        `${formatLicensePlate(
+                                          v.license_plate
+                                        )}${v.model ? ` · ${v.model}` : ''}`
+                                      );
+                                    }}
+                                  >
+                                    <span>
+                                      {formatLicensePlate(v.license_plate)}
+                                      {v.model ? ` · ${v.model}` : ''}
+                                    </span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                        </div>
+                        <button
+                          type="button"
+                          className="rounded border border-gray-300 px-2 text-xs h-9 self-end bg-blue-500 text-white flex items-center justify-center"
+                          onClick={() => setShowAddClientVehicle((v) => !v)}
+                        >
+                          <PlusIcon className="w-4 h-4" />
+                          חדש
+                        </button>
+                      </div>
+                      {showAddClientVehicle && (
+                        <div className="mt-2 grid grid-cols-3 gap-2 p-2 border rounded bg-slate-50">
+                          {!clientId && (
+                            <div className="col-span-3 mb-1 text-[11px] font-bold text-red-600 bg-red-50 p-1 rounded border border-red-100">
+                              ⚠️ חובה לבחור לקוח לפני הוספת רכב
+                            </div>
+                          )}
+                          <div className="col-span-1 flex flex-col gap-1">
+                            <label className="text-xs font-medium text-blue-600">
+                              מספר רישוי
+                            </label>
+                            <input
+                              className="rounded border border-gray-300 p-1 text-sm"
+                              placeholder="7 או 8 ספרות"
+                              value={newClientVehiclePlate}
+                              onChange={(e) => {
+                                const input = e.target.value;
+                                const cleaned = input.replace(/[^\d-]/g, '');
+                                setNewClientVehiclePlate(
+                                  formatLicensePlate(cleaned)
+                                );
+                              }}
+                            />
+                          </div>
+                          <div className="col-span-1 flex flex-col gap-1">
+                            <label className="text-xs font-medium text-blue-600">
+                              דגם
+                            </label>
+                            <input
+                              className="rounded border border-gray-300 p-1 text-sm"
+                              placeholder="דגם"
+                              value={newClientVehicleModel}
+                              onChange={(e) =>
+                                setNewClientVehicleModel(e.target.value)
+                              }
+                            />
+                          </div>
+                          <div className="col-span-1 flex items-end gap-1">
+                            <button
+                              type="button"
+                              disabled={!clientId}
+                              className="rounded bg-blue-600 px-2 py-1 text-xs text-white disabled:opacity-50"
+                              onClick={createClientVehicle}
+                            >
+                              הוסף
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded border border-gray-300 px-2 py-1 text-xs"
+                              onClick={() => setShowAddClientVehicle(false)}
+                            >
+                              בטל
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </label>
+                  )}
+                </div>
+              )}
+
+              {isMultiStopType && (
+                <div className="col-span-1 md:col-span-2 space-y-3 rounded border border-gray-200 bg-gray-50 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold text-blue-600">
+                        לקוחות / כתובות / יועצים
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        קבע התאמה בין לקוח, כתובת ויועץ לכל עצירה.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        className="rounded border border-gray-300 px-2 text-xs h-9 bg-blue-500 text-white flex items-center justify-center"
+                        onClick={() =>
+                          setStops((prev) => [
+                            ...prev,
+                            {
+                              clientId: '',
+                              clientQuery: '',
+                              address: '',
+                              advisorName: '',
+                              advisorColor: null,
+                              phone: '',
+                            },
+                          ])
+                        }
+                      >
+                        <PlusIcon className="w-4 h-4" />
+                        הוסף לקוח
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded border border-gray-300 px-2 text-xs h-9 bg-white text-primary flex items-center justify-center"
+                        onClick={() => setShowAddClient((v) => !v)}
+                      >
+                        <PlusIcon className="w-4 h-4" />
+                        לקוח חדש
+                      </button>
+                    </div>
+                  </div>
+
+                  {stops.map((stop, idx) => {
+                    const suggestions = getClientSuggestions(stop.clientQuery);
+                    return (
+                      <div
+                        key={`stop-${idx}`}
+                        className="space-y-3 rounded border border-gray-200 bg-white p-3 shadow-sm"
+                      >
+                        <div className="flex items-center justify-between text-sm font-semibold text-blue-600">
+                          <span>עצירה {idx + 1}</span>
+                          {stops.length > 1 && (
+                            <button
+                              type="button"
+                              className="text-xs text-red-600 hover:underline flex items-center gap-1"
+                              onClick={() =>
+                                setStops((prev) =>
+                                  prev.length > 1
+                                    ? prev.filter((_, i) => i !== idx)
+                                    : prev
+                                )
+                              }
+                            >
+                              <XIcon className="w-4 h-4" />
+                              הסר
+                            </button>
+                          )}
+                        </div>
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                            <div className="flex flex-col gap-1">
+                              <Label className="text-blue-600">
+                                לקוח
+                                {(type === 'הסעת לקוח הביתה' ||
+                                  type === 'הסעת לקוח למוסך') && (
+                                  <span className="text-red-500"> *</span>
+                                )}
+                              </Label>
+                              <Input
+                                type="text"
+                                placeholder="שם לקוח"
+                                value={stop.clientQuery}
+                                onFocus={() => setActiveStopIndex(idx)}
+                                onChange={(e) =>
+                                  setStops((prev) =>
+                                    prev.map((s, i) =>
+                                      i === idx
+                                        ? {
+                                            ...s,
+                                            clientQuery: e.target.value,
+                                            clientId: '',
+                                          }
+                                        : s
+                                    )
+                                  )
+                                }
+                              />
+                              {suggestions.length > 0 && !stop.clientId && (
+                                <div className="mt-1 max-h-40 w-full overflow-y-auto rounded border border-gray-300 bg-white text-sm shadow-sm">
+                                  {suggestions.map((c) => (
+                                    <button
+                                      key={c.id}
+                                      type="button"
+                                      className="flex w-full items-center justify-between px-2 py-1 text-right hover:bg-blue-50"
+                                      onClick={() =>
+                                        setStops((prev) =>
+                                          prev.map((s, i) =>
+                                            i === idx
+                                              ? {
+                                                  ...s,
+                                                  clientId: c.id,
+                                                  clientQuery: c.name,
+                                                  phone: c.phone || '',
+                                                }
+                                              : s
+                                          )
+                                        )
+                                      }
+                                    >
+                                      <span>{c.name}</span>
+                                      {c.phone && (
+                                        <span className="text-xs text-gray-500">
+                                          {c.phone}
+                                        </span>
+                                      )}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <Label className="text-blue-600">
+                                טלפון
+                                {(type === 'הסעת לקוח הביתה' ||
+                                  type === 'הסעת לקוח למוסך') && (
+                                  <span className="text-red-500"> *</span>
+                                )}
+                              </Label>
+                              <Input
+                                type="tel"
+                                placeholder="טלפון"
+                                value={stop.phone}
+                                onChange={(e) =>
+                                  setStops((prev) =>
+                                    prev.map((s, i) =>
+                                      i === idx
+                                        ? { ...s, phone: e.target.value }
+                                        : s
+                                    )
+                                  )
+                                }
+                              />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <Label className="text-blue-600">
+                                כתובת
+                                {(type === 'הסעת לקוח הביתה' ||
+                                  type === 'הסעת לקוח למוסך') && (
+                                  <span className="text-red-500"> *</span>
+                                )}
+                              </Label>
+                              <AddressAutocomplete
+                                value={stop.address}
+                                onChange={(val) =>
+                                  setStops((prev) =>
+                                    prev.map((s, i) =>
+                                      i === idx
+                                        ? {
+                                            ...s,
+                                            address: val,
+                                            lat: null,
+                                            lng: null,
+                                            distanceFromGarage: null,
+                                          }
+                                        : s
+                                    )
+                                  )
+                                }
+                                onSelect={(addr, lat, lng) =>
+                                  setStops((prev) =>
+                                    prev.map((s, i) =>
+                                      i === idx
+                                        ? {
+                                            ...s,
+                                            address: addr,
+                                            lat,
+                                            lng,
+                                            distanceFromGarage:
+                                              calculateDistance(
+                                                GARAGE_LOCATION,
+                                                { lat, lng }
+                                              ),
+                                          }
+                                        : s
+                                    )
+                                  )
+                                }
+                                placeholder="כתובת"
+                              />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                            <div className="flex flex-col gap-1">
+                              <Label className="text-blue-600">
+                                שם יועץ <span className="text-red-500">*</span>
+                              </Label>
+                              <Input
+                                type="text"
+                                placeholder="שם יועץ"
+                                value={stop.advisorName}
+                                onChange={(e) =>
+                                  setStops((prev) =>
+                                    prev.map((s, i) =>
+                                      i === idx
+                                        ? { ...s, advisorName: e.target.value }
+                                        : s
+                                    )
+                                  )
+                                }
+                              />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <Label className="text-blue-600">
+                                צבע יועץ <span className="text-red-500">*</span>
+                              </Label>
+                              <RtlSelectDropdown
+                                value={stop.advisorColor || ''}
+                                options={[
+                                  { value: '', label: '—' },
+                                  ...getAdvisorColorOptions().map((color) => ({
+                                    value: color,
+                                    label: color,
+                                    bgClass: getAdvisorColorBgClass(color),
+                                    textClass: getAdvisorColorTextClass(color),
+                                    color: getAdvisorColorHex(color),
+                                  })),
+                                ]}
+                                onChange={(value) =>
+                                  setStops((prev) =>
+                                    prev.map((s, i) =>
+                                      i === idx
+                                        ? {
+                                            ...s,
+                                            advisorColor:
+                                              value === ''
+                                                ? null
+                                                : (value as AdvisorColor),
+                                          }
+                                        : s
+                                    )
+                                  )
+                                }
+                                placeholder="בחר צבע"
+                              />
+                              {stop.advisorColor && (
+                                <div className="mt-1 flex items-center gap-2">
+                                  <span
+                                    className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getAdvisorColorBgClass(
+                                      stop.advisorColor
+                                    )} ${getAdvisorColorTextClass(
+                                      stop.advisorColor
+                                    )}`}
+                                  >
+                                    {stop.advisorColor}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
                   {showAddClient && (
                     <div className="mt-2 grid grid-cols-3 gap-2">
                       <input
@@ -1726,7 +3372,6 @@ export function TaskDialog(props: TaskDialogProps) {
                         value={newClientEmail}
                         onChange={(e) => setNewClientEmail(e.target.value)}
                       />
-
                       <div className="col-span-3 flex justify-end gap-2">
                         <button
                           type="button"
@@ -1740,729 +3385,341 @@ export function TaskDialog(props: TaskDialogProps) {
                           className="rounded bg-blue-600 hover:bg-blue-700 px-2 py-1 text-xs font-semibold text-white transition-colors"
                           onClick={createClient}
                         >
+                          צור ושייך לעצירה {activeStopIndex + 1}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Agency Vehicle - Visible for both regular and multi-stop tasks */}
+              <div className="col-span-1 md:col-span-2">
+                <label className="flex flex-col gap-1">
+                  <span className="text-sm font-medium text-primary">
+                    רכב סוכנות
+                    {(type === 'חילוץ רכב תקוע' ||
+                      type === 'מסירת רכב חלופי' ||
+                      type === 'הסעת לקוח הביתה') && (
+                      <span className="text-red-500"> *</span>
+                    )}
+                  </span>
+                  <div className="flex gap-2">
+                    <div className="grid w-full max-w-sm items-center gap-1">
+                      <Input
+                        type="text"
+                        id="vehicle"
+                        placeholder="רכב סוכנות"
+                        value={vehicleQuery}
+                        onChange={(e) => {
+                          setVehicleQuery(e.target.value);
+                          setVehicleId(''); // Clear vehicleId when typing to show suggestions
+                        }}
+                      />
+                      {vehicleSuggestions.length > 0 && !vehicleId && (
+                        <div className="mt-1 max-h-40 w-full overflow-y-auto rounded border border-gray-300 bg-white text-sm shadow-sm">
+                          {vehicleSuggestions.map((v) => {
+                            // Don't mark as occupied if it's the currently selected vehicle
+                            const isOccupied =
+                              (v.isOccupied || false) && v.id !== vehicleId;
+
+                            // Allow selecting unavailable vehicles IF they are "At Customer" and the task is "Return Vehicle"
+                            const isAtCustomer =
+                              v.unavailabilityReason === 'אצל לקוח';
+                            const isReturnTask = type === 'החזרת רכב/שינוע';
+                            const isUnavailable = v.isUnavailable || false;
+
+                            // A vehicle is disabled if:
+                            // 1. It is occupied by another task at the same time
+                            // 2. It is unavailable for a reason other than being at a customer
+                            // 3. It is at a customer, but the current task is NOT a return task
+                            const isDisabled =
+                              isOccupied ||
+                              (isUnavailable &&
+                                !(isAtCustomer && isReturnTask));
+
+                            return (
+                              <button
+                                key={v.id}
+                                type="button"
+                                disabled={isDisabled}
+                                className={`flex w-full items-center justify-between px-2 py-1 text-right ${
+                                  isDisabled
+                                    ? 'cursor-not-allowed bg-gray-100 text-gray-400 opacity-60'
+                                    : 'hover:bg-blue-50'
+                                }`}
+                                onClick={() => {
+                                  if (isOccupied) {
+                                    toastError(
+                                      'רכב זה כבר משוייך למשימה אחרת באותו יום ובאותו טווח זמן'
+                                    );
+                                    return;
+                                  }
+                                  if (isDisabled && isUnavailable) {
+                                    if (isAtCustomer && !isReturnTask) {
+                                      toastError(
+                                        'רכב זה נמצא אצל לקוח. ניתן לשייך אותו רק למשימת החזרת רכב.'
+                                      );
+                                    } else {
+                                      toastError(
+                                        'רכב זה מושבת ולא זמין לשימוש'
+                                      );
+                                    }
+                                    return;
+                                  }
+                                  setVehicleId(v.id);
+                                  setVehicleQuery(
+                                    `${formatLicensePlate(v.license_plate)}${
+                                      v.model ? ` · ${v.model}` : ''
+                                    }`
+                                  );
+                                }}
+                              >
+                                <span
+                                  className={isDisabled ? 'text-gray-400' : ''}
+                                >
+                                  {formatLicensePlate(v.license_plate)}
+                                  {v.model ? ` · ${v.model}` : ''}
+                                  {isOccupied && (
+                                    <span className="mr-2 text-xs">(תפוס)</span>
+                                  )}
+                                  {isUnavailable && (
+                                    <span className="mr-2 text-xs">
+                                      ({isAtCustomer ? 'אצל לקוח' : 'מושבת'})
+                                    </span>
+                                  )}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      className="rounded border border-gray-300 px-2 text-xs h-9 self-end bg-blue-500 text-white flex items-center justify-center"
+                      onClick={() => setShowAddVehicle((v) => !v)}
+                    >
+                      <PlusIcon className="w-4 h-4" />
+                      חדש
+                    </button>
+                  </div>
+                  {showAddVehicle && (
+                    <div className="mt-2 grid grid-cols-3 gap-2">
+                      <div className="col-span-1 flex flex-col gap-1">
+                        <label className="text-sm font-medium text-primary">
+                          מספר רישוי <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          className="rounded border border-gray-300 p-2"
+                          placeholder="מספר רישוי (7 או 8 ספרות)"
+                          value={newVehiclePlate}
+                          onChange={(e) => {
+                            const input = e.target.value;
+                            // Allow digits and dashes only
+                            const cleaned = input.replace(/[^\d-]/g, '');
+                            // Format as user types
+                            const formatted = formatLicensePlate(cleaned);
+                            setNewVehiclePlate(formatted);
+                            // Clear error when user starts typing
+                            if (error && error.includes('מספר רישוי')) {
+                              setError(null);
+                            }
+                          }}
+                          maxLength={10} // Max length for formatted plate (e.g., "123-45-678")
+                        />
+                        {newVehiclePlate &&
+                          (() => {
+                            const digitsOnly = newVehiclePlate.replace(
+                              /\D/g,
+                              ''
+                            );
+                            const digitCount = digitsOnly.length;
+                            if (digitCount === 0) return null;
+                            if (digitCount < 7) {
+                              return (
+                                <p className="text-xs text-red-600">
+                                  מספר רישוי חייב להכיל לפחות 7 ספרות (נמצאו{' '}
+                                  {digitCount} ספרות)
+                                </p>
+                              );
+                            }
+                            if (digitCount > 8) {
+                              return (
+                                <p className="text-xs text-red-600">
+                                  מספר רישוי חייב להכיל לכל היותר 8 ספרות (נמצאו{' '}
+                                  {digitCount} ספרות)
+                                </p>
+                              );
+                            }
+                            return null;
+                          })()}
+                      </div>
+                      <div className="col-span-1 flex flex-col gap-1">
+                        <label className="text-sm font-medium text-primary">
+                          דגם
+                        </label>
+                        <input
+                          className="rounded border border-gray-300 p-2"
+                          placeholder="דגם"
+                          value={newVehicleModel}
+                          onChange={(e) => setNewVehicleModel(e.target.value)}
+                        />
+                      </div>
+                      <div className="col-span-3 flex justify-end gap-2">
+                        <button
+                          type="button"
+                          className="rounded border border-gray-300 px-2 text-xs"
+                          onClick={() => setShowAddVehicle(false)}
+                        >
+                          בטל
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded bg-blue-600 hover:bg-blue-700 px-2 py-1 text-xs font-semibold text-white transition-colors"
+                          onClick={createVehicle}
+                        >
                           צור
                         </button>
                       </div>
                     </div>
                   )}
                 </label>
+              </div>
 
-                {/* Phone Field */}
+              {/* Drivers */}
+              <div className="col-span-1 md:col-span-2 grid grid-cols-1 gap-3 md:grid-cols-2">
                 <label className="flex flex-col gap-1">
                   <span className="text-sm font-medium text-blue-600">
-                    טלפון
-                    {(type === 'ביצוע טסט' ||
-                      type === 'חילוץ רכב תקוע' ||
-                      type === 'מסירת רכב חלופי' ||
-                      type === 'איסוף רכב/שינוע' ||
-                      type === 'החזרת רכב/שינוע') && (
-                      <span className="text-red-500"> *</span>
-                    )}
-                  </span>
-                  <Input
-                    type="tel"
-                    placeholder="טלפון"
-                    value={clientPhone}
-                    onChange={(e) => setClientPhone(e.target.value)}
-                  />
-                </label>
-
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium text-blue-600">
-                    כתובת
-                    {(type === 'חילוץ רכב תקוע' ||
-                      type === 'איסוף רכב/שינוע' ||
-                      type === 'החזרת רכב/שינוע') && (
-                      <span className="text-red-500"> *</span>
-                    )}
-                  </span>
-                  <AddressAutocomplete
-                    value={addressQuery}
-                    onChange={(val) => {
-                      setAddressQuery(val);
-                      setSelectedMainCoords(null);
-                    }}
-                    onSelect={(addr, lat, lng) => {
-                      setAddressQuery(addr);
-                      setSelectedMainCoords({ lat, lng });
-                    }}
-                    className="w-full"
-                  />
-                </label>
-
-                {(type === 'איסוף רכב/שינוע' || type === 'החזרת רכב/שינוע') && (
-                  <label className="flex flex-col gap-1">
-                    <span className="text-sm font-medium text-blue-600">
-                      רכב לקוח <span className="text-red-500"> *</span>
-                    </span>
-                    <div className="flex gap-2">
-                      <div className="grid w-full max-w-sm items-center gap-1">
-                        <Input
-                          type="text"
-                          placeholder="רכב לקוח (חפש לפי מספר רישוי או דגם)"
-                          value={clientVehicleQuery}
-                          onChange={(e) => {
-                            setClientVehicleQuery(e.target.value);
-                            setClientVehicleId('');
-                          }}
-                        />
-                        {clientVehicleSuggestions.length > 0 &&
-                          !clientVehicleId && (
-                            <div className="mt-1 max-h-40 w-full overflow-y-auto rounded border border-gray-300 bg-white text-sm shadow-sm">
-                              {clientVehicleSuggestions.map((v) => (
-                                <button
-                                  key={v.id}
-                                  type="button"
-                                  className="flex w-full items-center justify-between px-2 py-1 text-right hover:bg-blue-50"
-                                  onClick={() => {
-                                    setClientVehicleId(v.id);
-                                    setClientVehicleQuery(
-                                      `${formatLicensePlate(v.license_plate)}${
-                                        v.model ? ` · ${v.model}` : ''
-                                      }`
-                                    );
-                                  }}
-                                >
-                                  <span>
-                                    {formatLicensePlate(v.license_plate)}
-                                    {v.model ? ` · ${v.model}` : ''}
-                                  </span>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                      </div>
-                      <button
-                        type="button"
-                        className="rounded border border-gray-300 px-2 text-xs h-9 self-end bg-blue-500 text-white flex items-center justify-center"
-                        onClick={() => setShowAddClientVehicle((v) => !v)}
-                      >
-                        <PlusIcon className="w-4 h-4" />
-                        חדש
-                      </button>
-                    </div>
-                    {showAddClientVehicle && (
-                      <div className="mt-2 grid grid-cols-3 gap-2 p-2 border rounded bg-slate-50">
-                        {!clientId && (
-                          <div className="col-span-3 mb-1 text-[11px] font-bold text-red-600 bg-red-50 p-1 rounded border border-red-100">
-                            ⚠️ חובה לבחור לקוח לפני הוספת רכב
-                          </div>
-                        )}
-                        <div className="col-span-1 flex flex-col gap-1">
-                          <label className="text-xs font-medium text-blue-600">
-                            מספר רישוי
-                          </label>
-                          <input
-                            className="rounded border border-gray-300 p-1 text-sm"
-                            placeholder="7 או 8 ספרות"
-                            value={newClientVehiclePlate}
-                            onChange={(e) => {
-                              const input = e.target.value;
-                              const cleaned = input.replace(/[^\d-]/g, '');
-                              setNewClientVehiclePlate(
-                                formatLicensePlate(cleaned)
-                              );
-                            }}
-                          />
-                        </div>
-                        <div className="col-span-1 flex flex-col gap-1">
-                          <label className="text-xs font-medium text-blue-600">
-                            דגם
-                          </label>
-                          <input
-                            className="rounded border border-gray-300 p-1 text-sm"
-                            placeholder="דגם"
-                            value={newClientVehicleModel}
-                            onChange={(e) =>
-                              setNewClientVehicleModel(e.target.value)
-                            }
-                          />
-                        </div>
-                        <div className="col-span-1 flex items-end gap-1">
-                          <button
-                            type="button"
-                            disabled={!clientId}
-                            className="rounded bg-blue-600 px-2 py-1 text-xs text-white disabled:opacity-50"
-                            onClick={createClientVehicle}
-                          >
-                            הוסף
-                          </button>
-                          <button
-                            type="button"
-                            className="rounded border border-gray-300 px-2 py-1 text-xs"
-                            onClick={() => setShowAddClientVehicle(false)}
-                          >
-                            בטל
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </label>
-                )}
-              </div>
-            )}
-
-            {isMultiStopType && (
-              <div className="col-span-1 md:col-span-2 space-y-3 rounded border border-gray-200 bg-gray-50 p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-semibold text-blue-600">
-                      לקוחות / כתובות / יועצים
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      קבע התאמה בין לקוח, כתובת ויועץ לכל עצירה.
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      className="rounded border border-gray-300 px-2 text-xs h-9 bg-blue-500 text-white flex items-center justify-center"
-                      onClick={() =>
-                        setStops((prev) => [
-                          ...prev,
-                          {
-                            clientId: '',
-                            clientQuery: '',
-                            address: '',
-                            advisorName: '',
-                            advisorColor: null,
-                            phone: '',
-                          },
-                        ])
-                      }
-                    >
-                      <PlusIcon className="w-4 h-4" />
-                      הוסף לקוח
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded border border-gray-300 px-2 text-xs h-9 bg-white text-primary flex items-center justify-center"
-                      onClick={() => setShowAddClient((v) => !v)}
-                    >
-                      <PlusIcon className="w-4 h-4" />
-                      לקוח חדש
-                    </button>
-                  </div>
-                </div>
-
-                {stops.map((stop, idx) => {
-                  const suggestions = getClientSuggestions(stop.clientQuery);
-                  return (
-                    <div
-                      key={`stop-${idx}`}
-                      className="space-y-3 rounded border border-gray-200 bg-white p-3 shadow-sm"
-                    >
-                      <div className="flex items-center justify-between text-sm font-semibold text-blue-600">
-                        <span>עצירה {idx + 1}</span>
-                        {stops.length > 1 && (
-                          <button
-                            type="button"
-                            className="text-xs text-red-600 hover:underline flex items-center gap-1"
-                            onClick={() =>
-                              setStops((prev) =>
-                                prev.length > 1
-                                  ? prev.filter((_, i) => i !== idx)
-                                  : prev
-                              )
-                            }
-                          >
-                            <XIcon className="w-4 h-4" />
-                            הסר
-                          </button>
-                        )}
-                      </div>
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                          <div className="flex flex-col gap-1">
-                            <Label className="text-blue-600">
-                              לקוח
-                              {(type === 'הסעת לקוח הביתה' ||
-                                type === 'הסעת לקוח למוסך') && (
-                                <span className="text-red-500"> *</span>
-                              )}
-                            </Label>
-                            <Input
-                              type="text"
-                              placeholder="שם לקוח"
-                              value={stop.clientQuery}
-                              onFocus={() => setActiveStopIndex(idx)}
-                              onChange={(e) =>
-                                setStops((prev) =>
-                                  prev.map((s, i) =>
-                                    i === idx
-                                      ? {
-                                          ...s,
-                                          clientQuery: e.target.value,
-                                          clientId: '',
-                                        }
-                                      : s
-                                  )
-                                )
-                              }
-                            />
-                            {suggestions.length > 0 && !stop.clientId && (
-                              <div className="mt-1 max-h-40 w-full overflow-y-auto rounded border border-gray-300 bg-white text-sm shadow-sm">
-                                {suggestions.map((c) => (
-                                  <button
-                                    key={c.id}
-                                    type="button"
-                                    className="flex w-full items-center justify-between px-2 py-1 text-right hover:bg-blue-50"
-                                    onClick={() =>
-                                      setStops((prev) =>
-                                        prev.map((s, i) =>
-                                          i === idx
-                                            ? {
-                                                ...s,
-                                                clientId: c.id,
-                                                clientQuery: c.name,
-                                                phone: c.phone || '',
-                                              }
-                                            : s
-                                        )
-                                      )
-                                    }
-                                  >
-                                    <span>{c.name}</span>
-                                    {c.phone && (
-                                      <span className="text-xs text-gray-500">
-                                        {c.phone}
-                                      </span>
-                                    )}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            <Label className="text-blue-600">
-                              טלפון
-                              {(type === 'הסעת לקוח הביתה' ||
-                                type === 'הסעת לקוח למוסך') && (
-                                <span className="text-red-500"> *</span>
-                              )}
-                            </Label>
-                            <Input
-                              type="tel"
-                              placeholder="טלפון"
-                              value={stop.phone}
-                              onChange={(e) =>
-                                setStops((prev) =>
-                                  prev.map((s, i) =>
-                                    i === idx
-                                      ? { ...s, phone: e.target.value }
-                                      : s
-                                  )
-                                )
-                              }
-                            />
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            <Label className="text-blue-600">
-                              כתובת
-                              {(type === 'הסעת לקוח הביתה' ||
-                                type === 'הסעת לקוח למוסך') && (
-                                <span className="text-red-500"> *</span>
-                              )}
-                            </Label>
-                            <AddressAutocomplete
-                              value={stop.address}
-                              onChange={(val) =>
-                                setStops((prev) =>
-                                  prev.map((s, i) =>
-                                    i === idx
-                                      ? {
-                                          ...s,
-                                          address: val,
-                                          lat: null,
-                                          lng: null,
-                                          distanceFromGarage: null,
-                                        }
-                                      : s
-                                  )
-                                )
-                              }
-                              onSelect={(addr, lat, lng) =>
-                                setStops((prev) =>
-                                  prev.map((s, i) =>
-                                    i === idx
-                                      ? {
-                                          ...s,
-                                          address: addr,
-                                          lat,
-                                          lng,
-                                          distanceFromGarage: calculateDistance(
-                                            GARAGE_LOCATION,
-                                            { lat, lng }
-                                          ),
-                                        }
-                                      : s
-                                  )
-                                )
-                              }
-                              placeholder="כתובת"
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                          <div className="flex flex-col gap-1">
-                            <Label className="text-blue-600">
-                              שם יועץ <span className="text-red-500">*</span>
-                            </Label>
-                            <Input
-                              type="text"
-                              placeholder="שם יועץ"
-                              value={stop.advisorName}
-                              onChange={(e) =>
-                                setStops((prev) =>
-                                  prev.map((s, i) =>
-                                    i === idx
-                                      ? { ...s, advisorName: e.target.value }
-                                      : s
-                                  )
-                                )
-                              }
-                            />
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            <Label className="text-blue-600">
-                              צבע יועץ <span className="text-red-500">*</span>
-                            </Label>
-                            <RtlSelectDropdown
-                              value={stop.advisorColor || ''}
-                              options={[
-                                { value: '', label: '—' },
-                                ...getAdvisorColorOptions().map((color) => ({
-                                  value: color,
-                                  label: color,
-                                  bgClass: getAdvisorColorBgClass(color),
-                                  textClass: getAdvisorColorTextClass(color),
-                                  color: getAdvisorColorHex(color),
-                                })),
-                              ]}
-                              onChange={(value) =>
-                                setStops((prev) =>
-                                  prev.map((s, i) =>
-                                    i === idx
-                                      ? {
-                                          ...s,
-                                          advisorColor:
-                                            value === ''
-                                              ? null
-                                              : (value as AdvisorColor),
-                                        }
-                                      : s
-                                  )
-                                )
-                              }
-                              placeholder="בחר צבע"
-                            />
-                            {stop.advisorColor && (
-                              <div className="mt-1 flex items-center gap-2">
-                                <span
-                                  className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getAdvisorColorBgClass(
-                                    stop.advisorColor
-                                  )} ${getAdvisorColorTextClass(
-                                    stop.advisorColor
-                                  )}`}
-                                >
-                                  {stop.advisorColor}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {showAddClient && (
-                  <div className="mt-2 grid grid-cols-3 gap-2">
-                    <input
-                      className="rounded border border-gray-300 p-2 col-span-1"
-                      placeholder="שם"
-                      value={newClientName}
-                      onChange={(e) => setNewClientName(e.target.value)}
-                    />
-                    <input
-                      className="rounded border border-gray-300 p-2 col-span-1"
-                      placeholder="טלפון"
-                      value={newClientPhone}
-                      onChange={(e) => setNewClientPhone(e.target.value)}
-                    />
-                    <input
-                      className="rounded border border-gray-300 p-2 col-span-1"
-                      placeholder="אימייל (אופציונלי)"
-                      value={newClientEmail}
-                      onChange={(e) => setNewClientEmail(e.target.value)}
-                    />
-                    <div className="col-span-3 flex justify-end gap-2">
-                      <button
-                        type="button"
-                        className="rounded border border-gray-300 px-2 text-xs"
-                        onClick={() => setShowAddClient(false)}
-                      >
-                        בטל
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded bg-blue-600 hover:bg-blue-700 px-2 py-1 text-xs font-semibold text-white transition-colors"
-                        onClick={createClient}
-                      >
-                        צור ושייך לעצירה {activeStopIndex + 1}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Agency Vehicle - Visible for both regular and multi-stop tasks */}
-            <div className="col-span-1 md:col-span-2">
-              <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-primary">
-                  רכב סוכנות
-                  {(type === 'ביצוע טסט' ||
-                    type === 'חילוץ רכב תקוע' ||
-                    type === 'מסירת רכב חלופי' ||
-                    type === 'הסעת לקוח הביתה') && (
-                    <span className="text-red-500"> *</span>
-                  )}
-                </span>
-                <div className="flex gap-2">
-                  <div className="grid w-full max-w-sm items-center gap-1">
-                    <Input
-                      type="text"
-                      id="vehicle"
-                      placeholder="רכב סוכנות"
-                      value={vehicleQuery}
-                      onChange={(e) => {
-                        setVehicleQuery(e.target.value);
-                        setVehicleId(''); // Clear vehicleId when typing to show suggestions
-                      }}
-                    />
-                    {vehicleSuggestions.length > 0 && !vehicleId && (
-                      <div className="mt-1 max-h-40 w-full overflow-y-auto rounded border border-gray-300 bg-white text-sm shadow-sm">
-                        {vehicleSuggestions.map((v) => {
-                          // Don't mark as occupied if it's the currently selected vehicle
-                          const isOccupied =
-                            (v.isOccupied || false) && v.id !== vehicleId;
-
-                          // Allow selecting unavailable vehicles IF they are "At Customer" and the task is "Return Vehicle"
-                          const isAtCustomer =
-                            v.unavailabilityReason === 'אצל לקוח';
-                          const isReturnTask = type === 'החזרת רכב/שינוע';
-                          const isUnavailable = v.isUnavailable || false;
-
-                          // A vehicle is disabled if:
-                          // 1. It is occupied by another task at the same time
-                          // 2. It is unavailable for a reason other than being at a customer
-                          // 3. It is at a customer, but the current task is NOT a return task
-                          const isDisabled =
-                            isOccupied ||
-                            (isUnavailable && !(isAtCustomer && isReturnTask));
-
-                          return (
-                            <button
-                              key={v.id}
-                              type="button"
-                              disabled={isDisabled}
-                              className={`flex w-full items-center justify-between px-2 py-1 text-right ${
-                                isDisabled
-                                  ? 'cursor-not-allowed bg-gray-100 text-gray-400 opacity-60'
-                                  : 'hover:bg-blue-50'
-                              }`}
-                              onClick={() => {
-                                if (isOccupied) {
-                                  toastError(
-                                    'רכב זה כבר משוייך למשימה אחרת באותו יום ובאותו טווח זמן'
-                                  );
-                                  return;
-                                }
-                                if (isDisabled && isUnavailable) {
-                                  if (isAtCustomer && !isReturnTask) {
-                                    toastError(
-                                      'רכב זה נמצא אצל לקוח. ניתן לשייך אותו רק למשימת החזרת רכב.'
-                                    );
-                                  } else {
-                                    toastError('רכב זה מושבת ולא זמין לשימוש');
-                                  }
-                                  return;
-                                }
-                                setVehicleId(v.id);
-                                setVehicleQuery(
-                                  `${formatLicensePlate(v.license_plate)}${
-                                    v.model ? ` · ${v.model}` : ''
-                                  }`
-                                );
-                              }}
-                            >
-                              <span
-                                className={isDisabled ? 'text-gray-400' : ''}
-                              >
-                                {formatLicensePlate(v.license_plate)}
-                                {v.model ? ` · ${v.model}` : ''}
-                                {isOccupied && (
-                                  <span className="mr-2 text-xs">(תפוס)</span>
-                                )}
-                                {isUnavailable && (
-                                  <span className="mr-2 text-xs">
-                                    ({isAtCustomer ? 'אצל לקוח' : 'מושבת'})
-                                  </span>
-                                )}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    className="rounded border border-gray-300 px-2 text-xs h-9 self-end bg-blue-500 text-white flex items-center justify-center"
-                    onClick={() => setShowAddVehicle((v) => !v)}
-                  >
-                    <PlusIcon className="w-4 h-4" />
-                    חדש
-                  </button>
-                </div>
-                {showAddVehicle && (
-                  <div className="mt-2 grid grid-cols-3 gap-2">
-                    <div className="col-span-1 flex flex-col gap-1">
-                      <label className="text-sm font-medium text-primary">
-                        מספר רישוי <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        className="rounded border border-gray-300 p-2"
-                        placeholder="מספר רישוי (7 או 8 ספרות)"
-                        value={newVehiclePlate}
-                        onChange={(e) => {
-                          const input = e.target.value;
-                          // Allow digits and dashes only
-                          const cleaned = input.replace(/[^\d-]/g, '');
-                          // Format as user types
-                          const formatted = formatLicensePlate(cleaned);
-                          setNewVehiclePlate(formatted);
-                          // Clear error when user starts typing
-                          if (error && error.includes('מספר רישוי')) {
-                            setError(null);
-                          }
-                        }}
-                        maxLength={10} // Max length for formatted plate (e.g., "123-45-678")
-                      />
-                      {newVehiclePlate &&
-                        (() => {
-                          const digitsOnly = newVehiclePlate.replace(/\D/g, '');
-                          const digitCount = digitsOnly.length;
-                          if (digitCount === 0) return null;
-                          if (digitCount < 7) {
-                            return (
-                              <p className="text-xs text-red-600">
-                                מספר רישוי חייב להכיל לפחות 7 ספרות (נמצאו{' '}
-                                {digitCount} ספרות)
-                              </p>
-                            );
-                          }
-                          if (digitCount > 8) {
-                            return (
-                              <p className="text-xs text-red-600">
-                                מספר רישוי חייב להכיל לכל היותר 8 ספרות (נמצאו{' '}
-                                {digitCount} ספרות)
-                              </p>
-                            );
-                          }
-                          return null;
-                        })()}
-                    </div>
-                    <div className="col-span-1 flex flex-col gap-1">
-                      <label className="text-sm font-medium text-primary">
-                        דגם
-                      </label>
-                      <input
-                        className="rounded border border-gray-300 p-2"
-                        placeholder="דגם"
-                        value={newVehicleModel}
-                        onChange={(e) => setNewVehicleModel(e.target.value)}
-                      />
-                    </div>
-                    <div className="col-span-3 flex justify-end gap-2">
-                      <button
-                        type="button"
-                        className="rounded border border-gray-300 px-2 text-xs"
-                        onClick={() => setShowAddVehicle(false)}
-                      >
-                        בטל
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded bg-blue-600 hover:bg-blue-700 px-2 py-1 text-xs font-semibold text-white transition-colors"
-                        onClick={createVehicle}
-                      >
-                        צור
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </label>
-            </div>
-
-            {/* Drivers */}
-            <div className="col-span-1 md:col-span-2 grid grid-cols-1 gap-3 md:grid-cols-2">
-              <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-blue-600">
-                  נהג מוביל
-                </span>
-                <RtlSelectDropdown
-                  value={leadDriverId}
-                  options={drivers.map((d) => ({
-                    value: d.id,
-                    label: d.name || d.email || '',
-                  }))}
-                  onChange={(value) => setLeadDriverId(value)}
-                />
-              </label>
-
-              {multiDriverEnabled && (
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm font-medium text-blue-600">
-                    נהגי משנה
+                    נהג מוביל
                   </span>
                   <RtlSelectDropdown
-                    value={coDriverIds}
-                    options={drivers
-                      .filter((d) => d.id !== leadDriverId)
-                      .map((d) => ({
+                    value={leadDriverId}
+                    options={[
+                      { value: '', label: 'ללא (לא משוייך)' },
+                      ...drivers.map((d) => ({
                         value: d.id,
                         label: d.name || d.email || '',
-                      }))}
-                    onChange={(val) => setCoDriverIds(val as string[])}
-                    multiple
-                    placeholder="בחר נהגי משנה"
+                      })),
+                    ]}
+                    onChange={(value) => setLeadDriverId(value)}
                   />
-                </div>
-              )}
-            </div>
+                </label>
 
-            <div className="col-span-1 md:col-span-2 mt-2 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                className="rounded flex items-center justify-center gap-2 border border-gray-300 px-3 py-2 text-sm"
-                onClick={() => onOpenChange(false)}
-                disabled={submitting}
-              >
-                <XIcon className="w-4 h-4 mr-2" />
-                ביטול
-              </button>
-              <button
-                type="submit"
-                className="rounded flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50 transition-colors"
-                disabled={submitting}
-              >
-                <SaveIcon className="w-4 h-4 mr-2" />
-                {mode === 'create' ? 'צור משימה' : 'שמור שינויים'}
-              </button>
-            </div>
-          </form>
+                {multiDriverEnabled && (
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-blue-600">
+                        נהגי משנה
+                      </span>
+                      {coDriverIds.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setCoDriverIds([])}
+                          className="text-xs text-red-500 hover:text-red-700 underline"
+                        >
+                          נקה הכל
+                        </button>
+                      )}
+                    </div>
+                    <RtlSelectDropdown
+                      value={coDriverIds}
+                      options={drivers
+                        .filter((d) => d.id !== leadDriverId)
+                        .map((d) => ({
+                          value: d.id,
+                          label: d.name || d.email || '',
+                        }))}
+                      onChange={(val) => setCoDriverIds(val as string[])}
+                      multiple
+                      placeholder="בחר נהגי משנה"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="col-span-1 md:col-span-2 mt-2 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  {mode === 'edit' && task && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <button
+                          type="button"
+                          className="rounded flex items-center justify-center gap-2 border border-red-200 text-red-600 hover:bg-red-50 px-3 py-2 text-sm transition-colors"
+                          disabled={submitting}
+                        >
+                          <Trash2Icon className="w-4 h-4 mr-2" />
+                          מחק משימה
+                        </button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>למחוק את המשימה?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            פעולה זו תסמן את המשימה כמחוקה. הנהגים המשויכים
+                            יקבלו התראה על ביטול המשימה.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>בטל</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={async () => {
+                              if (!task?.id) return;
+                              setSubmitting(true);
+                              try {
+                                const res = await fetch(
+                                  `/api/admin/tasks/${task.id}`,
+                                  {
+                                    method: 'DELETE',
+                                  }
+                                );
+                                if (!res.ok) throw new Error('Delete failed');
+                                toastSuccess('המשימה נמחקה בהצלחה');
+                                onOpenChange(false);
+                                if (onUpdated) {
+                                  // Trigger refresh in parent
+                                  onUpdated({
+                                    ...task,
+                                    deleted_at: new Date().toISOString(),
+                                  } as Task);
+                                }
+                              } catch {
+                                toastError('שגיאה במחיקת המשימה');
+                              } finally {
+                                setSubmitting(false);
+                              }
+                            }}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                          >
+                            מחק
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="rounded flex items-center justify-center gap-2 border border-gray-300 px-3 py-2 text-sm"
+                    onClick={() => onOpenChange(false)}
+                    disabled={submitting}
+                  >
+                    <XIcon className="w-4 h-4 mr-2" />
+                    ביטול
+                  </button>
+                  <button
+                    type="submit"
+                    className="rounded flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50 transition-colors"
+                    disabled={submitting}
+                  >
+                    <SaveIcon className="w-4 h-4 mr-2" />
+                    צור משימה
+                  </button>
+                </div>
+              </div>
+            </form>
+          )}
         </div>
       </div>
     </div>

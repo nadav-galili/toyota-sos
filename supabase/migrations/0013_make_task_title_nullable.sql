@@ -1,3 +1,2 @@
--- Migration: Make tasks.title nullable
-alter table public.tasks alter column title drop not null;
-
+-- Migration: Make tasks.title nullable (DEPRECATED - title column removed)
+-- This migration is kept for index consistency but no longer performs any action.

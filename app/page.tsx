@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
@@ -154,7 +155,24 @@ export default function Home() {
           &copy; {new Date().getFullYear()} Toyota S.O.S. All rights reserved.
         </p>
         <p>Version 1.0.2</p>
-        <p>Developed By Nadav Galili</p>
+        <div className="flex flex-col items-center gap-1">
+          <p>Developed By Nadav Galili</p>
+          <div className="flex items-center gap-4">
+            <Link 
+              href="/accessibility" 
+              className="text-primary/60 hover:text-primary transition-colors underline underline-offset-2"
+            >
+              הצהרת נגישות
+            </Link>
+            <span className="text-gray-600">|</span>
+            <Link 
+              href="/privacy" 
+              className="text-primary/60 hover:text-primary transition-colors underline underline-offset-2"
+            >
+              מדיניות פרטיות
+            </Link>
+          </div>
+        </div>
       </div>
 
       {/* Background Glow */}

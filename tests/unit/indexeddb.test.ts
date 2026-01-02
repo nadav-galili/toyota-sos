@@ -143,10 +143,10 @@ describe('indexeddb wrapper - basic CRUD/queue flows', () => {
   });
 
   it('stores and retrieves tasks', async () => {
-    const ok = await cachePutTask({ id: 't1', title: 'Task 1' });
+    const ok = await cachePutTask({ id: 't1', type: 'Task 1' });
     expect(ok).toBe(true);
     const t = await cacheGetTask('t1');
-    expect(t?.title).toBe('Task 1');
+    expect(t?.type).toBe('Task 1');
     const all = await cacheGetAllTasks();
     expect(all.find((x) => x.id === 't1')).toBeTruthy();
     const del = await cacheDeleteTask('t1');

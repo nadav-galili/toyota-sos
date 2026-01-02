@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { cn } from '@/lib/utils';
 
 type AuditRow = {
   id: string;
@@ -8,90 +9,252 @@ type AuditRow = {
   actor_id: string | null;
   action: 'created' | 'updated' | string;
   changed_at: string;
-  before: any | null;
-  after: any | null;
-  diff: Record<string, { from: any; to: any }> | null;
+  before: Record<string, unknown> | null;
+  after: Record<string, unknown> | null;
+  diff: Record<string, { from: unknown; to: unknown }> | null;
+  actor?: { name: string; email: string } | null;
+  merged_actions?: AuditRow[];
 };
 
 type ProfilesMap = Record<string, string>;
 
+const FIELD_LABELS: Record<string, string> = {
+  type: 'סוג משימה',
+  status: 'סטטוס',
+  priority: 'עדיפות',
+  address: 'כתובת',
+  details: 'תיאור',
+  advisor_name: 'שם יועץ',
+  advisor_color: 'צבע יועץ',
+  estimated_start: 'תאריך/שעת ביצוע',
+  estimated_end: 'שעת סיום משוערת',
+  client_id: 'לקוח',
+  vehicle_id: 'רכב סוכנות',
+  client_vehicle_id: 'רכב לקוח',
+  phone: 'טלפון',
+  created_at: 'זמן יצירה',
+  distance_from_garage: 'מרחק מהסוכנות',
+  is_lead: 'נהג מוביל?',
+  driver_name: 'שם הנהג',
+  stop_index: 'מספר עצירה',
+};
+
+const HIDDEN_FIELDS = new Set(['lat', 'lng', 'distance_from_garage']);
+
 function formatDateHeIL(ts: string) {
+  if (!ts) return '—';
   try {
-    return new Date(ts).toLocaleString('he-IL');
+    const d = new Date(ts);
+    // If it's just a date (like estimated_start usually is when saved as date)
+    return d.toLocaleString('he-IL', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   } catch {
     return ts;
   }
 }
 
-function classifyChange(v: { from: any; to: any }) {
+function classifyChange(v: { from: unknown; to: unknown }) {
   if (v.from === undefined || v.from === null) return 'added';
   if (v.to === undefined || v.to === null) return 'removed';
   if (JSON.stringify(v.from) !== JSON.stringify(v.to)) return 'modified';
   return 'same';
 }
 
+const actionLabels: Record<string, string> = {
+  created: 'נוצר',
+  updated: 'עודכן',
+  assigned: 'הקצאת נהג',
+  unassigned: 'ביטול הקצאה',
+  stop_added: 'נוספה עצירה',
+  stop_updated: 'עודכנה עצירה',
+  stop_removed: 'הוסרה עצירה',
+};
+
 export function AuditFeed({
   taskId,
   pageSize = 20,
 }: {
-  taskId: string;
+  taskId?: string | null;
   pageSize?: number;
 }) {
   const [rows, setRows] = useState<AuditRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
-  const [actorLookup, setActorLookup] = useState<ProfilesMap>({});
+  const [lookups, setLookups] = useState<{
+    clients: ProfilesMap;
+    vehicles: ProfilesMap;
+    clientVehicles: ProfilesMap;
+    drivers: ProfilesMap;
+  }>({ clients: {}, vehicles: {}, clientVehicles: {}, drivers: {} });
   const [actionFilter, setActionFilter] = useState<string>('all');
   const [query, setQuery] = useState<string>('');
 
-  const loadPage = useCallback(async (p: number) => {
-    setLoading(true);
-    setError(null);
+  const fetchLookups = useCallback(async () => {
     try {
-      const offset = p * pageSize;
-      const res = await fetch(`/api/admin/tasks/${taskId}/audit?limit=${pageSize}&offset=${offset}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
+      const [clientsRes, vehiclesRes, clientVehiclesRes, driversRes] =
+        await Promise.all([
+          fetch('/api/admin/clients'),
+          fetch('/api/admin/vehicles'),
+          fetch('/api/admin/clients-vehicles'),
+          fetch('/api/admin/drivers'),
+        ]);
+
+      const [clients, vehicles, clientVehicles, drivers] = await Promise.all([
+        clientsRes.ok ? clientsRes.json() : Promise.resolve([]),
+        vehiclesRes.ok ? vehiclesRes.json() : Promise.resolve([]),
+        clientVehiclesRes.ok ? clientVehiclesRes.json() : Promise.resolve([]),
+        driversRes.ok ? driversRes.json() : Promise.resolve([]),
+      ]);
+
+      const clientMap: ProfilesMap = {};
+      const clientsData = clients?.data || clients || [];
+      if (Array.isArray(clientsData)) {
+        clientsData.forEach((c: any) => {
+          if (c.id) clientMap[c.id] = c.name || c.email || c.id;
+        });
+      }
+
+      const vehicleMap: ProfilesMap = {};
+      const vehiclesData = vehicles?.data || vehicles || [];
+      if (Array.isArray(vehiclesData)) {
+        vehiclesData.forEach((v: any) => {
+          if (v.id)
+            vehicleMap[v.id] = `${v.license_plate} ${v.model || ''}`.trim();
+        });
+      }
+
+      const clientVehicleMap: ProfilesMap = {};
+      const clientVehiclesData = clientVehicles?.data || clientVehicles || [];
+      if (Array.isArray(clientVehiclesData)) {
+        clientVehiclesData.forEach((v: any) => {
+          if (v.id)
+            clientVehicleMap[v.id] = `${v.license_plate} ${
+              v.model || ''
+            }`.trim();
+        });
+      }
+
+      const driverMap: ProfilesMap = {};
+      const driversData = drivers?.data || drivers || [];
+      if (Array.isArray(driversData)) {
+        driversData.forEach((d: any) => {
+          if (d.id) driverMap[d.id] = d.name || d.email || d.id;
+        });
+      }
+
+      setLookups({
+        clients: clientMap,
+        vehicles: vehicleMap,
+        clientVehicles: clientVehicleMap,
+        drivers: driverMap,
       });
-      if (res.status === 401) {
-        setError('לא מורשה');
-        setRows([]);
-        return;
-      }
-      if (!res.ok) throw new Error(await res.text().catch(() => 'שגיאה בטעינת לוג'));
-      const json = await res.json();
-      const data = (json?.data as AuditRow[]) || [];
-      setRows(data);
-      // fetch actors display names (best-effort)
-      const ids = Array.from(new Set(data.map((r) => r.actor_id).filter(Boolean))) as string[];
-      if (ids.length > 0) {
-        try {
-          const q = encodeURIComponent(`in.(${ids.join(',')})`);
-          const profRes = await fetch(
-            `${(globalThis as any).__SUPABASE_URL__ ?? ''}/rest/v1/profiles?select=id,name,email&id=${q}`,
-            { headers: { apikey: (globalThis as any).__SUPABASE_ANON__ ?? '' } }
-          );
-          if (profRes.ok) {
-            const arr = await profRes.json();
-            const map: ProfilesMap = {};
-            for (const p of arr) {
-              map[p.id] = p.name || p.email || p.id;
-            }
-            setActorLookup(map);
-          }
-        } catch {
-          // ignore
-        }
-      } else {
-        setActorLookup({});
-      }
-    } catch (e: any) {
-      setError(e?.message || 'שגיאה בטעינה');
-    } finally {
-      setLoading(false);
+    } catch {
+      // ignore errors
     }
-  }, [pageSize, taskId]);
+  }, []);
+
+  useEffect(() => {
+    fetchLookups();
+  }, [fetchLookups]);
+
+  const resolveValue = (key: string, val: unknown) => {
+    if (val === null || val === undefined) return '—';
+    if (typeof val === 'boolean') return val ? 'כן' : 'לא';
+
+    // If it's a diff object {from, to}, extract the "to" or "from" depending on context
+    // but in resolveValue we usually want the simple value.
+    if (typeof val === 'object' && val !== null) {
+      const v = val as { from?: unknown; to?: unknown };
+      if ('to' in v || 'from' in v) {
+        return resolveValue(key, v.to !== undefined ? v.to : v.from);
+      }
+      return JSON.stringify(val);
+    }
+
+    const sVal = String(val).toLowerCase();
+
+    if (key === 'client_id') {
+      const entry = Object.entries(lookups.clients).find(
+        ([id]) => id.toLowerCase() === sVal
+      );
+      if (entry) return entry[1];
+    }
+    if (key === 'vehicle_id') {
+      const entry = Object.entries(lookups.vehicles).find(
+        ([id]) => id.toLowerCase() === sVal
+      );
+      if (entry) return entry[1];
+    }
+    if (key === 'client_vehicle_id') {
+      const entry = Object.entries(lookups.clientVehicles).find(
+        ([id]) => id.toLowerCase() === sVal
+      );
+      if (entry) return entry[1];
+    }
+    if (key === 'driver_id' || key === 'driver_name') {
+      const entry = Object.entries(lookups.drivers).find(
+        ([id]) => id.toLowerCase() === sVal
+      );
+      if (entry) return entry[1];
+      // driver_name might already be the name string in the diff
+      if (
+        key === 'driver_name' &&
+        val &&
+        typeof val === 'string' &&
+        val.length > 5
+      )
+        return val;
+    }
+    if (
+      key.includes('date') ||
+      key.includes('start') ||
+      key.includes('_at') ||
+      key.includes('end')
+    ) {
+      if (sVal.includes('T') || sVal.includes('-')) return formatDateHeIL(sVal);
+    }
+    return sVal.replace(/^"|"$/g, '');
+  };
+
+  const loadPage = useCallback(
+    async (p: number) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const offset = p * pageSize;
+        const url = taskId
+          ? `/api/admin/tasks/${taskId}/audit?limit=${pageSize}&offset=${offset}`
+          : `/api/admin/audit?limit=${pageSize}&offset=${offset}`;
+
+        const res = await fetch(url, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (res.status === 401) {
+          setError('לא מורשה');
+          setRows([]);
+          return;
+        }
+        if (!res.ok)
+          throw new Error(await res.text().catch(() => 'שגיאה בטעינת לוג'));
+        const json = await res.json();
+        const data = (json?.data as AuditRow[]) || [];
+        setRows(data);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'שגיאה בטעינה';
+        setError(msg);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [pageSize, taskId]
+  );
 
   useEffect(() => {
     loadPage(page);
@@ -102,6 +265,15 @@ export function AuditFeed({
     if (actionFilter !== 'all') {
       list = list.filter((r) => r.action === actionFilter);
     }
+
+    // Filter out updates that only contain hidden technical fields
+    list = list.filter((r) => {
+      if (r.action !== 'updated' || !r.diff) return true;
+      const keys = Object.keys(r.diff);
+      const hasVisibleChanges = keys.some((k) => !HIDDEN_FIELDS.has(k) && k !== 'deleted_at');
+      return hasVisibleChanges;
+    });
+
     if (query.trim()) {
       const q = query.trim().toLowerCase();
       list = list.filter((r) => {
@@ -114,20 +286,53 @@ export function AuditFeed({
     return list;
   }, [rows, actionFilter, query]);
 
-  const copyJson = (payload: any) => {
-    try {
-      const s = JSON.stringify(payload, null, 2);
-      (navigator.clipboard?.writeText as any)?.(s);
-    } catch {
-      // ignore
-    }
-  };
+  const grouped = useMemo(() => {
+    const creationMap = new Map<string, AuditRow>();
+    const result: AuditRow[] = [];
+
+    // Find all 'created' actions first to use as anchors
+    filtered.forEach((r) => {
+      if (r.action === 'created') creationMap.set(r.task_id, r);
+    });
+
+    filtered.forEach((r) => {
+      // If it's an assignment/unassignment that happened very close to creation
+      if (r.action === 'assigned' || r.action === 'unassigned') {
+        const creation = creationMap.get(r.task_id);
+        if (creation) {
+          const creationTime = new Date(creation.changed_at).getTime();
+          const actionTime = new Date(r.changed_at).getTime();
+          // Within 10 seconds
+          if (Math.abs(creationTime - actionTime) < 10000) {
+            if (!creation.merged_actions) creation.merged_actions = [];
+
+            // De-duplicate assignments for same driver
+            const isDuplicate = creation.merged_actions.some(
+              (ma) =>
+                ma.action === r.action &&
+                JSON.stringify(ma.diff) === JSON.stringify(r.diff)
+            );
+
+            if (!isDuplicate) {
+              creation.merged_actions.push(r);
+            }
+            return; // Skip adding this as a separate row
+          }
+        }
+      }
+      result.push(r);
+    });
+
+    return result;
+  }, [filtered]);
 
   return (
     <section dir="rtl" aria-label="פיד שינויים" className="w-full max-w-3xl">
       <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-2">
-          <label className="text-sm" htmlFor="audit-action-filter">סינון פעולה</label>
+          <label className="text-sm" htmlFor="audit-action-filter">
+            סינון פעולה
+          </label>
           <select
             id="audit-action-filter"
             className="rounded border border-gray-300 p-2 text-sm"
@@ -137,6 +342,11 @@ export function AuditFeed({
             <option value="all">הכל</option>
             <option value="created">נוצר</option>
             <option value="updated">עודכן</option>
+            <option value="assigned">הקצאה</option>
+            <option value="unassigned">ביטול הקצאה</option>
+            <option value="stop_added">עצירה חדשה</option>
+            <option value="stop_updated">עדכון עצירה</option>
+            <option value="stop_removed">הסרת עצירה</option>
           </select>
         </div>
         <input
@@ -149,31 +359,178 @@ export function AuditFeed({
       </div>
 
       {loading ? <div role="status">טוען...</div> : null}
-      {error ? <div role="alert" className="text-red-600 text-sm">{error}</div> : null}
+      {error ? (
+        <div role="alert" className="text-red-600 text-sm">
+          {error}
+        </div>
+      ) : null}
       {!loading && !error && filtered.length === 0 ? (
         <div className="text-sm text-gray-500">אין שינויים להצגה.</div>
       ) : null}
 
       <ul className="space-y-3">
-        {filtered.map((r) => {
-          const actor = (r.actor_id && actorLookup[r.actor_id]) || r.actor_id || '—';
+        {grouped.map((r) => {
+          const actor = r.actor?.name || r.actor?.email || r.actor_id || '—';
           const when = formatDateHeIL(r.changed_at);
           const diff = r.diff || {};
           const keys = Object.keys(diff);
+
+          // Check for deletion (soft delete)
+          const isDeletion =
+            keys.includes('deleted_at') &&
+            diff.deleted_at &&
+            classifyChange(diff.deleted_at as { from: unknown; to: unknown }) ===
+              'added';
+
+          // When a task is deleted, we want to show some context fields even if they didn't change
+          const deletionContextFields = ['type', 'client_id'];
+          const displayKeys = isDeletion
+            ? [
+                ...deletionContextFields.filter(
+                  (f) => r.before?.[f] || r.after?.[f]
+                ),
+                ...keys.filter((k) => k !== 'deleted_at' && !HIDDEN_FIELDS.has(k)),
+              ]
+            : keys.filter((k) => !HIDDEN_FIELDS.has(k));
+
+          if (
+            r.action === 'created' ||
+            r.action === 'assigned' ||
+            r.action === 'unassigned'
+          ) {
+            const displayFields: Record<string, string[]> = {
+              created: [
+                'type',
+                'created_at',
+                'estimated_start',
+                'client_id',
+                'client_vehicle_id',
+                'vehicle_id',
+                'advisor_name',
+                'address',
+              ],
+              assigned: ['driver_name', 'is_lead'],
+              unassigned: ['driver_name', 'is_lead'],
+            };
+            const fields = displayFields[r.action] || [];
+
+            return (
+              <li key={r.id} className="rounded border bg-white p-3 shadow-sm">
+                <div className="mb-2 flex flex-wrap items-center gap-2 text-sm border-b pb-2">
+                  <span className="font-bold text-blue-700">{actor}</span>
+                  <span>•</span>
+                  <span
+                    className={cn(
+                      'px-2 py-0.5 rounded-full text-xs font-semibold',
+                      r.action === 'created'
+                        ? 'bg-blue-100 text-blue-800'
+                        : r.action === 'assigned'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-orange-100 text-orange-800'
+                    )}
+                  >
+                    {actionLabels[r.action] || r.action}
+                  </span>
+                  {!taskId && (
+                    <>
+                      <span>•</span>
+                      <span className="text-gray-500 font-mono text-xs">
+                        משימה: {r.task_id.slice(0, 8)}
+                      </span>
+                    </>
+                  )}
+                  <span className="mr-auto text-gray-400 text-xs">{when}</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                  {fields.map((k) => {
+                    // ... same logic ...
+                    let val = r.after?.[k];
+                    if (val === undefined || val === null) {
+                      val = r.before?.[k];
+                    }
+                    if ((val === undefined || val === null) && r.diff?.[k]) {
+                      const d = r.diff[k] as { to?: unknown; from?: unknown };
+                      val = d.to !== undefined && d.to !== null ? d.to : d.from;
+                    }
+                    if (
+                      val === undefined ||
+                      val === null ||
+                      val === '' ||
+                      val === '—'
+                    )
+                      return null;
+
+                    const resolved = resolveValue(k, val);
+                    if (resolved === '—') return null;
+
+                    return (
+                      <div
+                        key={k}
+                        className="flex justify-between border-b border-gray-50 py-1"
+                      >
+                        <span className="text-gray-500">
+                          {FIELD_LABELS[k] || k}:
+                        </span>
+                        <span className="font-medium">{resolved}</span>
+                      </div>
+                    );
+                  })}
+
+                  {/* Merged Actions (Drivers) */}
+                  {r.merged_actions?.map((m) => {
+                    const driverName = resolveValue(
+                      'driver_name',
+                      m.diff?.driver_name
+                    );
+                    const isLead = resolveValue('is_lead', m.diff?.is_lead);
+                    return (
+                      <div
+                        key={m.id}
+                        className="col-span-1 sm:col-span-2 flex justify-between border-b border-blue-50 bg-blue-50/30 py-1 px-2 mt-1 rounded"
+                      >
+                        <span className="text-blue-600 font-semibold">
+                          הקצאת נהג:
+                        </span>
+                        <span className="font-medium">
+                          {driverName} {isLead === 'כן' ? '(מוביל)' : '(משנה)'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </li>
+            );
+          }
+
           return (
             <li key={r.id} className="rounded border bg-white p-3 shadow-sm">
-              <div className="mb-1 flex flex-wrap items-center gap-2 text-sm">
+              <div className="mb-1 flex flex-wrap items-center gap-2 text-sm border-b pb-1">
                 <span className="font-semibold">{actor}</span>
                 <span>•</span>
-                <span>{r.action === 'created' ? 'נוצר' : r.action === 'updated' ? 'עודכן' : r.action}</span>
-                <span>•</span>
-                <time dateTime={r.changed_at}>{when}</time>
+                <span
+                  className={cn(
+                    isDeletion && 'text-red-600 font-bold'
+                  )}
+                >
+                  {isDeletion
+                    ? 'המשימה נמחקה'
+                    : actionLabels[r.action] || r.action}
+                </span>
+                {!taskId && (
+                  <>
+                    <span>•</span>
+                    <span className="text-blue-600 font-mono text-xs">
+                      משימה: {r.task_id.slice(0, 8)}
+                    </span>
+                  </>
+                )}
+                <span className="mr-auto text-gray-400 text-xs">{when}</span>
               </div>
-              {keys.length > 0 ? (
+              {displayKeys.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm rtl:text-right">
                     <thead>
-                      <tr className="text-gray-600">
+                      <tr className="text-gray-600 border-b">
                         <th className="p-1 text-right">שדה</th>
                         <th className="p-1 text-right">לפני</th>
                         <th className="p-1 text-right">אחרי</th>
@@ -181,25 +538,49 @@ export function AuditFeed({
                       </tr>
                     </thead>
                     <tbody>
-                      {keys.map((k) => {
-                        const rec = (diff as any)[k] as { from: any; to: any };
-                        const kind = classifyChange(rec);
-                        const kindLabel = kind === 'added' ? 'הוסף' : kind === 'removed' ? 'הוסר' : kind === 'modified' ? 'שונה' : 'ללא שינוי';
+                      {displayKeys.map((k) => {
+                        const rec = (
+                          diff as Record<string, { from: unknown; to: unknown }>
+                        )[k] || { from: r.before?.[k], to: r.after?.[k] };
+
+                        const kind = isDeletion && deletionContextFields.includes(k) 
+                          ? 'same' 
+                          : classifyChange(rec);
+                        
+                        const kindLabel =
+                          kind === 'added'
+                            ? 'הוסף'
+                            : kind === 'removed'
+                            ? 'הוסר'
+                            : kind === 'modified'
+                            ? 'שונה'
+                            : 'ללא שינוי';
+
+                        // For deletion context, we just want to show what was there
+                        const fromVal = isDeletion && deletionContextFields.includes(k) ? rec.from || rec.to : rec.from;
+                        const toVal = isDeletion && deletionContextFields.includes(k) ? null : rec.to;
+
                         return (
-                          <tr key={k} className="border-t">
-                            <td className="p-1 font-mono text-xs">{k}</td>
-                            <td className="p-1 font-mono text-[11px] text-gray-600 break-all">{JSON.stringify(rec.from)}</td>
-                            <td className="p-1 font-mono text-[11px] text-gray-800 break-all">{JSON.stringify(rec.to)}</td>
+                          <tr key={k} className="border-t border-gray-50">
+                            <td className="p-1 text-xs font-medium">
+                              {FIELD_LABELS[k] || k}
+                            </td>
+                            <td className="p-1 text-[11px] text-gray-500 italic">
+                              {resolveValue(k, fromVal)}
+                            </td>
+                            <td className="p-1 text-[11px] text-gray-800 font-medium">
+                              {toVal !== null ? resolveValue(k, toVal) : '—'}
+                            </td>
                             <td className="p-1 text-xs">
                               <span
                                 className={
                                   kind === 'added'
-                                    ? 'rounded bg-green-100 px-2 py-0.5 text-green-800'
+                                    ? 'text-green-600'
                                     : kind === 'removed'
-                                    ? 'rounded bg-red-100 px-2 py-0.5 text-red-800'
+                                    ? 'text-red-600'
                                     : kind === 'modified'
-                                    ? 'rounded bg-yellow-100 px-2 py-0.5 text-yellow-800'
-                                    : 'rounded bg-gray-100 px-2 py-0.5 text-gray-700'
+                                    ? 'text-yellow-600'
+                                    : 'text-gray-400'
                                 }
                               >
                                 {kindLabel}
@@ -212,26 +593,10 @@ export function AuditFeed({
                   </table>
                 </div>
               ) : (
-                <div className="text-xs text-gray-500">אין דיפ לשינוי זה.</div>
+                <div className="text-xs text-gray-500 mt-1 italic">
+                  אין פירוט לשינוי זה.
+                </div>
               )}
-              <div className="mt-2 flex gap-2">
-                <button
-                  type="button"
-                  className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
-                  aria-label="העתק JSON לפני"
-                  onClick={() => copyJson(r.before)}
-                >
-                  העתק לפני
-                </button>
-                <button
-                  type="button"
-                  className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
-                  aria-label="העתק JSON אחרי"
-                  onClick={() => copyJson(r.after)}
-                >
-                  העתק אחרי
-                </button>
-              </div>
             </li>
           );
         })}
@@ -263,5 +628,3 @@ export function AuditFeed({
 }
 
 export default AuditFeed;
-
-

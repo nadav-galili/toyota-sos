@@ -113,8 +113,8 @@ export async function notify(body: NotifyBody): Promise<NotifyResult> {
       const today = dayjs().tz(ISRAEL_TZ).startOf('day');
       
       // Only send push if task is today or in the past (to handle late tasks)
-      // The requirement was "ביום הנוכחי", but usually it implies "not for future"
-      shouldSendPush = !taskDay.isAfter(today);
+      // Exception: always send push for cancellations
+      shouldSendPush = body.type === 'cancelled' || !taskDay.isAfter(today);
     }
   }
 

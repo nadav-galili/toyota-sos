@@ -16,7 +16,6 @@ import { formatLicensePlate } from '@/lib/vehicleLicensePlate';
 
 export type TaskCardProps = {
   id: string;
-  title: string;
   type: string;
   priority: 'ללא עדיפות' | 'מיידי' | 'נמוכה' | 'בינונית' | 'גבוהה';
   status: 'בהמתנה' | 'בעבודה' | 'חסומה' | 'הושלמה';

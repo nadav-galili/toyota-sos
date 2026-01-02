@@ -14,7 +14,7 @@ describe('TasksBoard Drag Handlers and Optimistic Preview (7.1.4)', () => {
   const mockTasks: Task[] = [
     {
       id: 'task-1',
-      title: 'משימה 1',
+
       type: 'pickup_or_dropoff_car',
       priority: 'high',
       status: 'pending',
@@ -31,7 +31,7 @@ describe('TasksBoard Drag Handlers and Optimistic Preview (7.1.4)', () => {
     },
     {
       id: 'task-2',
-      title: 'משימה 2',
+
       type: 'drive_client_home',
       priority: 'medium',
       status: 'in_progress',
@@ -122,8 +122,9 @@ describe('TasksBoard Drag Handlers and Optimistic Preview (7.1.4)', () => {
     expect(
       screen.getByRole('main', { name: /לוח משימות/i })
     ).toBeInTheDocument();
-    expect(screen.getByText('משימה 1')).toBeInTheDocument();
-    expect(screen.getByText('משימה 2')).toBeInTheDocument();
+    // Check for type labels (used as title)
+    expect(screen.getByText('איסוף רכב/שינוע')).toBeInTheDocument();
+    expect(screen.getByText('הסעת לקוח הביתה')).toBeInTheDocument();
   });
 
   test('board has DragOverlay area for preview rendering', () => {
@@ -301,7 +302,7 @@ describe('TasksBoard Drag Handlers and Optimistic Preview (7.1.4)', () => {
       />
     );
 
-    const firstRender = screen.getAllByText(/משימה [12]/);
+    const firstRender = screen.getAllByText(/איסוף רכב\/שינוע|הסעת לקוח הביתה/);
     expect(firstRender.length).toBe(2);
 
     // Re-render with same props
@@ -315,7 +316,9 @@ describe('TasksBoard Drag Handlers and Optimistic Preview (7.1.4)', () => {
       />
     );
 
-    const secondRender = screen.getAllByText(/משימה [12]/);
+    const secondRender = screen.getAllByText(
+      /איסוף רכב\/שינוע|הסעת לקוח הביתה/
+    );
     expect(secondRender.length).toBe(2);
   });
 

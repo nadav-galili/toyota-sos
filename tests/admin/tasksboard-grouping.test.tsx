@@ -14,7 +14,7 @@ describe('TasksBoard Column Grouping Selector (7.1.5)', () => {
   const mockTasks: Task[] = [
     {
       id: 'task-1',
-      title: 'משימה 1',
+      
       type: 'pickup_or_dropoff_car',
       priority: 'high',
       status: 'pending',
@@ -31,7 +31,7 @@ describe('TasksBoard Column Grouping Selector (7.1.5)', () => {
     },
     {
       id: 'task-2',
-      title: 'משימה 2',
+      
       type: 'drive_client_home',
       priority: 'medium',
       status: 'in_progress',
@@ -48,7 +48,7 @@ describe('TasksBoard Column Grouping Selector (7.1.5)', () => {
     },
     {
       id: 'task-3',
-      title: 'משימה 3',
+      
       type: 'deliver_package',
       priority: 'low',
       status: 'completed',

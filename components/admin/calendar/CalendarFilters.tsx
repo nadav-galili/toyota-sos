@@ -23,7 +23,7 @@ const taskTypes: TaskType[] = [
   'אחר',
 ];
 
-const taskStatuses: TaskStatus[] = ['בהמתנה', 'בעבודה', 'חסומה', 'הושלמה'];
+const taskStatuses: TaskStatus[] = ['בהמתנה', 'בעבודה', 'הושלמה', 'חסומה'];
 
 const statusLabels: Record<TaskStatus, string> = {
   בהמתנה: 'ממתינה',
@@ -102,7 +102,10 @@ export function CalendarFiltersPanel({
 
   const handleAddClient = (clientId: string) => {
     if (!filters.clientIds.includes(clientId)) {
-      onFiltersChange({ ...filters, clientIds: [...filters.clientIds, clientId] });
+      onFiltersChange({
+        ...filters,
+        clientIds: [...filters.clientIds, clientId],
+      });
     }
     setClientSearch('');
     setShowClientSuggestions(false);
@@ -315,4 +318,3 @@ export function CalendarFiltersPanel({
     </div>
   );
 }
-

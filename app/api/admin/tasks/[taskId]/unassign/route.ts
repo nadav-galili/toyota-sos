@@ -15,6 +15,7 @@ export async function DELETE(
     // Check authentication via cookie
     const cookieStore = await cookies();
     const roleCookie = cookieStore.get('toyota_role')?.value;
+    const userIdCookie = cookieStore.get('toyota_user_id')?.value;
 
     if (
       !roleCookie ||
@@ -45,6 +46,7 @@ export async function DELETE(
       .from('tasks')
       .update({
         updated_at: new Date().toISOString(),
+        updated_by: userIdCookie ?? null,
       })
       .eq('id', taskId)
       .is('deleted_at', null);

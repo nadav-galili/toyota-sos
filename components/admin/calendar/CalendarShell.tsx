@@ -118,6 +118,11 @@ export function CalendarShell({
   // Filter tasks
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
+      // Filter out deleted tasks
+      if (task.deleted_at) {
+        return false;
+      }
+
       // Filter by task type
       if (
         filters.taskTypes.length > 0 &&

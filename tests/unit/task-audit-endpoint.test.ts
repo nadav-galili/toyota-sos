@@ -20,9 +20,9 @@ jest.mock('@/lib/auth', () => {
           actor_id: 'u1',
           action: 'updated',
           changed_at: '2025-01-01T00:00:00Z',
-          before: { title: 'Old' },
-          after: { title: 'New' },
-          diff: { title: { from: 'Old', to: 'New' } },
+          before: { type: 'Old' },
+          after: { type: 'New' },
+          diff: { type: { from: 'Old', to: 'New' } },
         },
       ],
       error: null,
@@ -45,7 +45,7 @@ describe('GET /api/admin/tasks/[taskId]/audit', () => {
     expect(((result.body as any).data[0])).toMatchObject({
       task_id: 't1',
       action: 'updated',
-      diff: { title: { from: 'Old', to: 'New' } },
+      diff: { type: { from: 'Old', to: 'New' } },
     });
   });
 

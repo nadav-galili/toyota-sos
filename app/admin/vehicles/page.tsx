@@ -29,6 +29,7 @@ export default async function AdminVehiclesPage() {
     { name: 'נהגים', url: '/admin/drivers', icon: 'Users' },
     { name: 'מנהלים', url: '/admin/admins', icon: 'ShieldCheck' },
     { name: 'רכבים', url: '/admin/vehicles', icon: 'Car' },
+    { name: 'לוג שינויים', url: '/admin/audit', icon: 'History' },
   ];
 
   return (

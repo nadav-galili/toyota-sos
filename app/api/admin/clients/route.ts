@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
-export async function POST(request: NextRequest) {
+export async function GET() {
   try {
     const cookieStore = await cookies();
     const roleCookie = cookieStore.get('toyota_role')?.value;
@@ -15,23 +15,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { name, phone, email } = body || {};
-    if (!name)
-      return NextResponse.json({ error: 'Missing name' }, { status: 400 });
-
     const admin = getSupabaseAdmin();
     const { data, error } = await admin
       .from('clients')
-      .insert({ name, phone, email })
-      .select('*')
-      .single();
+      .select('id, name, email')
+      .order('name');
+
     if (error)
       return NextResponse.json({ error: error.message }, { status: 400 });
-    return NextResponse.json({ ok: true, data }, { status: 200 });
+    return NextResponse.json({ data }, { status: 200 });
   } catch (err: any) {
     return NextResponse.json(
-      { error: err?.message || 'Internal server error' },
+      { error: err?.message || 'Internal error' },
       { status: 500 }
     );
   }

@@ -3,7 +3,6 @@
 create or replace function public.get_task_details(task_id uuid)
 returns table (
   id uuid,
-  title text,
   type public.task_type,
   priority public.task_priority,
   status public.task_status,
@@ -21,7 +20,6 @@ stable
 as $$
   select
     t.id,
-    t.title,
     t.type,
     t.priority,
     t.status,

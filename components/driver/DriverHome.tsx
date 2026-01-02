@@ -166,7 +166,6 @@ export function DriverHome() {
     advisor_name?: string | null;
     advisor_color?: AdvisorColor | null;
     id: string;
-    title: string;
     type: DriverTask['type'];
     priority: DriverTask['priority'];
     status: DriverTask['status'];
@@ -230,7 +229,6 @@ export function DriverHome() {
       }
       const mapped: DriverTask[] = (data ?? []).map((t) => ({
         id: t.id,
-        title: t.title,
         type: t.type,
         priority: t.priority,
         status: t.status,

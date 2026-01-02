@@ -6,7 +6,7 @@ describe('TasksBoard Grid Layout (7.1.2)', () => {
   const mockTasks: Task[] = [
     {
       id: 'task-1',
-      title: 'משימה 1 - איסוף רכב',
+      
       type: 'איסוף רכב/שינוע',
       priority: 'high',
       status: 'pending',
@@ -23,7 +23,7 @@ describe('TasksBoard Grid Layout (7.1.2)', () => {
     },
     {
       id: 'task-2',
-      title: 'משימה 2 - הסעת לקוח הביתה',
+      
       type: 'הסעת לקוח הביתה',
       priority: 'medium',
       status: 'in_progress',
@@ -40,7 +40,7 @@ describe('TasksBoard Grid Layout (7.1.2)', () => {
     },
     {
       id: 'task-3',
-      title: 'משימה 3 - חילוץ רכב',
+      
       type: 'חילוץ רכב תקוע',
       priority: 'low',
       status: 'pending',
@@ -293,10 +293,10 @@ describe('TasksBoard Grid Layout (7.1.2)', () => {
       />
     );
 
-    // Check for task titles
-    expect(screen.getByText('משימה 1 - איסוף רכב')).toBeInTheDocument();
-    expect(screen.getByText('משימה 2 - הסעת לקוח הביתה')).toBeInTheDocument();
-    expect(screen.getByText('משימה 3 - חילוץ רכב')).toBeInTheDocument();
+    // Check for task type labels (used as title)
+    expect(screen.getByText('איסוף רכב/שינוע')).toBeInTheDocument();
+    expect(screen.getByText('הסעת לקוח הביתה')).toBeInTheDocument();
+    expect(screen.getByText('חילוץ רכב תקוע')).toBeInTheDocument();
 
     // Check for status labels (using getAllByText because they appear in column headers + cards)
     expect(screen.getAllByText('ממתין').length).toBeGreaterThanOrEqual(1); // pending

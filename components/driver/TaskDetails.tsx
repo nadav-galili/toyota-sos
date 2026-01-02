@@ -18,7 +18,6 @@ import { formatLicensePlate } from '@/lib/vehicleLicensePlate';
 
 type TaskDetailsData = {
   id: string;
-  title: string;
   type: string | null;
   priority: 'low' | 'medium' | 'high' | null;
   status: 'pending' | 'in_progress' | 'blocked' | 'completed' | null;
@@ -123,9 +122,9 @@ export function TaskDetails({ taskId }: { taskId: string }) {
     <div className="space-y-4 max-w-md mx-auto">
       <Card>
         <CardHeader className="space-y-1">
-          <CardTitle className="text-xl">{task.title}</CardTitle>
+          <CardTitle className="text-xl">{task.type}</CardTitle>
           <CardDescription>
-            {task.type ?? '—'} • {task.priority ?? '—'} • {task.status ?? '—'}
+            {task.priority ?? '—'} • {task.status ?? '—'}
           </CardDescription>
           <p className="text-xs text-gray-400">
             עודכן:{' '}
