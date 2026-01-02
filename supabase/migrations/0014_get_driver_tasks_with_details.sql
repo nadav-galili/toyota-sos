@@ -85,9 +85,9 @@ begin
       when 'today' then
         (t.estimated_end >= v_today_start and t.estimated_end <= v_today_end)
         or (t.estimated_start >= v_today_start and t.estimated_start <= v_today_end)
-        or (t.status::text = 'in_progress' and t.estimated_end >= v_today_start)
+        or (t.status::text = 'בעבודה' and t.estimated_end >= v_today_start)
       when 'overdue' then
-        t.status::text != 'completed'
+        t.status::text != 'הושלמה'
         and t.estimated_end is not null
         and t.estimated_end < v_now
       when 'all' then
@@ -95,7 +95,7 @@ begin
       else
         (t.estimated_end >= v_today_start and t.estimated_end <= v_today_end)
         or (t.estimated_start >= v_today_start and t.estimated_start <= v_today_end)
-        or (t.status::text = 'in_progress' and t.estimated_end >= v_today_start)
+        or (t.status::text = 'בעבודה' and t.estimated_end >= v_today_start)
     end
   )
   and (

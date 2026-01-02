@@ -51,8 +51,8 @@ from (
   -- Overdue pending task
   select
     'pickup_or_dropoff_car'::task_type as type,
-    'high'::task_priority as priority,
-    'pending'::task_status as status,
+    'גבוהה'::task_priority as priority,
+    'בהמתנה'::task_status as status,
     now() - interval '3 hours' as estimated_start,
     now() - interval '2 hours' as estimated_end,
     'תל אביב, דיזנגוף 100'::text as address,
@@ -63,8 +63,8 @@ from (
   -- In-progress (not overdue)
   select
     'drive_client_to_dealership'::task_type,
-    'medium'::task_priority,
-    'in_progress'::task_status,
+    'בינונית'::task_priority,
+    'בעבודה'::task_status,
     now() - interval '30 minutes',
     now() + interval '1 hour',
     'חולון, רחוב הראשונים 5',
@@ -75,8 +75,8 @@ from (
   -- Completed (past)
   select
     'replacement_car_delivery'::task_type,
-    'low'::task_priority,
-    'completed'::task_status,
+    'נמוכה'::task_priority,
+    'הושלמה'::task_status,
     now() - interval '5 hours',
     now() - interval '3 hours',
     'רמת גן, ביאליק 20',

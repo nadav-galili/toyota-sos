@@ -13,10 +13,13 @@ begin
     create type role as enum ('driver', 'admin', 'manager', 'viewer');
   end if;
   if not exists (select 1 from pg_type where typname = 'task_status') then
-    create type task_status as enum ('pending', 'in_progress', 'blocked', 'completed');
+    create type task_status as enum ('בהמתנה', 'בעבודה', 'חסומה', 'הושלמה');
   end if;
   if not exists (select 1 from pg_type where typname = 'task_priority') then
-    create type task_priority as enum ('low', 'medium', 'high');
+    create type task_priority as enum ('ללא עדיפות', 'מיידי', 'נמוכה', 'בינונית', 'גבוהה');
+  end if;
+  if not exists (select 1 from pg_type where typname = 'advisor_color') then
+    create type advisor_color as enum ('צהוב', 'ירוק', 'כתום', 'סגול בהיר');
   end if;
   if not exists (select 1 from pg_type where typname = 'task_type') then
     create type task_type as enum (
@@ -69,8 +72,8 @@ create table if not exists public.vehicles (
 create table if not exists public.tasks (
   id uuid primary key default gen_random_uuid(),
   type task_type not null,
-  priority task_priority not null default 'medium',
-  status task_status not null default 'pending',
+  priority task_priority not null default 'בינונית',
+  status task_status not null default 'בהמתנה',
   estimated_start timestamptz,
   estimated_end timestamptz,
   address text,

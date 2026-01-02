@@ -20,25 +20,25 @@
 -- Update a specific user (nadavg1000@gmail.com / nadav admin)
 -- Replace USER_ID with the actual UUID from auth.users
 UPDATE auth.users
-SET user_metadata = jsonb_set(
-  COALESCE(user_metadata, '{}'::jsonb),
+SET raw_user_meta_data = jsonb_set(
+  COALESCE(raw_user_meta_data, '{}'::jsonb),
   '{role}',
   '"admin"'::jsonb
 )
 WHERE email = 'nadavg1000@gmail.com'
-  AND user_metadata->>'role' IS DISTINCT FROM 'admin';
+  AND raw_user_meta_data->>'role' IS DISTINCT FROM 'admin';
 
 -- Sync all admin/manager/viewer users from profiles to auth metadata
 UPDATE auth.users u
-SET user_metadata = jsonb_set(
-  COALESCE(u.user_metadata, '{}'::jsonb),
+SET raw_user_meta_data = jsonb_set(
+  COALESCE(u.raw_user_meta_data, '{}'::jsonb),
   '{role}',
   to_jsonb(p.role)
 )
 FROM public.profiles p
 WHERE u.id = p.id
   AND p.role IN ('admin', 'manager', 'viewer')
-  AND (u.user_metadata->>'role' IS DISTINCT FROM p.role OR u.user_metadata->>'role' IS NULL);
+  AND (u.raw_user_meta_data->>'role' IS DISTINCT FROM p.role::text OR u.raw_user_meta_data->>'role' IS NULL);
 
 -- Verify the sync worked
 -- SELECT 
