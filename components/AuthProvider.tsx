@@ -10,6 +10,7 @@ import {
   loginAsDriver,
   loginAsAdmin,
   AuthSession,
+  clearSessionCache,
 } from '@/lib/auth';
 
 interface AuthContextType {
@@ -283,6 +284,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: authListener } = client.auth.onAuthStateChange(
       async (event) => {
+        // Clear cache when auth state changes to ensure fresh data
+        clearSessionCache();
+
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           const currentRole = await getCurrentRole(client);
           const currentSession = await getCurrentSession(client);

@@ -73,6 +73,21 @@ const getSupabaseConfig = () => {
 // Session storage key for driver sessions (localStorage)
 const DRIVER_SESSION_KEY = 'driver_session';
 
+// In-memory cache for Supabase session to avoid repeated slow getSession() calls
+let cachedSupabaseSession: {
+  session: Session | null;
+  timestamp: number;
+} | null = null;
+const SESSION_CACHE_TTL = 5000; // 5 seconds cache
+
+/**
+ * Clear the in-memory session cache
+ * Call this when auth state changes to force a fresh fetch
+ */
+export const clearSessionCache = (): void => {
+  cachedSupabaseSession = null;
+};
+
 // Types for our hybrid auth system
 export interface DriverSession {
   employeeId: string;
@@ -99,6 +114,9 @@ export const createBrowserClient = (): SupabaseClient => {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
+      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+      storageKey: 'supabase.auth.token',
+      flowType: 'implicit',
     },
   });
 };
@@ -296,6 +314,9 @@ export const loginAsDriver = async (
           password: derivedPassword,
         });
 
+        // Clear session cache on login
+        cachedSupabaseSession = null;
+
         // IMPORTANT: If this fails, realtime subscriptions won't work!
         // In production, you need to ensure all drivers have proper Supabase auth accounts
         if (authErr) {
@@ -393,6 +414,9 @@ export const loginAsDriver = async (
  * Logout driver (clear localStorage session and cookies)
  */
 export const logoutDriver = (): void => {
+  // Clear session cache
+  cachedSupabaseSession = null;
+
   if (typeof window !== 'undefined') {
     localStorage.removeItem(DRIVER_SESSION_KEY);
     // Clear cookies
@@ -435,6 +459,9 @@ export const loginAsAdmin = async (
       email: username, // Supabase auth doesn't support username, use email field
       password,
     });
+
+    // Clear session cache on login
+    cachedSupabaseSession = null;
 
     if (error || !data.session) {
       return {
@@ -488,6 +515,8 @@ export const loginAsAdmin = async (
  * Logout admin user
  */
 export const logoutAdmin = async (client: SupabaseClient): Promise<void> => {
+  // Clear session cache
+  cachedSupabaseSession = null;
   await client.auth.signOut();
 };
 
@@ -584,11 +613,29 @@ export const getCurrentSession = async (
 ): Promise<AuthSession> => {
   console.log('[getCurrentSession] Called - checking Supabase auth...');
 
-  // CRITICAL: Check Supabase auth session FIRST!
-  // This ensures realtime subscriptions work for authenticated users (including drivers)
-  const {
-    data: { session: supabaseSession },
-  } = await client.auth.getSession();
+  // Check cache first to avoid repeated slow getSession() calls
+  const now = Date.now();
+  let supabaseSession: Session | null = null;
+
+  if (
+    cachedSupabaseSession &&
+    now - cachedSupabaseSession.timestamp < SESSION_CACHE_TTL
+  ) {
+    console.log('[getCurrentSession] Using cached session');
+    supabaseSession = cachedSupabaseSession.session;
+  } else {
+    console.log('[getCurrentSession] Fetching fresh session from Supabase...');
+    // CRITICAL: Check Supabase auth session FIRST!
+    // This ensures realtime subscriptions work for authenticated users (including drivers)
+    const result = await client.auth.getSession();
+    supabaseSession = result.data.session;
+
+    // Update cache
+    cachedSupabaseSession = {
+      session: supabaseSession,
+      timestamp: now,
+    };
+  }
 
   console.log(
     '[getCurrentSession] Supabase session:',
