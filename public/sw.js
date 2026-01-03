@@ -301,8 +301,8 @@ self.addEventListener('push', (event) => {
 
   const title = payload.title || 'התראה חדשה';
   const body = payload.body || '';
-  const icon = payload.icon || '/icons/icon-192.png';
-  const badge = payload.badge || '/icons/badge-72.png';
+  const icon = payload.icon || '/icons/icon-fresh-192.png';
+  const badge = payload.badge || '/icons/icon-fresh-192.png';
   const tag = payload.tag;
   const actions = Array.isArray(payload.actions) ? payload.actions : undefined;
   const data = payload.data || {};
@@ -326,7 +326,7 @@ self.addEventListener('push', (event) => {
 // Focus or open the app to a deep link on click
 self.addEventListener('notificationclick', (event) => {
   const notification = event.notification;
-  const action = event.action;
+
   notification.close();
 
   const url =
