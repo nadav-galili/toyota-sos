@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // Define route access by role
 const PROTECTED_ROUTES: Record<string, string[]> = {
   '/driver': ['driver'],
-  '/admin': ['admin', 'viewer'],
+  '/admin': ['admin', 'manager', 'viewer'],
   '/manager': ['admin', 'manager', 'viewer'],
   '/viewer': ['admin', 'viewer'],
 };

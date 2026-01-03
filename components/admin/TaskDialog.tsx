@@ -263,7 +263,6 @@ export function TaskDialog(props: TaskDialogProps) {
   const [showAddClient, setShowAddClient] = useState(false);
   const [newClientName, setNewClientName] = useState('');
   const [newClientPhone, setNewClientPhone] = useState('');
-  const [newClientEmail, setNewClientEmail] = useState('');
   const [showAddVehicle, setShowAddVehicle] = useState(false);
   const [newVehiclePlate, setNewVehiclePlate] = useState('');
   const [newVehicleModel, setNewVehicleModel] = useState('');
@@ -831,14 +830,31 @@ export function TaskDialog(props: TaskDialogProps) {
         body: JSON.stringify({
           name,
           phone: newClientPhone || null,
-          email: newClientEmail || null,
         }),
       });
-      if (!res.ok) throw new Error(await res.text());
+
+      if (!res.ok) {
+        const errorData = await res
+          .json()
+          .catch(() => ({ error: 'Unknown error' }));
+        // Handle CLIENT_EXISTS error specifically with toast
+        if (errorData.code === 'CLIENT_EXISTS') {
+          toastError(errorData.error || 'לקוח עם שם זה כבר קיים');
+          return;
+        }
+        throw new Error(errorData.error || 'Failed to create client');
+      }
+
       const json = await res.json();
       const created: Client = json.data;
       setClientsLocal((prev) => [...prev, created]);
       onClientCreated?.(created);
+
+      // Always update the main client fields
+      setClientId(created.id);
+      setClientQuery(created.name || '');
+      setClientPhone(created.phone || '');
+
       if (isMultiStopType) {
         setStops((prev) => {
           if (prev.length === 0) {
@@ -868,15 +884,10 @@ export function TaskDialog(props: TaskDialogProps) {
               : stop
           );
         });
-      } else {
-        setClientId(created.id);
-        setClientQuery(created.name || '');
-        setClientPhone(created.phone || '');
       }
       setShowAddClient(false);
       setNewClientName('');
       setNewClientPhone('');
-      setNewClientEmail('');
     } catch (err: unknown) {
       const error = err as Error;
       setError(error.message || 'יצירת לקוח נכשלה');
@@ -1747,19 +1758,11 @@ export function TaskDialog(props: TaskDialogProps) {
                               onChange={(e) => setNewClientName(e.target.value)}
                             />
                             <input
-                              className="rounded border border-gray-300 p-2 col-span-1"
+                              className="rounded border border-gray-300 p-2 col-span-2"
                               placeholder="טלפון"
                               value={newClientPhone}
                               onChange={(e) =>
                                 setNewClientPhone(e.target.value)
-                              }
-                            />
-                            <input
-                              className="rounded border border-gray-300 p-2 col-span-1"
-                              placeholder="אימייל (אופציונלי)"
-                              value={newClientEmail}
-                              onChange={(e) =>
-                                setNewClientEmail(e.target.value)
                               }
                             />
 
@@ -2242,16 +2245,10 @@ export function TaskDialog(props: TaskDialogProps) {
                             onChange={(e) => setNewClientName(e.target.value)}
                           />
                           <input
-                            className="rounded border border-gray-300 p-2 col-span-1"
+                            className="rounded border border-gray-300 p-2 col-span-2"
                             placeholder="טלפון"
                             value={newClientPhone}
                             onChange={(e) => setNewClientPhone(e.target.value)}
-                          />
-                          <input
-                            className="rounded border border-gray-300 p-2 col-span-1"
-                            placeholder="אימייל (אופציונלי)"
-                            value={newClientEmail}
-                            onChange={(e) => setNewClientEmail(e.target.value)}
                           />
                           <div className="col-span-3 flex justify-end gap-2">
                             <button
@@ -2884,16 +2881,10 @@ export function TaskDialog(props: TaskDialogProps) {
                           onChange={(e) => setNewClientName(e.target.value)}
                         />
                         <input
-                          className="rounded border border-gray-300 p-2 col-span-1"
+                          className="rounded border border-gray-300 p-2 col-span-2"
                           placeholder="טלפון"
                           value={newClientPhone}
                           onChange={(e) => setNewClientPhone(e.target.value)}
-                        />
-                        <input
-                          className="rounded border border-gray-300 p-2 col-span-1"
-                          placeholder="אימייל (אופציונלי)"
-                          value={newClientEmail}
-                          onChange={(e) => setNewClientEmail(e.target.value)}
                         />
 
                         <div className="col-span-3 flex justify-end gap-2">
@@ -3361,16 +3352,10 @@ export function TaskDialog(props: TaskDialogProps) {
                         onChange={(e) => setNewClientName(e.target.value)}
                       />
                       <input
-                        className="rounded border border-gray-300 p-2 col-span-1"
+                        className="rounded border border-gray-300 p-2 col-span-2"
                         placeholder="טלפון"
                         value={newClientPhone}
                         onChange={(e) => setNewClientPhone(e.target.value)}
-                      />
-                      <input
-                        className="rounded border border-gray-300 p-2 col-span-1"
-                        placeholder="אימייל (אופציונלי)"
-                        value={newClientEmail}
-                        onChange={(e) => setNewClientEmail(e.target.value)}
                       />
                       <div className="col-span-3 flex justify-end gap-2">
                         <button

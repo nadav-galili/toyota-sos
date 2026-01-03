@@ -14,7 +14,7 @@ export async function PATCH(
   try {
     const cookieStore = await cookies();
     const roleCookie = cookieStore.get('toyota_role')?.value;
-    if (!roleCookie || roleCookie !== 'admin') {
+    if (!roleCookie || (roleCookie !== 'admin' && roleCookie !== 'manager')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -26,7 +26,9 @@ export async function PATCH(
     const body = await request.json().catch(() => ({}));
     const payload = {
       name: body?.name,
-      employeeId: body?.employeeId ? String(body.employeeId).trim() || undefined : undefined,
+      employeeId: body?.employeeId
+        ? String(body.employeeId).trim() || undefined
+        : undefined,
       email: body?.email,
       role: body?.role,
       password: undefined, // Password updates not supported in PATCH
@@ -40,7 +42,7 @@ export async function PATCH(
           error: 'Validation failed',
           fieldErrors,
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -58,7 +60,7 @@ export async function PATCH(
     if (emailCheckErr && emailCheckErr.code !== 'PGRST116') {
       return NextResponse.json(
         { error: emailCheckErr.message },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -68,7 +70,7 @@ export async function PATCH(
           error: 'אימייל כבר קיים במערכת',
           code: 'EMAIL_EXISTS',
         },
-        { status: 409 },
+        { status: 409 }
       );
     }
 
@@ -84,7 +86,7 @@ export async function PATCH(
       if (existingErr && existingErr.code !== 'PGRST116') {
         return NextResponse.json(
           { error: existingErr.message },
-          { status: 400 },
+          { status: 400 }
         );
       }
 
@@ -94,7 +96,7 @@ export async function PATCH(
             error: 'מספר עובד כבר קיים במערכת',
             code: 'EMPLOYEE_ID_EXISTS',
           },
-          { status: 409 },
+          { status: 409 }
         );
       }
     }
@@ -136,7 +138,7 @@ export async function PATCH(
     if (upErr) {
       return NextResponse.json(
         { error: upErr.message || 'Failed to update admin' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -145,12 +147,12 @@ export async function PATCH(
         ok: true,
         data: profile,
       },
-      { status: 200 },
+      { status: 200 }
     );
   } catch (err: any) {
     return NextResponse.json(
       { error: err?.message || 'Internal server error' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -162,7 +164,7 @@ export async function DELETE(
   try {
     const cookieStore = await cookies();
     const roleCookie = cookieStore.get('toyota_role')?.value;
-    if (!roleCookie || roleCookie !== 'admin') {
+    if (!roleCookie || (roleCookie !== 'admin' && roleCookie !== 'manager')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -188,7 +190,7 @@ export async function DELETE(
     if (deleteErr) {
       return NextResponse.json(
         { error: deleteErr.message || 'Failed to delete admin' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -196,8 +198,7 @@ export async function DELETE(
   } catch (err: any) {
     return NextResponse.json(
       { error: err?.message || 'Internal server error' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
-

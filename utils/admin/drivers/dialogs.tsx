@@ -18,6 +18,7 @@ import {
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
 import dayjs from '@/lib/dayjs';
+import { PlusIcon } from 'lucide-react';
 
 // ---- Form schema & types ----
 
@@ -26,7 +27,10 @@ export const DriverFormSchema = driverSchema.extend({
   // Required in form (to match defaultValues), but transforms to undefined if empty
   email: z
     .union([
-      z.string().email('אימייל לא תקין').max(255, 'אימייל לא יכול להכיל יותר מ-255 תווים'),
+      z
+        .string()
+        .email('אימייל לא תקין')
+        .max(255, 'אימייל לא יכול להכיל יותר מ-255 תווים'),
       z.literal(''),
       z.undefined(),
     ])
@@ -78,7 +82,9 @@ export function DriverEditDialog({
             {mode === 'create' ? 'יצירת נהג חדש' : 'עריכת נהג'}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            {mode === 'create' ? 'הגדר שם ופרטי קשר לנהג החדש במערכת.' : 'ערוך את פרטי הנהג לפי הצורך.'}
+            {mode === 'create'
+              ? 'הגדר שם ופרטי קשר לנהג החדש במערכת.'
+              : 'ערוך את פרטי הנהג לפי הצורך.'}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <form className="mt-3 space-y-4" onSubmit={onSubmit}>
@@ -123,9 +129,10 @@ export function DriverEditDialog({
           <AlertDialogFooter>
             <Button
               type="submit"
-              className="bg-primary hover:bg-primary/90"
+              className="bg-primary hover:bg-primary/90 text-white"
               disabled={submitting}
             >
+              <PlusIcon className="w-4 h-4" />
               {mode === 'create'
                 ? submitting
                   ? 'יוצר נהג...'
@@ -168,7 +175,8 @@ export function DeleteDriverDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>מחיקת נהג</AlertDialogTitle>
           <AlertDialogDescription>
-            פעולה זו תמחק את הנהג מהמערכת לצמיתות. פעולה זו אינה הפיכה ועלולה להשפיע על משימות קיימות.
+            פעולה זו תמחק את הנהג מהמערכת לצמיתות. פעולה זו אינה הפיכה ועלולה
+            להשפיע על משימות קיימות.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <p className="mt-2 text-xs text-gray-700">
